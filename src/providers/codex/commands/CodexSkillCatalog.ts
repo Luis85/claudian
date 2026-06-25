@@ -1,4 +1,4 @@
-import type { ClaudianEventMap } from '../../../app/events/claudianEvents';
+import type { SpecoratorEventMap } from '../../../app/events/specoratorEvents';
 import type { EventBus } from '../../../core/events/EventBus';
 import type {
   ProviderCommandCatalog,
@@ -85,7 +85,7 @@ export class CodexSkillCatalog implements ProviderCommandCatalog {
     private storage: CodexSkillStorage,
     private listProvider: CodexSkillListProvider,
     private vaultPath: string | null,
-    private eventBus?: EventBus<ClaudianEventMap>,
+    private eventBus?: EventBus<SpecoratorEventMap>,
   ) {}
 
   setRuntimeCommands(_commands: SlashCommand[]): void {

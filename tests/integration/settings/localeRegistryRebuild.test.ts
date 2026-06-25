@@ -10,11 +10,11 @@
 
 import '../../setup/obsidianDom';
 
-import { ClaudianSettingTab } from '../../../src/features/settings/ClaudianSettings';
 import {
   getSettingsRegistry,
   resetSettingsRegistryForTests,
 } from '../../../src/features/settings/registry';
+import { SpecoratorSettingTab } from '../../../src/features/settings/SpecoratorSettings';
 import { setLocale } from '../../../src/i18n/i18n';
 import {
   configureProviderRegistryMock,
@@ -28,7 +28,7 @@ const OPTS = { tabId: 'general', tabContentIndex: 0 };
 function mountTab() {
   configureProviderRegistryMock(OPTS);
   const plugin = createStubPlugin(OPTS);
-  const tab = new ClaudianSettingTab({} as never, plugin as never);
+  const tab = new SpecoratorSettingTab({} as never, plugin as never);
   (tab as unknown as { containerEl: HTMLElement }).containerEl =
     document.createElement('div');
   (

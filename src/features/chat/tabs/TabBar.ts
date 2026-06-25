@@ -34,7 +34,7 @@ export class TabBar {
 
   /** Builds the tab bar UI. */
   private build(): void {
-    this.containerEl.addClass('claudian-tab-badges');
+    this.containerEl.addClass('specorator-tab-badges');
     // The badges are `role="tab"`; their container must be the enclosing tablist
     // for assistive tech to announce position/count correctly.
     this.containerEl.setAttribute('role', 'tablist');
@@ -70,14 +70,14 @@ export class TabBar {
 
   /** Builds the state/kind class list for a badge. */
   private badgeStateClasses(item: TabBarItem, isFirstWorkOrder: boolean): string[] {
-    const classes = ['claudian-tab-badge'];
-    if (item.isActive) classes.push('claudian-tab-badge-active');
-    if (item.needsAttention) classes.push('claudian-tab-badge-attention');
-    if (item.isStreaming) classes.push('claudian-tab-badge-working');
-    if (!item.isActive && !item.needsAttention && !item.isStreaming) classes.push('claudian-tab-badge-idle');
-    if (item.kind === 'work-order') classes.push('claudian-tab-badge--work-order');
-    if (item.kind !== 'work-order' && item.isAgentBound) classes.push('claudian-tab-badge--agent');
-    if (isFirstWorkOrder) classes.push('claudian-tab-badge--work-order-first');
+    const classes = ['specorator-tab-badge'];
+    if (item.isActive) classes.push('specorator-tab-badge-active');
+    if (item.needsAttention) classes.push('specorator-tab-badge-attention');
+    if (item.isStreaming) classes.push('specorator-tab-badge-working');
+    if (!item.isActive && !item.needsAttention && !item.isStreaming) classes.push('specorator-tab-badge-idle');
+    if (item.kind === 'work-order') classes.push('specorator-tab-badge--work-order');
+    if (item.kind !== 'work-order' && item.isAgentBound) classes.push('specorator-tab-badge--agent');
+    if (isFirstWorkOrder) classes.push('specorator-tab-badge--work-order-first');
     return classes;
   }
 
@@ -88,13 +88,13 @@ export class TabBar {
   private createBadgeEl(item: TabBarItem, cls: string): HTMLElement {
     if (item.kind === 'work-order') {
       const el = this.containerEl.createDiv({ cls });
-      setIcon(el.createSpan({ cls: 'claudian-tab-badge-icon' }), 'wrench');
+      setIcon(el.createSpan({ cls: 'specorator-tab-badge-icon' }), 'wrench');
       return el;
     }
     if (item.isAgentBound) {
       const el = this.containerEl.createDiv({ cls });
-      setIcon(el.createSpan({ cls: 'claudian-tab-badge-agent-icon' }), 'user');
-      el.createSpan({ cls: 'claudian-tab-badge-number', text: String(item.index) });
+      setIcon(el.createSpan({ cls: 'specorator-tab-badge-agent-icon' }), 'user');
+      el.createSpan({ cls: 'specorator-tab-badge-number', text: String(item.index) });
       return el;
     }
     return this.containerEl.createDiv({ cls, text: String(item.index) });
@@ -128,7 +128,7 @@ export class TabBar {
     badgeEl.setAttribute('data-provider', item.providerId);
     badgeEl.setAttribute('data-kind', item.kind);
     // Inner glyphs are decorative; the composite aria-label carries the meaning.
-    for (const iconCls of ['claudian-tab-badge-icon', 'claudian-tab-badge-agent-icon']) {
+    for (const iconCls of ['specorator-tab-badge-icon', 'specorator-tab-badge-agent-icon']) {
       badgeEl.querySelector(`.${iconCls}`)?.setAttribute('aria-hidden', 'true');
     }
     this.wireBadgeInteraction(badgeEl, item);
@@ -176,7 +176,7 @@ export class TabBar {
    */
   private handleRovingKey(e: KeyboardEvent, badgeEl: HTMLElement): boolean {
     const badges = Array.from(
-      this.containerEl.querySelectorAll('.claudian-tab-badge'),
+      this.containerEl.querySelectorAll('.specorator-tab-badge'),
     ) as HTMLElement[];
     const current = badges.indexOf(badgeEl);
     if (current === -1 || badges.length === 0) return false;
@@ -210,6 +210,6 @@ export class TabBar {
   /** Destroys the tab bar. */
   destroy(): void {
     this.containerEl.empty();
-    this.containerEl.removeClass('claudian-tab-badges');
+    this.containerEl.removeClass('specorator-tab-badges');
   }
 }

@@ -1,6 +1,6 @@
 import { Setting } from 'obsidian';
 
-import type { ClaudianSettings } from '../../../../../src/core/types/settings';
+import type { SpecoratorSettings } from '../../../../../src/core/types/settings';
 import { renderField } from '../../../../../src/features/settings/registry/renderField';
 import type {
   SettingsCtx,
@@ -15,7 +15,7 @@ function makeCtx(initial: Record<string, unknown> = {}): {
   const saveSettings = jest.fn().mockResolvedValue(undefined);
   const refresh = jest.fn();
   const ctx: SettingsCtx = {
-    settings: { ...initial } as unknown as ClaudianSettings,
+    settings: { ...initial } as unknown as SpecoratorSettings,
     saveSettings,
     refresh,
     // Plugin handle is exercised by F4/F5 widget tests; renderField only

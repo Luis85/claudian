@@ -5,7 +5,7 @@ import { registerWorkspaceMenus } from '@/app/commands/registerWorkspaceMenus';
 import type { QuickActionFavoritesCache } from '@/features/quickActions/QuickActionFavoritesCache';
 import { runQuickActionForFile } from '@/features/quickActions/runQuickActionForFile';
 import type { QuickAction } from '@/features/quickActions/types';
-import type ClaudianPlugin from '@/main';
+import type SpecoratorPlugin from '@/main';
 
 const { MENU_SEPARATOR } = jest.requireActual('obsidian') as { MENU_SEPARATOR: symbol };
 
@@ -86,7 +86,7 @@ function titles(items: Array<MenuItem | symbol>): string[] {
 }
 
 function createPlugin(favorites: QuickAction[] = []): {
-  plugin: ClaudianPlugin;
+  plugin: SpecoratorPlugin;
   fileMenu: { handler: FileMenuHandler | null };
   editorMenu: { handler: EditorMenuHandler | null };
   cache: { getFavorites: jest.Mock };
@@ -106,7 +106,7 @@ function createPlugin(favorites: QuickAction[] = []): {
         }),
       },
     },
-  } as unknown as ClaudianPlugin;
+  } as unknown as SpecoratorPlugin;
   return { plugin, fileMenu, editorMenu, cache };
 }
 
@@ -125,7 +125,7 @@ describe('registerWorkspaceMenus', () => {
     expect(plugin.registerEvent).toHaveBeenCalledTimes(2);
   });
 
-  it('adds separator-bracketed Claudian chat, work-order, and quick-actions items for TFile entries', () => {
+  it('adds separator-bracketed Specorator chat, work-order, and quick-actions items for TFile entries', () => {
     const { plugin, fileMenu } = createPlugin();
     registerWorkspaceMenus(plugin);
     const file = Object.create(TFile.prototype) as TFile;
@@ -133,7 +133,7 @@ describe('registerWorkspaceMenus', () => {
     fileMenu.handler!(menu, file);
     expect(titles(items)).toEqual([
       '<sep>',
-      'Add file to Claudian chat',
+      'Add file to Specorator chat',
       'Create work order',
       'Add to work order',
       'Open Quick Actions',
@@ -149,7 +149,7 @@ describe('registerWorkspaceMenus', () => {
     fileMenu.handler!(menu, folder);
     expect(titles(items)).toEqual([
       '<sep>',
-      'Add folder to Claudian chat',
+      'Add folder to Specorator chat',
       'Create work order',
       'Add to work order',
       'Open Quick Actions',
@@ -194,7 +194,7 @@ describe('registerWorkspaceMenus', () => {
     // workspace menu skips its own bottom sep when the helper added one.
     expect(titles(items)).toEqual([
       '<sep>',
-      'Add file to Claudian chat',
+      'Add file to Specorator chat',
       'Create work order',
       'Add to work order',
       'Open Quick Actions',
@@ -217,7 +217,7 @@ describe('registerWorkspaceMenus', () => {
 
     expect(titles(items)).toEqual([
       '<sep>',
-      'Add folder to Claudian chat',
+      'Add folder to Specorator chat',
       'Create work order',
       'Add to work order',
       'Open Quick Actions',
@@ -256,7 +256,7 @@ describe('registerWorkspaceMenus', () => {
     fileMenu.handler!(menu, file);
     expect(titles(items)).toEqual([
       '<sep>',
-      'Add file to Claudian chat',
+      'Add file to Specorator chat',
       'Create work order',
       'Add to work order',
       'Open Quick Actions',

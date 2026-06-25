@@ -118,7 +118,7 @@ describe('MessageRenderer', () => {
 
     expect(emptySpy).toHaveBeenCalled();
     expect(renderStoredSpy).toHaveBeenCalledTimes(1);
-    expect(welcomeEl.hasClass('claudian-welcome')).toBe(true);
+    expect(welcomeEl.hasClass('specorator-welcome')).toBe(true);
     expect(welcomeEl.children[0].textContent).toBe('Hello');
   });
 
@@ -129,7 +129,7 @@ describe('MessageRenderer', () => {
     const welcomeEl = renderer.renderMessages([], () => 'Welcome!');
 
     expect(renderStoredSpy).not.toHaveBeenCalled();
-    expect(welcomeEl.hasClass('claudian-welcome')).toBe(true);
+    expect(welcomeEl.hasClass('specorator-welcome')).toBe(true);
   });
 
   // ============================================
@@ -145,7 +145,7 @@ describe('MessageRenderer', () => {
     renderer.setHydrationError({ code: 'store-unreadable', message: 'History unavailable' });
     renderer.renderMessages([], () => 'Welcome');
 
-    const banner = messagesEl.querySelector('.claudian-hydration-error');
+    const banner = messagesEl.querySelector('.specorator-hydration-error');
     expect(banner).not.toBeNull();
     expect(banner?.textContent).toBe('History unavailable');
     expect(banner?.dataset.errorCode).toBe('store-unreadable');
@@ -159,7 +159,7 @@ describe('MessageRenderer', () => {
     renderer.renderMessages([], () => 'Welcome');
     renderer.renderMessages([], () => 'Welcome');
 
-    expect(messagesEl.querySelectorAll('.claudian-hydration-error')).toHaveLength(1);
+    expect(messagesEl.querySelectorAll('.specorator-hydration-error')).toHaveLength(1);
   });
 
   it('clearHydrationBanner stops the banner from re-rendering', () => {
@@ -170,7 +170,7 @@ describe('MessageRenderer', () => {
     renderer.clearHydrationBanner();
     renderer.renderMessages([], () => 'Welcome');
 
-    expect(messagesEl.querySelector('.claudian-hydration-error')).toBeNull();
+    expect(messagesEl.querySelector('.specorator-hydration-error')).toBeNull();
   });
 
   // ============================================
@@ -195,12 +195,12 @@ describe('MessageRenderer', () => {
     // Should create assistant-style message with interrupt content
     expect(messagesEl.children.length).toBe(1);
     const msgEl = messagesEl.children[0];
-    expect(msgEl.hasClass('claudian-message-assistant')).toBe(true);
+    expect(msgEl.hasClass('specorator-message-assistant')).toBe(true);
     // Check the content contains interrupt styling
     const contentEl = msgEl.children[0];
     const textEl = contentEl.children[0];
     const interruptedEl = textEl.children[0];
-    expect(interruptedEl.hasClass('claudian-interrupted')).toBe(true);
+    expect(interruptedEl.hasClass('specorator-interrupted')).toBe(true);
     expect(interruptedEl.textContent).toBe('Interrupted');
   });
 
@@ -222,13 +222,13 @@ describe('MessageRenderer', () => {
     // Should create an assistant message (not a bare interrupt marker)
     expect(messagesEl.children.length).toBe(1);
     const msgEl = messagesEl.children[0];
-    expect(msgEl.hasClass('claudian-message-assistant')).toBe(true);
+    expect(msgEl.hasClass('specorator-message-assistant')).toBe(true);
 
     // The content div should have both content rendering and an interrupt indicator
     const contentEl = msgEl.children[0];
     const lastChild = contentEl.children[contentEl.children.length - 1];
     const interruptedEl = lastChild.children[0];
-    expect(interruptedEl.hasClass('claudian-interrupted')).toBe(true);
+    expect(interruptedEl.hasClass('specorator-interrupted')).toBe(true);
     expect(interruptedEl.textContent).toBe('Interrupted');
   });
 
@@ -250,10 +250,10 @@ describe('MessageRenderer', () => {
     // Should create a bare interrupt marker (same as Claude-style)
     expect(messagesEl.children.length).toBe(1);
     const msgEl = messagesEl.children[0];
-    expect(msgEl.hasClass('claudian-message-assistant')).toBe(true);
+    expect(msgEl.hasClass('specorator-message-assistant')).toBe(true);
     const contentEl = msgEl.children[0];
     const textEl = contentEl.children[0];
-    expect(textEl.children[0].hasClass('claudian-interrupted')).toBe(true);
+    expect(textEl.children[0].hasClass('specorator-interrupted')).toBe(true);
   });
 
   it('skips rebuilt context messages', () => {
@@ -289,7 +289,7 @@ describe('MessageRenderer', () => {
 
     expect(messagesEl.children.length).toBe(1);
     const msgEl = messagesEl.children[0];
-    expect(msgEl.hasClass('claudian-message-user')).toBe(true);
+    expect(msgEl.hasClass('specorator-message-user')).toBe(true);
   });
 
   it('renders user message with displayContent instead of content', () => {
@@ -329,7 +329,7 @@ describe('MessageRenderer', () => {
     expect(renderer.renderMessageImages).toHaveBeenCalled();
     // Only the images container, no message bubble
     const bubbles = messagesEl.children.filter(
-      (c: any) => c.hasClass('claudian-message')
+      (c: any) => c.hasClass('specorator-message')
     );
     expect(bubbles.length).toBe(0);
   });
@@ -371,7 +371,7 @@ describe('MessageRenderer', () => {
 
     renderer.renderStoredMessage(allMessages[1], allMessages, 1);
 
-    expect(messagesEl.querySelector('.claudian-message-rewind-btn')).not.toBeNull();
+    expect(messagesEl.querySelector('.specorator-message-rewind-btn')).not.toBeNull();
   });
 
   it('does not add a rewind button when stored render is called without context', () => {
@@ -390,7 +390,7 @@ describe('MessageRenderer', () => {
 
     renderer.renderStoredMessage(msg);
 
-    expect(messagesEl.querySelector('.claudian-message-rewind-btn')).toBeNull();
+    expect(messagesEl.querySelector('.specorator-message-rewind-btn')).toBeNull();
   });
 
   it('shows rewind mode menu for eligible streamed user messages', async () => {
@@ -416,7 +416,7 @@ describe('MessageRenderer', () => {
 
     renderer.refreshActionButtons(userMsg, allMessages, 1);
 
-    const btn = messagesEl.querySelector('.claudian-message-rewind-btn');
+    const btn = messagesEl.querySelector('.specorator-message-rewind-btn');
     expect(btn).not.toBeNull();
 
     btn!.click();
@@ -501,10 +501,10 @@ describe('MessageRenderer', () => {
     });
 
     // The error + its guidance survive the save and re-render as the card...
-    expect(messagesEl.querySelector('.claudian-runtime-error-card')).not.toBeNull();
+    expect(messagesEl.querySelector('.specorator-runtime-error-card')).not.toBeNull();
     expect(messagesEl.textContent).toContain('spawn claude ENOENT');
     // ...but retry is omitted on reload (no live turn to re-dispatch).
-    expect(messagesEl.querySelector('.claudian-runtime-error-button-primary')).toBeNull();
+    expect(messagesEl.querySelector('.specorator-runtime-error-button-primary')).toBeNull();
   });
 
   it('skips empty or whitespace-only text blocks', () => {
@@ -618,8 +618,8 @@ describe('MessageRenderer', () => {
 
     // Find the footer element
     const msgEl = messagesEl.children[0];
-    const contentEl = msgEl.children[0]; // claudian-message-content
-    const footerEl = contentEl.children.find((c: any) => c.hasClass('claudian-response-footer'));
+    const contentEl = msgEl.children[0]; // specorator-message-content
+    const footerEl = contentEl.children.find((c: any) => c.hasClass('specorator-response-footer'));
     expect(footerEl).toBeDefined();
     const durationSpan = footerEl!.children[0];
     expect(durationSpan.textContent).toContain('Baked');
@@ -646,7 +646,7 @@ describe('MessageRenderer', () => {
 
     const msgEl = messagesEl.children[0];
     const contentEl = msgEl.children[0];
-    const footerEl = contentEl.children.find((c: any) => c.hasClass('claudian-response-footer'));
+    const footerEl = contentEl.children.find((c: any) => c.hasClass('specorator-response-footer'));
     expect(footerEl).toBeUndefined();
   });
 
@@ -670,7 +670,7 @@ describe('MessageRenderer', () => {
 
     const msgEl = messagesEl.children[0];
     const contentEl = msgEl.children[0];
-    const footerEl = contentEl.children.find((c: any) => c.hasClass('claudian-response-footer'));
+    const footerEl = contentEl.children.find((c: any) => c.hasClass('specorator-response-footer'));
     expect(footerEl).toBeDefined();
     expect(footerEl!.children[0].textContent).toContain('Baked');
   });
@@ -986,7 +986,7 @@ describe('MessageRenderer', () => {
 
     const msgEl = renderer.addMessage(msg);
 
-    expect(msgEl.hasClass('claudian-message-user')).toBe(true);
+    expect(msgEl.hasClass('specorator-message-user')).toBe(true);
   });
 
   it('addMessage renders images for user messages', () => {
@@ -1046,7 +1046,7 @@ describe('MessageRenderer', () => {
 
     const msgEl = renderer.addMessage(msg);
 
-    expect(msgEl.hasClass('claudian-message-assistant')).toBe(true);
+    expect(msgEl.hasClass('specorator-message-assistant')).toBe(true);
   });
 
   it('getMessageEl prefers liveMessageEls when registered', () => {
@@ -1117,7 +1117,7 @@ describe('MessageRenderer', () => {
     // Should create images container with 2 image wrappers
     expect(containerEl.children.length).toBe(1);
     const imagesContainer = containerEl.children[0];
-    expect(imagesContainer.hasClass('claudian-message-images')).toBe(true);
+    expect(imagesContainer.hasClass('specorator-message-images')).toBe(true);
     expect(imagesContainer.children.length).toBe(2);
 
     // PERF-2 safe win: off-screen image data URIs are lazily decoded/painted.
@@ -1163,7 +1163,7 @@ describe('MessageRenderer', () => {
 
     try {
       renderer.showFullImage(image);
-      expect(mockBody.createDiv).toHaveBeenCalledWith({ cls: 'claudian-image-modal-overlay' });
+      expect(mockBody.createDiv).toHaveBeenCalledWith({ cls: 'specorator-image-modal-overlay' });
     } finally {
       (globalThis as any).document = origDocument;
     }
@@ -1178,12 +1178,12 @@ describe('MessageRenderer', () => {
     const { renderer } = createRenderer(messagesEl, 'claude', true);
     const renderContentSpy = jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
 
-    const handoff = `<claudian_handoff>
+    const handoff = `<specorator_handoff>
 summary: Finished the work.
 verification: npm run test passed.
 risks: No known risks.
 next_action: Review the result.
-</claudian_handoff>`;
+</specorator_handoff>`;
 
     renderer.renderStoredMessage({
       id: 'a-handoff',
@@ -1192,10 +1192,10 @@ next_action: Review the result.
       timestamp: Date.now(),
     });
 
-    expect(messagesEl.querySelector('.claudian-work-order-handoff-card')).not.toBeNull();
+    expect(messagesEl.querySelector('.specorator-work-order-handoff-card')).not.toBeNull();
     expect(messagesEl.textContent).toContain('Work order handoff');
     expect(messagesEl.textContent).toContain('Finished the work.');
-    expect(messagesEl.textContent).not.toContain('<claudian_handoff>');
+    expect(messagesEl.textContent).not.toContain('<specorator_handoff>');
     expect(renderContentSpy).toHaveBeenCalledWith(expect.anything(), 'Intro text.');
     expect(renderContentSpy).toHaveBeenCalledWith(expect.anything(), 'Closing text.');
   });
@@ -1208,22 +1208,22 @@ next_action: Review the result.
     renderer.renderStoredMessage({
       id: 'a-handoff-expanded',
       role: 'assistant',
-      content: `<claudian_handoff>
+      content: `<specorator_handoff>
 summary: Finished the work.
 verification: npm run test passed.
 risks: No known risks.
 next_action: Review the result.
-</claudian_handoff>`,
+</specorator_handoff>`,
       timestamp: Date.now(),
     });
 
-    const header = messagesEl.querySelector('.claudian-work-order-handoff-card-header') as any;
-    const details = messagesEl.querySelector('.claudian-work-order-handoff-card-details');
-    expect(details?.hasClass('claudian-hidden')).toBe(true);
+    const header = messagesEl.querySelector('.specorator-work-order-handoff-card-header') as any;
+    const details = messagesEl.querySelector('.specorator-work-order-handoff-card-details');
+    expect(details?.hasClass('specorator-hidden')).toBe(true);
 
     header._eventListeners.get('click')[0]();
 
-    expect(details?.hasClass('claudian-hidden')).toBe(false);
+    expect(details?.hasClass('specorator-hidden')).toBe(false);
     expect(messagesEl.textContent).toContain('Summary');
     expect(messagesEl.textContent).toContain('Verification');
     expect(messagesEl.textContent).toContain('Risks');
@@ -1235,16 +1235,16 @@ next_action: Review the result.
     const { renderer } = createRenderer(messagesEl, 'claude', false);
     const renderContentSpy = jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
 
-    const handoff = `<claudian_handoff>
+    const handoff = `<specorator_handoff>
 summary: Finished the work.
 verification: npm run test passed.
 risks: No known risks.
 next_action: Review the result.
-</claudian_handoff>`;
+</specorator_handoff>`;
 
     renderer.renderStoredMessage({ id: 'a-normal', role: 'assistant', content: handoff, timestamp: Date.now() });
 
-    expect(messagesEl.querySelector('.claudian-work-order-handoff-card')).toBeNull();
+    expect(messagesEl.querySelector('.specorator-work-order-handoff-card')).toBeNull();
     expect(renderContentSpy).toHaveBeenCalledWith(expect.anything(), handoff);
   });
 
@@ -1252,11 +1252,11 @@ next_action: Review the result.
     const messagesEl = createMockEl();
     const { renderer } = createRenderer(messagesEl, 'claude', true);
     const renderContentSpy = jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
-    const malformed = `<claudian_handoff>\nsummary: Missing fields\n</claudian_handoff>`;
+    const malformed = `<specorator_handoff>\nsummary: Missing fields\n</specorator_handoff>`;
 
     renderer.renderStoredMessage({ id: 'a-bad', role: 'assistant', content: malformed, timestamp: Date.now() });
 
-    expect(messagesEl.querySelector('.claudian-work-order-handoff-card')).toBeNull();
+    expect(messagesEl.querySelector('.specorator-work-order-handoff-card')).toBeNull();
     expect(renderContentSpy).toHaveBeenCalledWith(expect.anything(), malformed);
   });
 
@@ -1265,19 +1265,19 @@ next_action: Review the result.
     const { renderer } = createRenderer(messagesEl, 'claude', true);
     jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
 
-    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
-    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
-    const footerEl = contentEl.createDiv({ cls: 'claudian-response-footer' });
+    const contentEl = messagesEl.createDiv({ cls: 'specorator-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'specorator-text-block' });
+    const footerEl = contentEl.createDiv({ cls: 'specorator-response-footer' });
 
-    const replaced = renderer.finalizeStreamedAssistantText(contentEl, textEl, `<claudian_handoff>
+    const replaced = renderer.finalizeStreamedAssistantText(contentEl, textEl, `<specorator_handoff>
 summary: Finished the work.
 verification: npm run test passed.
 risks: No known risks.
 next_action: Review the result.
-</claudian_handoff>`);
+</specorator_handoff>`);
 
     expect(replaced).toBe(true);
-    const card = contentEl.querySelector('.claudian-work-order-handoff-card');
+    const card = contentEl.querySelector('.specorator-work-order-handoff-card');
     expect(card).not.toBeNull();
     const cardIndex = (contentEl.children as any[]).indexOf(card);
     const footerIndex = (contentEl.children as any[]).indexOf(footerEl);
@@ -1291,36 +1291,36 @@ next_action: Review the result.
     const { renderer } = createRenderer(messagesEl, 'claude', true);
     jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
 
-    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
-    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+    const contentEl = messagesEl.createDiv({ cls: 'specorator-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'specorator-text-block' });
 
-    const replaced = renderer.finalizeStreamedAssistantText(contentEl, textEl, `<claudian_handoff>
+    const replaced = renderer.finalizeStreamedAssistantText(contentEl, textEl, `<specorator_handoff>
 summary: Finished the work.
 verification: npm run test passed.
 risks: No known risks.
 next_action: Review the result.
-</claudian_handoff>`);
+</specorator_handoff>`);
 
     expect(replaced).toBe(true);
-    expect(contentEl.querySelector('.claudian-work-order-handoff-card')).not.toBeNull();
-    expect(messagesEl.textContent).not.toContain('<claudian_handoff>');
+    expect(contentEl.querySelector('.specorator-work-order-handoff-card')).not.toBeNull();
+    expect(messagesEl.textContent).not.toContain('<specorator_handoff>');
   });
 
   it('leaves a streamed text block untouched outside work-order tabs', () => {
     const messagesEl = createMockEl();
     const { renderer } = createRenderer(messagesEl, 'claude', false);
-    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
-    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+    const contentEl = messagesEl.createDiv({ cls: 'specorator-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'specorator-text-block' });
 
-    const replaced = renderer.finalizeStreamedAssistantText(contentEl, textEl, `<claudian_handoff>
+    const replaced = renderer.finalizeStreamedAssistantText(contentEl, textEl, `<specorator_handoff>
 summary: Finished the work.
 verification: npm run test passed.
 risks: No known risks.
 next_action: Review the result.
-</claudian_handoff>`);
+</specorator_handoff>`);
 
     expect(replaced).toBe(false);
-    expect(contentEl.querySelector('.claudian-work-order-handoff-card')).toBeNull();
+    expect(contentEl.querySelector('.specorator-work-order-handoff-card')).toBeNull();
   });
 
   it('keeps registered message actions reachable on a handoff-only card', () => {
@@ -1344,19 +1344,19 @@ next_action: Review the result.
     renderer.renderStoredMessage({
       id: 'a-handoff-actions',
       role: 'assistant',
-      content: `<claudian_handoff>
+      content: `<specorator_handoff>
 summary: Finished the work.
 verification: npm run test passed.
 risks: No known risks.
 next_action: Review the result.
-</claudian_handoff>`,
+</specorator_handoff>`,
       timestamp: Date.now(),
     });
 
-    const card = messagesEl.querySelector('.claudian-work-order-handoff-card');
+    const card = messagesEl.querySelector('.specorator-work-order-handoff-card');
     expect(card).not.toBeNull();
-    expect(card?.querySelector('.claudian-text-actions')).not.toBeNull();
-    expect(messagesEl.querySelector('.claudian-text-action-btn')).not.toBeNull();
+    expect(card?.querySelector('.specorator-text-actions')).not.toBeNull();
+    expect(messagesEl.querySelector('.specorator-text-action-btn')).not.toBeNull();
   });
 
   // ============================================
@@ -1368,34 +1368,34 @@ next_action: Review the result.
     const { renderer } = createRenderer(messagesEl, 'claude', true);
     jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
 
-    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
-    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+    const contentEl = messagesEl.createDiv({ cls: 'specorator-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'specorator-text-block' });
 
     const replaced = renderer.finalizeStreamedAssistantText(
       contentEl,
       textEl,
-      '<claudian_progress>\nstep: compiling\ndone: 3/10\n</claudian_progress>',
+      '<specorator_progress>\nstep: compiling\ndone: 3/10\n</specorator_progress>',
     );
 
     expect(replaced).toBe(true);
-    expect(contentEl.querySelector('.claudian-work-order-progress-card')).not.toBeNull();
-    expect(contentEl.querySelector('.claudian-text-block')).toBeNull();
+    expect(contentEl.querySelector('.specorator-work-order-progress-card')).not.toBeNull();
+    expect(contentEl.querySelector('.specorator-text-block')).toBeNull();
   });
 
   it('leaves a streamed progress text block untouched outside work-order tabs', () => {
     const messagesEl = createMockEl();
     const { renderer } = createRenderer(messagesEl, 'claude', false);
-    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
-    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+    const contentEl = messagesEl.createDiv({ cls: 'specorator-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'specorator-text-block' });
 
     const replaced = renderer.finalizeStreamedAssistantText(
       contentEl,
       textEl,
-      '<claudian_progress>\nstep: compiling\ndone: 3/10\n</claudian_progress>',
+      '<specorator_progress>\nstep: compiling\ndone: 3/10\n</specorator_progress>',
     );
 
     expect(replaced).toBe(false);
-    expect(contentEl.querySelector('.claudian-work-order-progress-card')).toBeNull();
+    expect(contentEl.querySelector('.specorator-work-order-progress-card')).toBeNull();
   });
 
   it('keeps registered message actions reachable on a progress-only card', () => {
@@ -1419,14 +1419,14 @@ next_action: Review the result.
     renderer.renderStoredMessage({
       id: 'a-progress-actions',
       role: 'assistant',
-      content: '<claudian_progress>\nstep: compiling\ndone: 3/10\n</claudian_progress>',
+      content: '<specorator_progress>\nstep: compiling\ndone: 3/10\n</specorator_progress>',
       timestamp: Date.now(),
     });
 
-    const card = messagesEl.querySelector('.claudian-work-order-progress-card');
+    const card = messagesEl.querySelector('.specorator-work-order-progress-card');
     expect(card).not.toBeNull();
-    expect(card?.querySelector('.claudian-text-actions')).not.toBeNull();
-    expect(messagesEl.querySelector('.claudian-text-action-btn')).not.toBeNull();
+    expect(card?.querySelector('.specorator-text-actions')).not.toBeNull();
+    expect(messagesEl.querySelector('.specorator-text-action-btn')).not.toBeNull();
   });
 
   // ============================================
@@ -1438,34 +1438,34 @@ next_action: Review the result.
     const { renderer } = createRenderer(messagesEl, 'claude', true);
     jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
 
-    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
-    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+    const contentEl = messagesEl.createDiv({ cls: 'specorator-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'specorator-text-block' });
 
     const replaced = renderer.finalizeStreamedAssistantText(
       contentEl,
       textEl,
-      '<claudian_needs_input>\nquestion: Continue?\n</claudian_needs_input>',
+      '<specorator_needs_input>\nquestion: Continue?\n</specorator_needs_input>',
     );
 
     expect(replaced).toBe(true);
-    expect(contentEl.querySelector('.claudian-work-order-needs-input-card')).not.toBeNull();
-    expect(contentEl.querySelector('.claudian-text-block')).toBeNull();
+    expect(contentEl.querySelector('.specorator-work-order-needs-input-card')).not.toBeNull();
+    expect(contentEl.querySelector('.specorator-text-block')).toBeNull();
   });
 
   it('leaves a streamed needs_input text block untouched outside work-order tabs', () => {
     const messagesEl = createMockEl();
     const { renderer } = createRenderer(messagesEl, 'claude', false);
-    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
-    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+    const contentEl = messagesEl.createDiv({ cls: 'specorator-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'specorator-text-block' });
 
     const replaced = renderer.finalizeStreamedAssistantText(
       contentEl,
       textEl,
-      '<claudian_needs_input>\nquestion: Continue?\n</claudian_needs_input>',
+      '<specorator_needs_input>\nquestion: Continue?\n</specorator_needs_input>',
     );
 
     expect(replaced).toBe(false);
-    expect(contentEl.querySelector('.claudian-work-order-needs-input-card')).toBeNull();
+    expect(contentEl.querySelector('.specorator-work-order-needs-input-card')).toBeNull();
   });
 
   // ============================================
@@ -1477,34 +1477,34 @@ next_action: Review the result.
     const { renderer } = createRenderer(messagesEl, 'claude', true);
     jest.spyOn(renderer, 'renderContent').mockResolvedValue(undefined);
 
-    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
-    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+    const contentEl = messagesEl.createDiv({ cls: 'specorator-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'specorator-text-block' });
 
     const replaced = renderer.finalizeStreamedAssistantText(
       contentEl,
       textEl,
-      '<claudian_needs_approval>\naction: deploy\nreversible: true\n</claudian_needs_approval>',
+      '<specorator_needs_approval>\naction: deploy\nreversible: true\n</specorator_needs_approval>',
     );
 
     expect(replaced).toBe(true);
-    expect(contentEl.querySelector('.claudian-work-order-needs-approval-card')).not.toBeNull();
-    expect(contentEl.querySelector('.claudian-text-block')).toBeNull();
+    expect(contentEl.querySelector('.specorator-work-order-needs-approval-card')).not.toBeNull();
+    expect(contentEl.querySelector('.specorator-text-block')).toBeNull();
   });
 
   it('leaves a streamed needs_approval text block untouched outside work-order tabs', () => {
     const messagesEl = createMockEl();
     const { renderer } = createRenderer(messagesEl, 'claude', false);
-    const contentEl = messagesEl.createDiv({ cls: 'claudian-message-content' });
-    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+    const contentEl = messagesEl.createDiv({ cls: 'specorator-message-content' });
+    const textEl = contentEl.createDiv({ cls: 'specorator-text-block' });
 
     const replaced = renderer.finalizeStreamedAssistantText(
       contentEl,
       textEl,
-      '<claudian_needs_approval>\naction: deploy\nreversible: true\n</claudian_needs_approval>',
+      '<specorator_needs_approval>\naction: deploy\nreversible: true\n</specorator_needs_approval>',
     );
 
     expect(replaced).toBe(false);
-    expect(contentEl.querySelector('.claudian-work-order-needs-approval-card')).toBeNull();
+    expect(contentEl.querySelector('.specorator-work-order-needs-approval-card')).toBeNull();
   });
 
   // ============================================
@@ -1519,7 +1519,7 @@ next_action: Review the result.
 
     expect(textEl.children.length).toBe(1);
     const copyBtn = textEl.children[0];
-    expect(copyBtn.hasClass('claudian-text-copy-btn')).toBe(true);
+    expect(copyBtn.hasClass('specorator-text-copy-btn')).toBe(true);
   });
 
   // ============================================
@@ -1535,7 +1535,7 @@ next_action: Review the result.
       const msg: ChatMessage = { id: 'u1', role: 'user', content: 'hello', timestamp: Date.now() };
       renderer.renderStoredMessage(msg);
 
-      expect(messagesEl.querySelector('.claudian-user-msg-action-btn')).toBeNull();
+      expect(messagesEl.querySelector('.specorator-user-msg-action-btn')).toBeNull();
     });
 
     it('renders a button per eligible action and runs it on click', () => {
@@ -1552,7 +1552,7 @@ next_action: Review the result.
       const msg: ChatMessage = { id: 'u1', role: 'user', content: 'hello', timestamp: Date.now() };
       renderer.renderStoredMessage(msg);
 
-      const btn = messagesEl.querySelector('.claudian-user-msg-action-btn');
+      const btn = messagesEl.querySelector('.specorator-user-msg-action-btn');
       expect(btn).not.toBeNull();
 
       btn!.click();
@@ -1578,12 +1578,12 @@ next_action: Review the result.
 
       // The action lands inside the same text block as the copy button (beside it),
       // not in the message-level user toolbar.
-      const textBlock = messagesEl.querySelector('.claudian-text-block');
+      const textBlock = messagesEl.querySelector('.specorator-text-block');
       expect(textBlock).not.toBeNull();
-      expect(textBlock!.querySelector('.claudian-text-copy-btn')).not.toBeNull();
-      const btn = textBlock!.querySelector('.claudian-text-action-btn');
+      expect(textBlock!.querySelector('.specorator-text-copy-btn')).not.toBeNull();
+      const btn = textBlock!.querySelector('.specorator-text-action-btn');
       expect(btn).not.toBeNull();
-      expect(messagesEl.querySelector('.claudian-user-msg-actions')).toBeNull();
+      expect(messagesEl.querySelector('.specorator-user-msg-actions')).toBeNull();
 
       btn!.click();
       expect(run).toHaveBeenCalledWith(msg, null);
@@ -1608,8 +1608,8 @@ next_action: Review the result.
       };
       renderer.renderStoredMessage(msg);
 
-      expect(messagesEl.querySelector('.claudian-text-actions')).toBeNull();
-      expect(messagesEl.querySelector('.claudian-text-action-btn')).toBeNull();
+      expect(messagesEl.querySelector('.specorator-text-actions')).toBeNull();
+      expect(messagesEl.querySelector('.specorator-text-action-btn')).toBeNull();
     });
 
     it('refreshMessageActions adds the action button beside the copy button on a streamed agent message', () => {
@@ -1628,16 +1628,16 @@ next_action: Review the result.
       };
       // Simulate the streamed message DOM: a text block with its copy button already in place.
       const msgEl = createMockEl();
-      const contentEl = msgEl.createDiv({ cls: 'claudian-message-content' });
-      const textBlock = contentEl.createDiv({ cls: 'claudian-text-block' });
+      const contentEl = msgEl.createDiv({ cls: 'specorator-message-content' });
+      const textBlock = contentEl.createDiv({ cls: 'specorator-text-block' });
       renderer.addTextCopyButton(textBlock as any, 'Streamed response.');
       // getMessageEl resolves via data-message-id in real DOM; the mock only matches classes.
       jest.spyOn(renderer, 'getMessageEl').mockReturnValue(msgEl as any);
 
       renderer.refreshMessageActions(msg);
 
-      expect(textBlock.querySelector('.claudian-text-copy-btn')).not.toBeNull();
-      const btn = textBlock.querySelector('.claudian-text-action-btn');
+      expect(textBlock.querySelector('.specorator-text-copy-btn')).not.toBeNull();
+      const btn = textBlock.querySelector('.specorator-text-action-btn');
       expect(btn).not.toBeNull();
       btn!.click();
       expect(run).toHaveBeenCalledWith(msg, null);
@@ -1780,7 +1780,7 @@ next_action: Review the result.
       renderer.addTextCopyButton(textEl, 'markdown content');
 
       const copyBtn = textEl.children[0];
-      expect(copyBtn.hasClass('claudian-text-copy-btn')).toBe(true);
+      expect(copyBtn.hasClass('specorator-text-copy-btn')).toBe(true);
 
       // Simulate click
       const clickHandlers = copyBtn._eventListeners.get('click');
@@ -1835,7 +1835,7 @@ next_action: Review the result.
     const welcomeEl = renderer.renderMessages(messages, () => 'Good morning!');
 
     expect(welcomeEl).toBeDefined();
-    expect(welcomeEl!.hasClass('claudian-welcome')).toBe(true);
+    expect(welcomeEl!.hasClass('specorator-welcome')).toBe(true);
   });
 
   it('renderMessages should hide welcome when messages exist', () => {
@@ -1861,7 +1861,7 @@ next_action: Review the result.
     const welcomeEl = renderer.renderMessages([], () => 'Welcome');
 
     expect(welcomeEl).toBeDefined();
-    expect(welcomeEl!.hasClass('claudian-welcome')).toBe(true);
+    expect(welcomeEl!.hasClass('specorator-welcome')).toBe(true);
   });
 
   // ============================================
@@ -2080,10 +2080,10 @@ next_action: Review the result.
         renderer.showFullImage(image);
 
         // The overlay has a modal child, which has a close button child
-        const modalEl = overlayEl.children[0]; // claudian-image-modal
+        const modalEl = overlayEl.children[0]; // specorator-image-modal
         // Children: img (index 0), closeBtn (index 1)
         const closeBtn = modalEl.children[1];
-        expect(closeBtn.hasClass('claudian-image-modal-close')).toBe(true);
+        expect(closeBtn.hasClass('specorator-image-modal-close')).toBe(true);
 
         const removeSpy = jest.spyOn(overlayEl, 'remove');
         closeBtn.click();
@@ -2155,7 +2155,7 @@ next_action: Review the result.
       await renderer.renderContent(el, '**broken markdown**');
 
       const errorDiv = el.children.find(
-        (c: any) => c.hasClass('claudian-render-error')
+        (c: any) => c.hasClass('specorator-render-error')
       );
       expect(errorDiv).toBeDefined();
       expect(errorDiv!.textContent).toBe('Failed to render message content.');
@@ -2284,7 +2284,7 @@ next_action: Review the result.
 
       await renderer.renderContent(el, '```js\nconsole.log("hello")\n```');
 
-      // The pre should be wrapped in a claudian-code-wrapper
+      // The pre should be wrapped in a specorator-code-wrapper
       // Due to mock limitations, check that querySelectorAll was called on el
       // The actual wrapping logic runs on real DOM, but the mock captures calls
       expect(MarkdownRenderer.renderMarkdown).toHaveBeenCalled();
@@ -2298,7 +2298,7 @@ next_action: Review the result.
       // Mock renderMarkdown to create an already-wrapped pre element
       (MarkdownRenderer.renderMarkdown as jest.Mock).mockImplementationOnce(
         async (_md: string, container: any) => {
-          const wrapper = container.createDiv({ cls: 'claudian-code-wrapper' });
+          const wrapper = container.createDiv({ cls: 'specorator-code-wrapper' });
           wrapper.createEl('pre');
         }
       );
@@ -2525,9 +2525,9 @@ next_action: Review the result.
         timestamp: Date.now(),
       });
 
-      const cards = messagesEl.querySelectorAll('.claudian-context-card');
+      const cards = messagesEl.querySelectorAll('.specorator-context-card');
       expect(cards).toHaveLength(1);
-      expect(messagesEl.querySelectorAll('.claudian-context-card-row')).toHaveLength(2);
+      expect(messagesEl.querySelectorAll('.specorator-context-card-row')).toHaveLength(2);
     });
 
     it('renders no card when no @mentions resolve to vault entries', () => {
@@ -2540,7 +2540,7 @@ next_action: Review the result.
         timestamp: Date.now(),
       });
 
-      expect(messagesEl.querySelectorAll('.claudian-context-card')).toHaveLength(0);
+      expect(messagesEl.querySelectorAll('.specorator-context-card')).toHaveLength(0);
     });
 
     it('renders context card with two rows via the stored render path', () => {
@@ -2556,9 +2556,9 @@ next_action: Review the result.
 
       renderer.renderStoredMessage(msg);
 
-      const cards = messagesEl.querySelectorAll('.claudian-context-card');
+      const cards = messagesEl.querySelectorAll('.specorator-context-card');
       expect(cards).toHaveLength(1);
-      expect(messagesEl.querySelectorAll('.claudian-context-card-row')).toHaveLength(2);
+      expect(messagesEl.querySelectorAll('.specorator-context-card-row')).toHaveLength(2);
     });
 
     it('derives the context card from content even when displayContent is clean prose', () => {
@@ -2572,9 +2572,9 @@ next_action: Review the result.
         timestamp: Date.now(),
       });
 
-      expect(messagesEl.querySelectorAll('.claudian-context-card')).toHaveLength(1);
-      expect(messagesEl.querySelectorAll('.claudian-context-card-row')).toHaveLength(2);
-      const text = messagesEl.querySelector('.claudian-text-block')?.textContent ?? '';
+      expect(messagesEl.querySelectorAll('.specorator-context-card')).toHaveLength(1);
+      expect(messagesEl.querySelectorAll('.specorator-context-card-row')).toHaveLength(2);
+      const text = messagesEl.querySelector('.specorator-text-block')?.textContent ?? '';
       expect(text).not.toContain('@notes.md');
     });
 
@@ -2598,7 +2598,7 @@ next_action: Review the result.
       // Second update must not duplicate the card
       renderer.updateLiveUserMessage(msg);
 
-      expect(messagesEl.querySelectorAll('.claudian-context-card')).toHaveLength(1);
+      expect(messagesEl.querySelectorAll('.specorator-context-card')).toHaveLength(1);
     });
   });
 
@@ -2659,11 +2659,11 @@ next_action: Review the result.
       renderer.renderMessageImages(messagesEl, [img]);
 
       // No <img> child — fallback chip element present instead.
-      const imagesContainer = messagesEl.querySelector('.claudian-message-images');
+      const imagesContainer = messagesEl.querySelector('.specorator-message-images');
       expect(imagesContainer).not.toBeNull();
       const imgChildren = imagesContainer?.querySelectorAll?.('img') ?? [];
       expect(imgChildren.length).toBe(0);
-      const fallback = imagesContainer?.querySelector('.claudian-message-image-fallback');
+      const fallback = imagesContainer?.querySelector('.specorator-message-image-fallback');
       expect(fallback).not.toBeNull();
     });
 

@@ -17,8 +17,8 @@ export function createSettingsActionButton(
 ): HTMLButtonElement {
   const btn = parentEl.createEl('button', {
     cls: options.danger
-      ? 'claudian-settings-action-btn claudian-settings-delete-btn'
-      : 'claudian-settings-action-btn',
+      ? 'specorator-settings-action-btn specorator-settings-delete-btn'
+      : 'specorator-settings-action-btn',
     attr: { 'aria-label': options.ariaLabel },
   });
   setIcon(btn, options.icon);
@@ -41,19 +41,19 @@ export function renderSettingsListItem(
   listEl: HTMLElement,
   options: SettingsListItemOptions,
 ): { headerRow: HTMLElement } {
-  const itemEl = listEl.createDiv({ cls: 'claudian-sp-item' });
-  const infoEl = itemEl.createDiv({ cls: 'claudian-sp-info' });
+  const itemEl = listEl.createDiv({ cls: 'specorator-sp-item' });
+  const infoEl = itemEl.createDiv({ cls: 'specorator-sp-info' });
 
-  const headerRow = infoEl.createDiv({ cls: 'claudian-sp-item-header' });
-  const nameEl = headerRow.createSpan({ cls: 'claudian-sp-item-name' });
+  const headerRow = infoEl.createDiv({ cls: 'specorator-sp-item-header' });
+  const nameEl = headerRow.createSpan({ cls: 'specorator-sp-item-name' });
   nameEl.setText(options.name);
 
   if (options.description) {
-    const descEl = infoEl.createDiv({ cls: 'claudian-sp-item-desc' });
+    const descEl = infoEl.createDiv({ cls: 'specorator-sp-item-desc' });
     descEl.setText(options.description);
   }
 
-  const actionsEl = itemEl.createDiv({ cls: 'claudian-sp-item-actions' });
+  const actionsEl = itemEl.createDiv({ cls: 'specorator-sp-item-actions' });
   for (const action of options.actions) {
     createSettingsActionButton(actionsEl, action);
   }
@@ -78,14 +78,14 @@ export function renderSettingsListHeader(
   containerEl: HTMLElement,
   options: SettingsListHeaderOptions,
 ): void {
-  const headerEl = containerEl.createDiv({ cls: 'claudian-sp-header' });
-  headerEl.createSpan({ text: options.label, cls: 'claudian-sp-label' });
+  const headerEl = containerEl.createDiv({ cls: 'specorator-sp-header' });
+  headerEl.createSpan({ text: options.label, cls: 'specorator-sp-label' });
 
-  const actionsEl = headerEl.createDiv({ cls: 'claudian-sp-header-actions' });
+  const actionsEl = headerEl.createDiv({ cls: 'specorator-sp-header-actions' });
 
   if (options.onRefresh) {
     const refreshBtn = actionsEl.createEl('button', {
-      cls: 'claudian-settings-action-btn',
+      cls: 'specorator-settings-action-btn',
       attr: { 'aria-label': 'Refresh' },
     });
     setIcon(refreshBtn, 'refresh-cw');
@@ -93,7 +93,7 @@ export function renderSettingsListHeader(
   }
 
   const addBtn = actionsEl.createEl('button', {
-    cls: 'claudian-settings-action-btn',
+    cls: 'specorator-settings-action-btn',
     attr: { 'aria-label': 'Add' },
   });
   setIcon(addBtn, 'plus');
@@ -117,13 +117,13 @@ export function renderModalButtonRow(
 
   const cancelBtn = buttonContainer.createEl('button', {
     text: 'Cancel',
-    cls: 'claudian-cancel-btn',
+    cls: 'specorator-cancel-btn',
   });
   cancelBtn.addEventListener('click', options.onCancel);
 
   const saveBtn = buttonContainer.createEl('button', {
     text: options.saveText,
-    cls: options.saveCls ?? 'claudian-save-btn',
+    cls: options.saveCls ?? 'specorator-save-btn',
   });
   saveBtn.addEventListener('click', options.onSave);
 }
@@ -170,11 +170,11 @@ interface RenderSettingsListBodyOptions<T> {
 /** Empty-state hint + list container + per-item loop shared by provider settings. */
 export function renderSettingsListBody<T>(options: RenderSettingsListBodyOptions<T>): void {
   if (options.emptyText !== null) {
-    const emptyEl = options.containerEl.createDiv({ cls: 'claudian-sp-empty-state' });
+    const emptyEl = options.containerEl.createDiv({ cls: 'specorator-sp-empty-state' });
     emptyEl.setText(options.emptyText);
   }
   if (options.returnEarlyIfEmpty && options.items.length === 0) return;
-  const listEl = options.containerEl.createDiv({ cls: 'claudian-sp-list' });
+  const listEl = options.containerEl.createDiv({ cls: 'specorator-sp-list' });
   for (const item of options.items) {
     options.renderItem(listEl, item);
   }

@@ -1,7 +1,7 @@
 import * as path from 'path';
 
 import type { PluginContext } from '@/core/types/PluginContext';
-import type { ClaudianSettings } from '@/core/types/settings';
+import type { SpecoratorSettings } from '@/core/types/settings';
 import {
   setClaudeVaultTrusted,
 } from '@/providers/claude/runtime/claudeProjectTrust';
@@ -74,7 +74,7 @@ function createMockPluginManager() {
 }
 
 // Create a mock settings object
-function createMockSettings(overrides: Partial<ClaudianSettings> = {}): ClaudianSettings {
+function createMockSettings(overrides: Partial<SpecoratorSettings> = {}): SpecoratorSettings {
   return {
     permissions: [],
     permissionMode: 'yolo',
@@ -97,7 +97,7 @@ function createMockSettings(overrides: Partial<ClaudianSettings> = {}): Claudian
     claudeCliPath: '',
     enableChrome: false,
     ...overrides,
-  } as ClaudianSettings;
+  } as SpecoratorSettings;
 }
 
 function createMockPersistentQueryConfig(
@@ -746,31 +746,31 @@ describe('QueryOptionsBuilder', () => {
       expect(options.mcpServers?.['test-server']).toBeDefined();
     });
 
-    it('merges the in-process claudian tool server when getClaudianToolServer returns one', () => {
-      const claudianServer = { type: 'sdk', name: 'claudian' };
+    it('merges the in-process specorator tool server when getSpecoratorToolServer returns one', () => {
+      const specoratorServer = { type: 'sdk', name: 'specorator' };
       const ctx = {
         ...createMockContext(),
         abortController: new AbortController(),
         hooks: {},
-        getClaudianToolServer: () => claudianServer,
+        getSpecoratorToolServer: () => specoratorServer,
         hasEditorContext: false,
       };
       const options = QueryOptionsBuilder.buildColdStartQueryOptions(ctx);
 
-      expect(options.mcpServers?.['claudian']).toBe(claudianServer);
+      expect(options.mcpServers?.['specorator']).toBe(specoratorServer);
     });
 
-    it('omits the claudian server when getClaudianToolServer returns nothing', () => {
+    it('omits the specorator server when getSpecoratorToolServer returns nothing', () => {
       const ctx = {
         ...createMockContext(),
         abortController: new AbortController(),
         hooks: {},
-        getClaudianToolServer: () => undefined,
+        getSpecoratorToolServer: () => undefined,
         hasEditorContext: false,
       };
       const options = QueryOptionsBuilder.buildColdStartQueryOptions(ctx);
 
-      expect(options.mcpServers?.['claudian']).toBeUndefined();
+      expect(options.mcpServers?.['specorator']).toBeUndefined();
     });
 
     it('uses model override when provided', () => {
@@ -967,7 +967,7 @@ describe('QueryOptionsBuilder', () => {
       const ctx = createMockContext({
         settings: createMockSettings({
           trustedVaults: { '/test/vault': true },
-        } as Partial<ClaudianSettings>),
+        } as Partial<SpecoratorSettings>),
       });
       const config = QueryOptionsBuilder.buildPersistentQueryConfig(ctx);
       expect(config.settingSources).toBe('project,local');

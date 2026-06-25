@@ -2,7 +2,7 @@ import { TaskIndexer } from '../../../../../src/features/tasks/indexing/TaskInde
 import { TaskNoteStore } from '../../../../../src/features/tasks/storage/TaskNoteStore';
 
 const VALID = `---
-type: claudian-work-order
+type: specorator-work-order
 schema_version: 1
 id: task-valid
 title: Valid order

@@ -1,5 +1,5 @@
 /**
- * Claudian - Session Utilities
+ * Specorator - Session Utilities
  *
  * Session recovery and history reconstruction.
  */

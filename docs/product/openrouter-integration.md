@@ -9,7 +9,7 @@ scope: feature spec
 
 ## Overview
 
-OpenRouter is an opt-in provider gateway that routes LLM prompts through a unified API for cost optimization and model availability. Users can integrate OpenRouter as an alternative provider in Claudian to manage costs and access a broader model catalog without maintaining multiple provider API keys.
+OpenRouter is an opt-in provider gateway that routes LLM prompts through a unified API for cost optimization and model availability. Users can integrate OpenRouter as an alternative provider in Specorator to manage costs and access a broader model catalog without maintaining multiple provider API keys.
 
 ## Problem Statement
 
@@ -92,7 +92,7 @@ Users currently manage multiple LLM provider API keys and have limited visibilit
 - **Tool execution requirement (MVP gate)**: Agent Board work orders must perform file edits and checklist updates as required by the work-order prompt. For MVP, OpenRouter integration requires integration with a local agent runtime that executes tools (e.g., Claude Agent SDK). Read-only inference-only work orders are explicitly out of MVP scope.
 
 ### Auto Router Session Pinning
-- For Auto mode, derive a stable `session_id` from the Claudian conversation ID or Agent Board run ID
+- For Auto mode, derive a stable `session_id` from the Specorator conversation ID or Agent Board run ID
 - Send this `session_id` with each request to OpenRouter's Auto Router
 - **Session expiry handling**: OpenRouter's Auto Router session stickiness expires after 5 minutes of inactivity. For conversations/runs paused/resumed beyond this window:
   - Persist the actual `model` name returned in the first Auto Router response (not just the session_id)
@@ -156,7 +156,7 @@ Users currently manage multiple LLM provider API keys and have limited visibilit
 
 ## Related Documents
 
-- Claudian Architecture: `CLAUDE.md` (provider boundaries and architecture)
+- Specorator Architecture: `CLAUDE.md` (provider boundaries and architecture)
 - Claude Provider Reference: `src/providers/claude/CLAUDE.md`
 - Codex Provider Reference: `src/providers/codex/CLAUDE.md`
 - Chat Feature: `src/features/chat/CLAUDE.md`

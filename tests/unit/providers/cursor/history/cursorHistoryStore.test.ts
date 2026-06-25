@@ -17,7 +17,7 @@ import {
 
 describe('cursorHistoryStore', () => {
   it('legacy hash matches raw md5 of workspace path (pre-normalization Cursor CLI behavior)', () => {
-    const vaultPath = '/tmp/claudian-test-vault-path';
+    const vaultPath = '/tmp/specorator-test-vault-path';
     expect(cursorWorkspaceHashLegacy(vaultPath)).toBe(
       crypto.createHash('md5').update(vaultPath).digest('hex'),
     );
@@ -157,8 +157,8 @@ describe('cursorWorkspaceHash (normalized)', () => {
 
   it('produces the same hash for differently-cased Windows paths', () => {
     setPlatform('win32');
-    expect(cursorWorkspaceHash('D:\\Projects\\Claudian'))
-      .toBe(cursorWorkspaceHash('d:\\projects\\claudian'));
+    expect(cursorWorkspaceHash('D:\\Projects\\Specorator'))
+      .toBe(cursorWorkspaceHash('d:\\projects\\specorator'));
   });
 
   it('keeps POSIX paths case-sensitive', () => {
@@ -238,7 +238,7 @@ describe('classifyCursorSqliteOpenError', () => {
 });
 
 describe('resolveCursorStoreDbPath two-hash fallback', () => {
-  const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'claudian-test-home-'));
+  const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'specorator-test-home-'));
   let homedirSpy: jest.SpyInstance;
   beforeAll(() => { homedirSpy = jest.spyOn(os, 'homedir').mockReturnValue(tmpHome); });
   afterAll(() => {
@@ -247,7 +247,7 @@ describe('resolveCursorStoreDbPath two-hash fallback', () => {
   });
 
   it('falls back to the legacy hash when the normalized hash has no store', () => {
-    const vault = 'D:\\Projects\\Claudian';
+    const vault = 'D:\\Projects\\Specorator';
     const legacy = cursorWorkspaceHashLegacy(vault);
     const legacyDir = path.join(tmpHome, '.cursor', 'chats', legacy, 'sess-123');
     fs.mkdirSync(legacyDir, { recursive: true });

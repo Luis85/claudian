@@ -51,7 +51,7 @@ describe('Opencode tab registry fields', () => {
     } as any;
     updateOpencodeProviderSettings(settings, {
       availableModes: [
-        { id: 'claudian-yolo', name: 'yolo', description: 'Default agent.' },
+        { id: 'specorator-yolo', name: 'yolo', description: 'Default agent.' },
         { id: 'plan', name: 'plan', description: 'Plan mode.' },
       ],
     });
@@ -63,7 +63,7 @@ describe('Opencode tab registry fields', () => {
       throw new Error('selectedMode type must be dropdown');
     }
     expect(type.options(settings)).toEqual([
-      { value: 'claudian-yolo', label: 'yolo' },
+      { value: 'specorator-yolo', label: 'yolo' },
       { value: 'plan', label: 'plan' },
     ]);
   });

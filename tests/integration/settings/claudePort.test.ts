@@ -193,33 +193,33 @@ describe('claude tab registry port', () => {
 
     // CLI path: same validation element + seeded text input the legacy tab has.
     const cliRow = fieldRow(host, 'providerConfigs.claude.cliPathsByHost');
-    expect(cliRow?.querySelector('.claudian-cli-path-validation')).not.toBeNull();
+    expect(cliRow?.querySelector('.specorator-cli-path-validation')).not.toBeNull();
     expect(componentFor(host, 'providerConfigs.claude.cliPathsByHost', 'text')).toBeDefined();
 
     // Slash commands / subagents / MCP / plugins: the same containers the
     // legacy tab renders, populated by the same component classes.
     const slashRow = fieldRow(host, 'claude.slashCommands');
-    const slashContainer = slashRow?.querySelector('.claudian-slash-commands-container');
+    const slashContainer = slashRow?.querySelector('.specorator-slash-commands-container');
     expect(slashContainer).not.toBeNull();
     expect(slashContainer?.childElementCount ?? 0).toBeGreaterThan(0);
 
     const agentsRow = fieldRow(host, 'claude.subagents');
-    expect(agentsRow?.querySelector('.claudian-agents-container .claudian-sp-header')).not.toBeNull();
+    expect(agentsRow?.querySelector('.specorator-agents-container .specorator-sp-header')).not.toBeNull();
 
     const mcpRow = fieldRow(host, 'claude.mcpServers');
-    const mcpContainer = mcpRow?.querySelector('.claudian-mcp-container');
+    const mcpContainer = mcpRow?.querySelector('.specorator-mcp-container');
     expect(mcpContainer).not.toBeNull();
     expect(mcpContainer?.childElementCount ?? 0).toBeGreaterThan(0);
 
     const pluginsRow = fieldRow(host, 'claude.plugins');
-    const pluginsContainer = pluginsRow?.querySelector('.claudian-plugins-container');
+    const pluginsContainer = pluginsRow?.querySelector('.specorator-plugins-container');
     expect(pluginsContainer).not.toBeNull();
     expect(pluginsContainer?.childElementCount ?? 0).toBeGreaterThan(0);
 
     // Environment: shared snippet manager + keychain-backed secret editor.
     const envRow = fieldRow(host, 'providerConfigs.claude.environmentVariables');
-    expect(envRow?.querySelector('.claudian-env-snippets-container')).not.toBeNull();
-    expect(envRow?.querySelector('.claudian-secret-env-vars')).not.toBeNull();
+    expect(envRow?.querySelector('.specorator-env-snippets-container')).not.toBeNull();
+    expect(envRow?.querySelector('.specorator-secret-env-vars')).not.toBeNull();
 
     // Hidden commands textarea is seeded from the persisted list.
     const hidden = componentFor(host, 'hiddenProviderCommands.claude', 'textarea');
@@ -227,7 +227,7 @@ describe('claude tab registry port', () => {
 
     // Bang-bash keeps its validation element.
     const bangRow = fieldRow(host, 'providerConfigs.claude.enableBangBash');
-    expect(bangRow?.querySelector('.claudian-bang-bash-validation')).not.toBeNull();
+    expect(bangRow?.querySelector('.specorator-bang-bash-validation')).not.toBeNull();
   });
 
   it('round-trips a native toggle through SettingsCtx onto the persisted path', async () => {

@@ -2,7 +2,7 @@ import { Notice } from 'obsidian';
 
 import type { ChatMessage } from '../../core/types';
 import { t } from '../../i18n/i18n';
-import type ClaudianPlugin from '../../main';
+import type SpecoratorPlugin from '../../main';
 import { chatMessageText } from '../../utils/chatMessageText';
 import { QuickActionEditorModal } from './ui/QuickActionEditorModal';
 
@@ -62,7 +62,7 @@ export function deriveSeedName(text: string, maxLen = 50): string {
  * per click.
  */
 export function openCaptureFromMessage(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   message: ChatMessage,
 ): void {
   const folder = plugin.settings.quickActionsFolder?.trim() ?? '';

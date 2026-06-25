@@ -1,6 +1,6 @@
 import { Notice } from 'obsidian';
 
-import type { ClaudianEventMap } from '../../../app/events/claudianEvents';
+import type { SpecoratorEventMap } from '../../../app/events/specoratorEvents';
 import type { EventBus } from '../../../core/events/EventBus';
 import type { HistoryLoadErrorCode } from '../../../core/providers/types';
 
@@ -25,7 +25,7 @@ export type HydrationBannerRenderer = (
  * Returns the bus disposer so the caller can tie cleanup to its own lifecycle.
  */
 export function registerHydrationFailedSubscriber(
-  events: EventBus<ClaudianEventMap>,
+  events: EventBus<SpecoratorEventMap>,
   renderBanner: HydrationBannerRenderer,
 ): () => void {
   return events.on('conversation:hydration-failed', (payload) => {

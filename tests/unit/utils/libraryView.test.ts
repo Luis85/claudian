@@ -85,11 +85,11 @@ describe('DOM helpers', () => {
     const renderNav = jest.fn((c: HTMLElement) => c.createDiv({ cls: 'nav-marker' }));
     const { actions, list } = renderLibraryShell(root, 'Tools', renderNav);
 
-    expect(root.querySelector('.claudian-library-header h2')?.textContent).toBe('Tools');
+    expect(root.querySelector('.specorator-library-header h2')?.textContent).toBe('Tools');
     expect(renderNav).toHaveBeenCalledWith(root);
     expect(root.querySelector('.nav-marker')).not.toBeNull();
-    expect(actions.classList.contains('claudian-library-header-actions')).toBe(true);
-    expect(list.classList.contains('claudian-library-list')).toBe(true);
+    expect(actions.classList.contains('specorator-library-header-actions')).toBe(true);
+    expect(list.classList.contains('specorator-library-list')).toBe(true);
   });
 
   it('renderLibraryEmptyState renders the message and a working CTA', () => {
@@ -97,9 +97,9 @@ describe('DOM helpers', () => {
     const onAction = jest.fn();
     renderLibraryEmptyState(root, { icon: 'wrench', message: 'Nothing here', actionLabel: 'New tool', onAction });
 
-    expect(root.querySelector('.claudian-library-empty-icon')).not.toBeNull();
-    expect(root.querySelector('.claudian-library-empty-text')?.textContent).toBe('Nothing here');
-    const btn = root.querySelector<HTMLButtonElement>('.claudian-library-empty-action');
+    expect(root.querySelector('.specorator-library-empty-icon')).not.toBeNull();
+    expect(root.querySelector('.specorator-library-empty-text')?.textContent).toBe('Nothing here');
+    const btn = root.querySelector<HTMLButtonElement>('.specorator-library-empty-action');
     expect(btn?.textContent).toBe('New tool');
     btn?.click();
     expect(onAction).toHaveBeenCalledTimes(1);
@@ -108,20 +108,20 @@ describe('DOM helpers', () => {
   it('renderLibraryEmptyState omits the CTA when no action is given', () => {
     const root = container();
     renderLibraryEmptyState(root, { icon: 'book-open', message: 'Empty' });
-    expect(root.querySelector('.claudian-library-empty-action')).toBeNull();
+    expect(root.querySelector('.specorator-library-empty-action')).toBeNull();
   });
 
   it('createLibraryCard exposes card, name row, body and actions', () => {
     const root = container();
     const { card, nameRow, body, actions, nameButton } = createLibraryCard(root, 'my-tool');
-    expect(card.classList.contains('claudian-library-card')).toBe(true);
+    expect(card.classList.contains('specorator-library-card')).toBe(true);
     expect(nameRow.textContent).toBe('my-tool');
     // Default name is a plain span — no focusable button.
     expect(nameRow.querySelector('button')).toBeNull();
     expect(nameButton).toBeUndefined();
-    expect(body.classList.contains('claudian-library-card-body')).toBe(true);
-    expect(actions.classList.contains('claudian-library-card-actions')).toBe(true);
-    expect(root.querySelector('.claudian-library-card-leading')).toBeNull();
+    expect(body.classList.contains('specorator-library-card-body')).toBe(true);
+    expect(actions.classList.contains('specorator-library-card-actions')).toBe(true);
+    expect(root.querySelector('.specorator-library-card-leading')).toBeNull();
   });
 
   it('createLibraryCard renders a leading slot and a focusable name button when asked', () => {
@@ -129,7 +129,7 @@ describe('DOM helpers', () => {
     const seedLeading = jest.fn((slot: HTMLElement) => slot.createDiv({ cls: 'avatar-marker' }));
     const { card, nameButton } = createLibraryCard(root, 'Agent', { leading: seedLeading, nameAsButton: true });
 
-    const leading = card.querySelector('.claudian-library-card-leading');
+    const leading = card.querySelector('.specorator-library-card-leading');
     expect(leading).not.toBeNull();
     expect(seedLeading).toHaveBeenCalledWith(leading);
     expect(leading?.querySelector('.avatar-marker')).not.toBeNull();
@@ -138,7 +138,7 @@ describe('DOM helpers', () => {
 
     expect(nameButton?.tagName).toBe('BUTTON');
     expect(nameButton?.textContent).toBe('Agent');
-    expect(nameButton?.classList.contains('claudian-library-card-name-button')).toBe(true);
+    expect(nameButton?.classList.contains('specorator-library-card-name-button')).toBe(true);
   });
 
   it('modal helpers render labels, fields, inputs, code areas and footer', () => {
@@ -148,8 +148,8 @@ describe('DOM helpers', () => {
     const input = renderModalTextField(root, 'Rename', 'old');
     const code = createModalCodeArea(root, 'const x = 1;', 'Source');
 
-    expect(root.querySelector('.claudian-library-modal-label')?.textContent).toBe('Source');
-    expect(root.querySelector('.claudian-library-modal-value')?.textContent).toBe('value');
+    expect(root.querySelector('.specorator-library-modal-label')?.textContent).toBe('Source');
+    expect(root.querySelector('.specorator-library-modal-value')?.textContent).toBe('value');
     expect(input.value).toBe('old');
     expect(input.getAttribute('aria-label')).toBe('Rename');
     expect(code.value).toBe('const x = 1;');
@@ -159,7 +159,7 @@ describe('DOM helpers', () => {
     const onSave = jest.fn();
     const onClose = jest.fn();
     renderModalFooter(root, { saveLabel: 'Save', onSave, closeLabel: 'Close', onClose });
-    const buttons = Array.from(root.querySelectorAll('.claudian-library-modal-footer button')) as HTMLButtonElement[];
+    const buttons = Array.from(root.querySelectorAll('.specorator-library-modal-footer button')) as HTMLButtonElement[];
     expect(buttons).toHaveLength(2);
     buttons[0].click();
     buttons[1].click();
@@ -170,6 +170,6 @@ describe('DOM helpers', () => {
   it('renderModalFooter omits Save when no handler is given', () => {
     const root = container();
     renderModalFooter(root, { closeLabel: 'Close', onClose: jest.fn() });
-    expect(root.querySelectorAll('.claudian-library-modal-footer button')).toHaveLength(1);
+    expect(root.querySelectorAll('.specorator-library-modal-footer button')).toHaveLength(1);
   });
 });

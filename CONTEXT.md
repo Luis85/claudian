@@ -1,11 +1,11 @@
-# Claudian
+# Specorator
 
 An Obsidian plugin that embeds provider-backed chat runtimes in a sidebar and inline-edit flow. Claude is the default, full-feature provider; Codex, Opencode, and Cursor are opt-in and join the same conversation model through a provider boundary. This file is the domain glossary: it fixes the vocabulary used across `CLAUDE.md` files, PRDs, and code so that the same concept always has the same name.
 
 ## Language
 
 **Provider**:
-A chat backend Claudian can drive — currently Claude (default, full-feature), Codex, Opencode, or Cursor (all opt-in). A provider is identified by `Conversation.providerId` and owns its own opaque `providerState`.
+A chat backend Specorator can drive — currently Claude (default, full-feature), Codex, Opencode, or Cursor (all opt-in). A provider is identified by `Conversation.providerId` and owns its own opaque `providerState`.
 _Avoid_: backend, vendor, engine, LLM (LLM is the model, not the provider)
 
 **Provider adaptor**:
@@ -21,7 +21,7 @@ The provider-neutral unit of chat state. Carries `providerId` and opaque `provid
 _Avoid_: thread, session (see below), chat log
 
 **Session**:
-A persisted record of a conversation. Provider-neutral metadata lives at `.claudian/sessions/*.meta.json`; provider-native transcripts live under `~/.claude/`, `~/.codex/`, or `~/.cursor/` (Opencode keeps state in its own database).
+A persisted record of a conversation. Provider-neutral metadata lives at `.specorator/sessions/*.meta.json`; provider-native transcripts live under `~/.claude/`, `~/.codex/`, or `~/.cursor/` (Opencode keeps state in its own database).
 _Avoid_: history file, save (use "session metadata" vs "transcript" to disambiguate)
 
 **Transcript**:
@@ -61,11 +61,11 @@ _Avoid_: context bundle, prompt context, payload
 These terms are defined by the Agent Board work (see [[docs/issues/agent-board-mvp.md]] and [[docs/ideas/agent-board-symphony.md]]). They are scoped to the `features/tasks` module.
 
 **Work order**:
-A plain Markdown note (`type: claudian-work-order`) that owns the goal, acceptance criteria, linked context, scope, permissions, and run metadata. The durable unit of delegated work.
+A plain Markdown note (`type: specorator-work-order`) that owns the goal, acceptance criteria, linked context, scope, permissions, and run metadata. The durable unit of delegated work.
 _Avoid_: task, ticket, issue (reserve "issue" for the **Issue tracker**; reserve "task" for code-level `TaskSpec` types)
 
 **Agent Board**:
-The Obsidian custom view (`VIEW_TYPE_CLAUDIAN_AGENT_BOARD`) that renders **Work orders** as cards grouped by status.
+The Obsidian custom view (`VIEW_TYPE_SPECORATOR_AGENT_BOARD`) that renders **Work orders** as cards grouped by status.
 _Avoid_: dashboard, kanban, board (when unqualified)
 
 **Lane**:

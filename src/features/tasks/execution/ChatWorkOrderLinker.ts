@@ -2,7 +2,7 @@ import { Notice, type TFile } from 'obsidian';
 
 import type { ChatMessage } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { chatMessageText } from '../../../utils/chatMessageText';
 import {
   buildConversationSeed,
@@ -11,7 +11,7 @@ import {
 } from '../commands/taskCommands';
 
 export class ChatWorkOrderLinker {
-  constructor(private readonly plugin: ClaudianPlugin) {}
+  constructor(private readonly plugin: SpecoratorPlugin) {}
 
   async promoteMessageToWorkOrder(message: ChatMessage, conversationId: string | null): Promise<TFile | null> {
     const messageContent = chatMessageText(message);

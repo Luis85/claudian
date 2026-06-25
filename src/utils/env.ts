@@ -8,7 +8,7 @@ import { parsePathEntries } from './path';
 const isWindows = process.platform === 'win32';
 const PATH_SEPARATOR = isWindows ? ';' : ':';
 const NODE_EXECUTABLE = isWindows ? 'node.exe' : 'node';
-const DEVICE_SETTINGS_STORAGE_KEY = 'claudian.deviceSettingsKey';
+const DEVICE_SETTINGS_STORAGE_KEY = 'specorator.deviceSettingsKey';
 let cachedDeviceSettingsKey: string | null = null;
 
 export function findNodeDirectory(additionalPaths?: string): string | null {
@@ -150,18 +150,18 @@ export function getEnhancedPath(additionalPaths?: string, cliPath?: string): str
 }
 
 /**
- * SEC-A inline opt-out marker: a trailing `# claudian:plaintext` on an env line tells
+ * SEC-A inline opt-out marker: a trailing `# specorator:plaintext` on an env line tells
  * the secret-migration pass to leave that line in plaintext (power-user escape hatch).
  * The marker is preserved in stored settings but stripped before runtime parsing.
  */
-export const PLAINTEXT_OPT_OUT_MARKER = /#\s*claudian:plaintext\s*$/;
+export const PLAINTEXT_OPT_OUT_MARKER = /#\s*specorator:plaintext\s*$/;
 
 export function parseEnvironmentVariables(input: string): Record<string, string> {
   const result: Record<string, string> = {};
   for (const line of input.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('#')) continue;
-    // SEC-A: the `# claudian:plaintext` opt-out marker is kept in the SAVED env line
+    // SEC-A: the `# specorator:plaintext` opt-out marker is kept in the SAVED env line
     // (so the secret stays opted out of future migrations) but must never reach the
     // runtime as part of the value. parseEnvironmentVariables is the chokepoint every
     // runtime consumer funnels through, so strip the marker here.

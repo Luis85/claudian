@@ -4,7 +4,7 @@ import { ProviderRegistry } from '../../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../../core/providers/types';
 import { asSettingsBag } from '../../../../core/types/settings';
 import { t } from '../../../../i18n/i18n';
-import type ClaudianPlugin from '../../../../main';
+import type SpecoratorPlugin from '../../../../main';
 import { renderLibraryNav } from '../../../../shared/libraryNav';
 import { confirm } from '../../../../shared/modals/ConfirmModal';
 import { withErrorNotice } from '../../../../shared/uiAction';
@@ -17,12 +17,12 @@ import { createRosterAgent, dedupeRosterId } from '../rosterCapabilities';
 import type { RosterAgent } from '../rosterTypes';
 import { AgentDetailEditor } from './AgentDetailEditor';
 
-export const VIEW_TYPE_AGENT_ROSTER = 'claudian-agent-roster';
+export const VIEW_TYPE_AGENT_ROSTER = 'specorator-agent-roster';
 
 const CARD_AVATAR_SIZE = 36;
 
 export class AgentRosterView extends ItemView {
-  constructor(leaf: WorkspaceLeaf, private plugin: ClaudianPlugin) {
+  constructor(leaf: WorkspaceLeaf, private plugin: SpecoratorPlugin) {
     super(leaf);
   }
 
@@ -42,8 +42,8 @@ export class AgentRosterView extends ItemView {
 
   private async renderList(): Promise<void> {
     // The roster shares the library shell with the Tool/Skill views; only the
-    // detail editor keeps its bespoke `claudian-roster-detail` root.
-    this.contentEl.removeClass('claudian-roster-detail');
+    // detail editor keeps its bespoke `specorator-roster-detail` root.
+    this.contentEl.removeClass('specorator-roster-detail');
     const { actions: headerActions, list } = renderLibraryShell(
       this.contentEl,
       t('agentRoster.title'),
@@ -87,13 +87,13 @@ export class AgentRosterView extends ItemView {
       // Decorative avatar leads the card; the aria-label + name button convey
       // the name, so the avatar is hidden from the accessibility tree.
       leading: (slot) => {
-        slot.addClass('claudian-roster-card-avatar');
+        slot.addClass('specorator-roster-card-avatar');
         slot.setAttribute('aria-hidden', 'true');
         renderAgentAvatar(slot, rosterAgentToPersona(agent), CARD_AVATAR_SIZE);
       },
       nameAsButton: true,
     });
-    card.addClass('claudian-roster-card');
+    card.addClass('specorator-roster-card');
     card.setAttribute('role', 'group');
     card.setAttribute('aria-label', agent.name);
     // Mouse convenience: clicking anywhere on the card opens the detail editor.
@@ -101,20 +101,20 @@ export class AgentRosterView extends ItemView {
     // card itself is a plain group (no nested interactive in a role=button).
     card.onclick = () => void this.openDetail(agent);
 
-    nameButton?.addClass('claudian-roster-card-name');
+    nameButton?.addClass('specorator-roster-card-name');
     if (nameButton) nameButton.onclick = (e) => { e.stopPropagation(); void this.openDetail(agent); };
-    body.createDiv({ cls: 'claudian-roster-card-desc', text: agent.description || '—' });
+    body.createDiv({ cls: 'specorator-roster-card-desc', text: agent.description || '—' });
 
-    const caps = body.createDiv({ cls: 'claudian-roster-card-caps' });
+    const caps = body.createDiv({ cls: 'specorator-roster-card-caps' });
     for (const role of agent.roles) {
       const roleLabel = role === 'verifier' ? t('agentRoster.roleVerifier') : t('agentRoster.roleWorker');
-      caps.createSpan({ cls: 'claudian-roster-chip claudian-roster-chip-role', text: roleLabel });
+      caps.createSpan({ cls: 'specorator-roster-chip specorator-roster-chip-role', text: roleLabel });
     }
     // Only surface the capability count once the agent actually has skills or
     // tools — a "0 · 0" chip on a fresh agent is noise.
     if (agent.skills.length > 0 || agent.tools.length > 0) {
       caps.createSpan({
-        cls: 'claudian-roster-chip',
+        cls: 'specorator-roster-chip',
         text: t('agentRoster.capsSummary', {
           skills: String(agent.skills.length),
           tools: String(agent.tools.length),
@@ -128,7 +128,7 @@ export class AgentRosterView extends ItemView {
       e.stopPropagation();
       void withErrorNotice(() => this.startChatWithAgent(agent), fail, (err) => this.fail(err));
     };
-    const deleteBtn = actions.createEl('button', { cls: 'claudian-library-card-delete', text: t('agentRoster.delete') });
+    const deleteBtn = actions.createEl('button', { cls: 'specorator-library-card-delete', text: t('agentRoster.delete') });
     deleteBtn.onclick = (e) => {
       e.stopPropagation();
       void withErrorNotice(() => this.deleteAgent(agent), fail, (err) => this.fail(err));

@@ -2,7 +2,7 @@ import type { App } from 'obsidian';
 import { Modal, Notice, setIcon } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { TemplateNoteStore } from '../templates/TemplateNoteStore';
 import type { WorkOrderTemplate } from '../templates/templateTypes';
 import { WorkOrderTemplateEditorModal } from './WorkOrderTemplateEditorModal';
@@ -24,7 +24,7 @@ export class WorkOrderTemplatePickerModal extends Modal {
 
   constructor(
     app: App,
-    private readonly plugin: ClaudianPlugin,
+    private readonly plugin: SpecoratorPlugin,
     private readonly resolve: (result: TemplatePickResult) => void,
   ) {
     super(app);
@@ -32,13 +32,13 @@ export class WorkOrderTemplatePickerModal extends Modal {
 
   onOpen(): void {
     this.setTitle(t('tasks.templatePicker.title'));
-    this.modalEl.addClass('claudian-sp-modal', 'claudian-wo-templates-modal');
+    this.modalEl.addClass('specorator-sp-modal', 'specorator-wo-templates-modal');
 
-    const body = this.contentEl.createDiv({ cls: 'claudian-wo-templates-body' });
-    this.introEl = body.createDiv({ cls: 'claudian-wo-templates-intro' });
-    this.listEl = body.createDiv({ cls: 'claudian-wo-templates-list' });
+    const body = this.contentEl.createDiv({ cls: 'specorator-wo-templates-body' });
+    this.introEl = body.createDiv({ cls: 'specorator-wo-templates-intro' });
+    this.listEl = body.createDiv({ cls: 'specorator-wo-templates-list' });
 
-    const footer = this.contentEl.createDiv({ cls: 'claudian-wo-templates-footer' });
+    const footer = this.contentEl.createDiv({ cls: 'specorator-wo-templates-footer' });
     footer.createEl('button', {
       cls: 'mod-cta',
       text: t('tasks.templatePicker.newTemplate'),
@@ -79,7 +79,7 @@ export class WorkOrderTemplatePickerModal extends Modal {
     this.introEl.empty();
     if (this.templates.length === 0) {
       this.introEl.createEl('p', {
-        cls: 'claudian-wo-templates-intro-lead',
+        cls: 'specorator-wo-templates-intro-lead',
         text: t('tasks.templatePicker.emptyState'),
       });
       return;
@@ -89,16 +89,16 @@ export class WorkOrderTemplatePickerModal extends Modal {
 
   private renderBlankRow(): void {
     if (!this.listEl) return;
-    const row = this.listEl.createDiv({ cls: 'claudian-wo-templates-row claudian-wo-templates-row--blank' });
-    const main = row.createDiv({ cls: 'claudian-wo-templates-main' });
+    const row = this.listEl.createDiv({ cls: 'specorator-wo-templates-row specorator-wo-templates-row--blank' });
+    const main = row.createDiv({ cls: 'specorator-wo-templates-main' });
 
-    const iconEl = main.createSpan({ cls: 'claudian-wo-templates-icon' });
+    const iconEl = main.createSpan({ cls: 'specorator-wo-templates-icon' });
     setIcon(iconEl, BLANK_ICON);
 
-    const textCol = main.createDiv({ cls: 'claudian-wo-templates-text' });
+    const textCol = main.createDiv({ cls: 'specorator-wo-templates-text' });
     textCol.createEl('strong', { text: t('tasks.templatePicker.blankTitle') });
     textCol.createDiv({
-      cls: 'claudian-wo-templates-desc',
+      cls: 'specorator-wo-templates-desc',
       text: t('tasks.templatePicker.blankDesc'),
     });
 
@@ -110,23 +110,23 @@ export class WorkOrderTemplatePickerModal extends Modal {
   private renderTemplateRow(template: WorkOrderTemplate): void {
     if (!this.listEl) return;
 
-    const row = this.listEl.createDiv({ cls: 'claudian-wo-templates-row' });
-    const main = row.createDiv({ cls: 'claudian-wo-templates-main' });
+    const row = this.listEl.createDiv({ cls: 'specorator-wo-templates-row' });
+    const main = row.createDiv({ cls: 'specorator-wo-templates-main' });
 
-    const iconEl = main.createSpan({ cls: 'claudian-wo-templates-icon' });
+    const iconEl = main.createSpan({ cls: 'specorator-wo-templates-icon' });
     setIcon(iconEl, template.icon || DEFAULT_TEMPLATE_ICON);
 
-    const textCol = main.createDiv({ cls: 'claudian-wo-templates-text' });
+    const textCol = main.createDiv({ cls: 'specorator-wo-templates-text' });
     textCol.createEl('strong', { text: template.name });
     if (template.description) {
-      textCol.createDiv({ cls: 'claudian-wo-templates-desc', text: template.description });
+      textCol.createDiv({ cls: 'specorator-wo-templates-desc', text: template.description });
     }
 
     main.addEventListener('click', () => {
       this.choose({ cancelled: false, template });
     });
 
-    const actions = row.createDiv({ cls: 'claudian-wo-templates-actions' });
+    const actions = row.createDiv({ cls: 'specorator-wo-templates-actions' });
     actions.createEl('button', { text: t('tasks.templatePicker.edit') }).addEventListener('click', (event) => {
       event.stopPropagation();
       this.openEditor(template);
@@ -162,7 +162,7 @@ export class WorkOrderTemplatePickerModal extends Modal {
   }
 }
 
-export async function chooseWorkOrderTemplate(plugin: ClaudianPlugin): Promise<TemplatePickResult> {
+export async function chooseWorkOrderTemplate(plugin: SpecoratorPlugin): Promise<TemplatePickResult> {
   return new Promise<TemplatePickResult>((resolve) => {
     new WorkOrderTemplatePickerModal(plugin.app, plugin, resolve).open();
   });

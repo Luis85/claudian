@@ -8,7 +8,7 @@ parent: "[[Agent Kanban Board]]"
 
 This manual covers how to turn ideas, notes, selections, and chat into **work orders** on the Agent Board, run them, and jump back to the chat conversation a work order came from.
 
-A **work order** is a Markdown note (`type: claudian-work-order`) that the Agent Board tracks through a set of status lanes. Capture creates these notes from many places; interop links them back to chat.
+A **work order** is a Markdown note (`type: specorator-work-order`) that the Agent Board tracks through a set of status lanes. Capture creates these notes from many places; interop links them back to chat.
 
 Capture is the bridge from low-ceremony chat to managed work. Start in [[sidepanel-chat|Co-Worker Chat]] when you want to think out loud or get a quick draft. Create a work order when the result should be queued, prioritized, run later, reviewed, or kept as a durable handoff record. For the full decision guide, see [[chat-vs-agent-board]].
 
@@ -16,7 +16,7 @@ Capture is the bridge from low-ceremony chat to managed work. Start in [[sidepan
 
 ## Before you start
 
-Set these once in **Settings → Claudian → Agent Board**:
+Set these once in **Settings → Specorator → Agent Board**:
 
 | Setting | What it does | Default |
 |---------|--------------|---------|
@@ -62,7 +62,7 @@ Select text in a note, then either:
 The first line of the selection becomes the title (truncated). The full selection is blockquoted into **Context**, with a link back to the source note. Lands in **`inbox`**.
 
 ### From a browser selection
-Select text in a Claudian chat browser view (e.g. Surfing), then run command palette → **Create work order from browser selection**.
+Select text in a Specorator chat browser view (e.g. Surfing), then run command palette → **Create work order from browser selection**.
 
 The page title (or first line) becomes the title. The selection is blockquoted into **Context** with a `Source: [title](url)` link. Lands in **`inbox`**.
 
@@ -71,7 +71,7 @@ The page title (or first line) becomes the title. The selection is blockquoted i
 ## Promoting chat into work orders (interop)
 
 ### From a single chat message
-Hover an **agent** (assistant) message in the Claudian chat panel — a **Create work order** button (kanban icon) appears in the message toolbar. Capture the agent's reply (a plan, a summary, a proposed fix) as the thing you want to act on later.
+Hover an **agent** (assistant) message in the Specorator chat panel — a **Create work order** button (kanban icon) appears in the message toolbar. Capture the agent's reply (a plan, a summary, a proposed fix) as the thing you want to act on later.
 
 - The agent's response text becomes the work order's **Objective**. (Tool-only turns with no prose have no button.)
 - The first line becomes the title.
@@ -94,7 +94,7 @@ Command palette → **Create work order from current chat conversation**.
 Open a work order on the board to show its detail view. If the work order has a `conversation_id` (i.e. it was promoted from chat), an **Open conversation** button appears.
 
 Click it to:
-1. Open/activate the Claudian chat panel, and
+1. Open/activate the Specorator chat panel, and
 2. Reopen the linked conversation by its id.
 
 This is the round trip: chat → work order → back to the same chat.

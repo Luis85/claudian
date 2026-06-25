@@ -82,7 +82,7 @@ beforeEach(() => {
 describe('LoopLibraryView', () => {
   it('exposes the stable view type and metadata', () => {
     const { view } = makeView(makePlugin({}));
-    expect(VIEW_TYPE_LOOP_LIBRARY).toBe('claudian-loop-library');
+    expect(VIEW_TYPE_LOOP_LIBRARY).toBe('specorator-loop-library');
     expect(view.getViewType()).toBe(VIEW_TYPE_LOOP_LIBRARY);
     expect(view.getIcon()).toBe('repeat');
     expect(view.getDisplayText()).toBe('Loop library');
@@ -93,15 +93,15 @@ describe('LoopLibraryView', () => {
     await view.onOpen();
     await flush();
 
-    expect(contentEl.classList.contains('claudian-library')).toBe(true);
-    expect(contentEl.querySelector('.claudian-library-nav')).not.toBeNull();
-    const navItems = contentEl.querySelectorAll('.claudian-library-nav-item');
+    expect(contentEl.classList.contains('specorator-library')).toBe(true);
+    expect(contentEl.querySelector('.specorator-library-nav')).not.toBeNull();
+    const navItems = contentEl.querySelectorAll('.specorator-library-nav-item');
     expect(navItems.length).toBe(4);
     const headerButtons = Array.from(
-      contentEl.querySelectorAll('.claudian-library-header-actions button'),
+      contentEl.querySelectorAll('.specorator-library-header-actions button'),
     ).map((b) => b.textContent);
     expect(headerButtons).toEqual(['New loop', 'Install starter loops']);
-    const newBtn = contentEl.querySelector('.claudian-library-header-actions .mod-cta');
+    const newBtn = contentEl.querySelector('.specorator-library-header-actions .mod-cta');
     expect(newBtn?.textContent).toBe('New loop');
   });
 
@@ -110,7 +110,7 @@ describe('LoopLibraryView', () => {
     await view.onOpen();
     await flush();
 
-    const installBtn = Array.from(contentEl.querySelectorAll('.claudian-library-header-actions button'))
+    const installBtn = Array.from(contentEl.querySelectorAll('.specorator-library-header-actions button'))
       .find((b) => b.textContent === 'Install starter loops') as HTMLButtonElement;
     expect(installBtn).toBeDefined();
     installBtn.click();
@@ -124,10 +124,10 @@ describe('LoopLibraryView', () => {
     await view.onOpen();
     await flush();
 
-    const empty = contentEl.querySelector('.claudian-library-empty');
+    const empty = contentEl.querySelector('.specorator-library-empty');
     expect(empty).not.toBeNull();
     expect(empty?.textContent).toContain('No loops yet.');
-    expect(contentEl.querySelectorAll('.claudian-library-card').length).toBe(0);
+    expect(contentEl.querySelectorAll('.specorator-library-card').length).toBe(0);
   });
 
   it('renders one card per loop with name, description, and use-when', async () => {
@@ -138,14 +138,14 @@ describe('LoopLibraryView', () => {
     await view.onOpen();
     await flush();
 
-    const cards = contentEl.querySelectorAll('.claudian-library-card');
+    const cards = contentEl.querySelectorAll('.specorator-library-card');
     expect(cards.length).toBe(2);
 
-    const names = Array.from(contentEl.querySelectorAll('.claudian-library-card-name')).map((n) => n.textContent);
+    const names = Array.from(contentEl.querySelectorAll('.specorator-library-card-name')).map((n) => n.textContent);
     expect(names).toContain('Alpha Loop');
     expect(names).toContain('Beta Loop');
 
-    const descs = Array.from(contentEl.querySelectorAll('.claudian-library-card-desc')).map((d) => d.textContent);
+    const descs = Array.from(contentEl.querySelectorAll('.specorator-library-card-desc')).map((d) => d.textContent);
     expect(descs).toContain('Runs the alpha playbook.');
     expect(descs.some((d) => d?.startsWith('Use when:'))).toBe(true);
   });
@@ -157,10 +157,10 @@ describe('LoopLibraryView', () => {
     await view.onOpen();
     await flush();
 
-    const card = contentEl.querySelector('.claudian-library-card')!;
+    const card = contentEl.querySelector('.specorator-library-card')!;
     const buttons = Array.from(card.querySelectorAll('button'));
     expect(buttons.map((b) => b.textContent)).toEqual(['Edit', 'Delete']);
-    expect(card.querySelector('.claudian-library-card-delete')).not.toBeNull();
+    expect(card.querySelector('.specorator-library-card-delete')).not.toBeNull();
   });
 
   it('clicking Edit opens the loop editor modal', async () => {
@@ -170,7 +170,7 @@ describe('LoopLibraryView', () => {
     await view.onOpen();
     await flush();
 
-    const editBtn = Array.from(contentEl.querySelectorAll('.claudian-library-card button'))
+    const editBtn = Array.from(contentEl.querySelectorAll('.specorator-library-card button'))
       .find((b) => b.textContent === 'Edit') as HTMLButtonElement;
     editBtn.click();
     expect(openMock).toHaveBeenCalled();
@@ -181,7 +181,7 @@ describe('LoopLibraryView', () => {
     await view.onOpen();
     await flush();
 
-    const newBtn = contentEl.querySelector('.claudian-library-header-actions .mod-cta') as HTMLButtonElement;
+    const newBtn = contentEl.querySelector('.specorator-library-header-actions .mod-cta') as HTMLButtonElement;
     newBtn.click();
     expect(openMock).toHaveBeenCalled();
   });
@@ -194,7 +194,7 @@ describe('LoopLibraryView', () => {
     await view.onOpen();
     await flush();
 
-    const deleteBtn = contentEl.querySelector('.claudian-library-card-delete') as HTMLButtonElement;
+    const deleteBtn = contentEl.querySelector('.specorator-library-card-delete') as HTMLButtonElement;
     deleteBtn.click();
     await flush();
 
@@ -211,7 +211,7 @@ describe('LoopLibraryView', () => {
     await view.onOpen();
     await flush();
 
-    const deleteBtn = contentEl.querySelector('.claudian-library-card-delete') as HTMLButtonElement;
+    const deleteBtn = contentEl.querySelector('.specorator-library-card-delete') as HTMLButtonElement;
     deleteBtn.click();
     await flush();
 

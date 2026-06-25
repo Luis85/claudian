@@ -8,7 +8,7 @@ export interface SectionHeaderOptions {
 }
 
 export interface SectionHeaderHandle {
-  /** The `.claudian-work-order-modal-section` wrapper. */
+  /** The `.specorator-work-order-modal-section` wrapper. */
   section: HTMLElement;
   /** The header row holding the icon + label + right slot. */
   header: HTMLElement;
@@ -33,24 +33,24 @@ export function renderSectionHeader(
   parent: HTMLElement,
   options: SectionHeaderOptions,
 ): SectionHeaderHandle {
-  const section = parent.createDiv({ cls: 'claudian-work-order-modal-section' });
-  const header = section.createDiv({ cls: 'claudian-work-order-modal-section-head' });
+  const section = parent.createDiv({ cls: 'specorator-work-order-modal-section' });
+  const header = section.createDiv({ cls: 'specorator-work-order-modal-section-head' });
 
-  const title = header.createSpan({ cls: 'claudian-work-order-modal-section-title' });
-  const iconEl = title.createSpan({ cls: 'claudian-work-order-modal-section-icon' });
+  const title = header.createSpan({ cls: 'specorator-work-order-modal-section-title' });
+  const iconEl = title.createSpan({ cls: 'specorator-work-order-modal-section-icon' });
   iconEl.setAttr('aria-hidden', 'true');
   // Mirror the editable-value-chip convention: stamp the icon name as a data
   // attribute so tests (where setIcon is a no-op) can assert which glyph renders.
   iconEl.setAttr('data-icon', options.icon);
   setIcon(iconEl, options.icon);
-  title.createSpan({ cls: 'claudian-work-order-modal-section-label', text: options.label });
+  title.createSpan({ cls: 'specorator-work-order-modal-section-label', text: options.label });
 
   let rightEl: HTMLElement | undefined;
   return {
     section,
     header,
     right: () => {
-      rightEl ??= header.createDiv({ cls: 'claudian-work-order-modal-section-right' });
+      rightEl ??= header.createDiv({ cls: 'specorator-work-order-modal-section-right' });
       return rightEl;
     },
   };

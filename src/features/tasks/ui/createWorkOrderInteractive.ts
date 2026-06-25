@@ -1,7 +1,7 @@
 import { Notice, type TFile, type TFolder } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import {
   buildSelectionSeed,
   createWorkOrder,
@@ -11,7 +11,7 @@ import {
 import { chooseWorkOrderTemplate } from './WorkOrderTemplatePickerModal';
 
 export async function createWorkOrderInteractive(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   source?: TFile | TFolder | null,
   options?: CreateWorkOrderOptions,
 ): Promise<TFile | null> {
@@ -22,7 +22,7 @@ export async function createWorkOrderInteractive(
   return createWorkOrder(plugin, source ?? null, { ...options, template: picked.template });
 }
 
-export async function createWorkOrderFromCurrentNoteInteractive(plugin: ClaudianPlugin): Promise<TFile | null> {
+export async function createWorkOrderFromCurrentNoteInteractive(plugin: SpecoratorPlugin): Promise<TFile | null> {
   const active = plugin.app.workspace.getActiveFile();
   if (!active) {
     new Notice(t('tasks.create.noActiveNote'));
@@ -35,7 +35,7 @@ export async function createWorkOrderFromCurrentNoteInteractive(plugin: Claudian
   return createWorkOrder(plugin, active, { template: picked.template });
 }
 
-export async function createWorkOrderFromSelectionInteractive(plugin: ClaudianPlugin): Promise<TFile | null> {
+export async function createWorkOrderFromSelectionInteractive(plugin: SpecoratorPlugin): Promise<TFile | null> {
   const editor = plugin.app.workspace.activeEditor?.editor;
   const selection = editor?.getSelection() ?? '';
   if (!selection.trim()) {

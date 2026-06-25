@@ -5,7 +5,7 @@ import type { ProviderId } from '@/core/providers/types';
 import { asSettingsBag } from '@/core/types/settings';
 import { resolveBlankTabModel } from '@/features/chat/tabs/tabShared';
 import { t } from '@/i18n/i18n';
-import type ClaudianPlugin from '@/main';
+import type SpecoratorPlugin from '@/main';
 
 import { quickActionStemFromPath } from './quickActionStem';
 import { runQuickActionForFile } from './runQuickActionForFile';
@@ -24,7 +24,7 @@ import {
  * `runQuickActionForFile` with a provider+model override.
  */
 export async function launchQuickAction(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   file: TAbstractFile,
   action: QuickAction,
 ): Promise<void> {

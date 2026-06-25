@@ -2,7 +2,7 @@ import type { App } from 'obsidian';
 import { Modal, Notice, setIcon, TFile, TFolder } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { TaskIndexer } from '../indexing/TaskIndexer';
 import type { TaskSpec, TaskStatus } from '../model/taskTypes';
 import { TaskNoteStore } from '../storage/TaskNoteStore';
@@ -43,7 +43,7 @@ export class AddToWorkOrderModal extends Modal {
 
   constructor(
     app: App,
-    private readonly plugin: ClaudianPlugin,
+    private readonly plugin: SpecoratorPlugin,
     private readonly target: TFile | TFolder,
   ) {
     super(app);
@@ -51,15 +51,15 @@ export class AddToWorkOrderModal extends Modal {
 
   onOpen(): void {
     this.setTitle(t('tasks.addToWorkOrder.title'));
-    this.modalEl.addClass('claudian-sp-modal', 'claudian-wo-templates-modal');
+    this.modalEl.addClass('specorator-sp-modal', 'specorator-wo-templates-modal');
 
-    const body = this.contentEl.createDiv({ cls: 'claudian-wo-templates-body' });
+    const body = this.contentEl.createDiv({ cls: 'specorator-wo-templates-body' });
     body
-      .createDiv({ cls: 'claudian-wo-templates-intro' })
+      .createDiv({ cls: 'specorator-wo-templates-intro' })
       .createEl('p', { text: t('tasks.addToWorkOrder.lead') });
-    this.listEl = body.createDiv({ cls: 'claudian-wo-templates-list' });
+    this.listEl = body.createDiv({ cls: 'specorator-wo-templates-list' });
 
-    const footer = this.contentEl.createDiv({ cls: 'claudian-wo-templates-footer' });
+    const footer = this.contentEl.createDiv({ cls: 'specorator-wo-templates-footer' });
     footer
       .createEl('button', { cls: 'mod-cta', text: t('tasks.addToWorkOrder.newWorkOrder') })
       .addEventListener('click', () => {
@@ -82,7 +82,7 @@ export class AddToWorkOrderModal extends Modal {
     const tasks = filterAddableWorkOrders(model.tasks);
     if (tasks.length === 0) {
       this.listEl.createEl('p', {
-        cls: 'claudian-wo-templates-intro-lead',
+        cls: 'specorator-wo-templates-intro-lead',
         text: t('tasks.addToWorkOrder.empty'),
       });
       return;
@@ -94,15 +94,15 @@ export class AddToWorkOrderModal extends Modal {
 
   private renderRow(task: TaskSpec): void {
     if (!this.listEl) return;
-    const row = this.listEl.createDiv({ cls: 'claudian-wo-templates-row' });
-    const main = row.createDiv({ cls: 'claudian-wo-templates-main' });
+    const row = this.listEl.createDiv({ cls: 'specorator-wo-templates-row' });
+    const main = row.createDiv({ cls: 'specorator-wo-templates-main' });
 
-    setIcon(main.createSpan({ cls: 'claudian-wo-templates-icon' }), WORK_ORDER_ICON);
+    setIcon(main.createSpan({ cls: 'specorator-wo-templates-icon' }), WORK_ORDER_ICON);
 
-    const textCol = main.createDiv({ cls: 'claudian-wo-templates-text' });
+    const textCol = main.createDiv({ cls: 'specorator-wo-templates-text' });
     textCol.createEl('strong', { text: task.frontmatter.title });
     textCol.createDiv({
-      cls: 'claudian-wo-templates-desc',
+      cls: 'specorator-wo-templates-desc',
       text: humanizeStatus(task.frontmatter.status),
     });
 
@@ -141,6 +141,6 @@ export class AddToWorkOrderModal extends Modal {
   }
 }
 
-export function addToWorkOrderInteractive(plugin: ClaudianPlugin, target: TFile | TFolder): void {
+export function addToWorkOrderInteractive(plugin: SpecoratorPlugin, target: TFile | TFolder): void {
   new AddToWorkOrderModal(plugin.app, plugin, target).open();
 }

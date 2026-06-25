@@ -57,13 +57,13 @@ export interface EditorIconRowConfig {
 /**
  * Builds the shared icon-picker `Setting` row used by the editor modals and
  * returns the mounted picker so the caller can destroy it on close. Appends a
- * single `Setting` to `contentEl` tagged with `claudian-icon-picker-setting`.
+ * single `Setting` to `contentEl` tagged with `specorator-icon-picker-setting`.
  */
 export function addIconPickerRow(contentEl: HTMLElement, config: EditorIconRowConfig): LucideIconPicker {
   const iconSetting = new Setting(contentEl)
     .setName(config.name)
     .setDesc(config.desc);
-  iconSetting.settingEl.addClass('claudian-icon-picker-setting');
+  iconSetting.settingEl.addClass('specorator-icon-picker-setting');
   return new LucideIconPicker(iconSetting.controlEl, {
     value: config.value,
     onChange: config.onChange,

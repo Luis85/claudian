@@ -5,12 +5,12 @@ describe('parseTaskHandoff', () => {
   it('accepts a valid handoff block and renders marker-delimited markdown sections', () => {
     const result = parseTaskHandoff(`Some prior assistant text.
 
-<claudian_handoff>
+<specorator_handoff>
 summary: Implemented parser and prompt renderer.
 verification: npx jest --selectProjects unit --testMatch "**/tests/unit/features/tasks/**/*.test.ts" passed.
 risks: No known risks.
 next_action: Review the local commit.
-</claudian_handoff>
+</specorator_handoff>
 
 Trailing text.`);
 
@@ -22,24 +22,24 @@ Trailing text.`);
         risks: 'No known risks.',
         nextAction: 'Review the local commit.',
         markdown: `## Summary
-<!-- claudian:handoff:summary:start -->
+<!-- specorator:handoff:summary:start -->
 Implemented parser and prompt renderer.
-<!-- claudian:handoff:summary:end -->
+<!-- specorator:handoff:summary:end -->
 
 ## Verification
-<!-- claudian:handoff:verification:start -->
+<!-- specorator:handoff:verification:start -->
 npx jest --selectProjects unit --testMatch "**/tests/unit/features/tasks/**/*.test.ts" passed.
-<!-- claudian:handoff:verification:end -->
+<!-- specorator:handoff:verification:end -->
 
 ## Risks
-<!-- claudian:handoff:risks:start -->
+<!-- specorator:handoff:risks:start -->
 No known risks.
-<!-- claudian:handoff:risks:end -->
+<!-- specorator:handoff:risks:end -->
 
 ## Next Action
-<!-- claudian:handoff:next-action:start -->
+<!-- specorator:handoff:next-action:start -->
 Review the local commit.
-<!-- claudian:handoff:next-action:end -->`,
+<!-- specorator:handoff:next-action:end -->`,
       },
     });
   });
@@ -48,14 +48,14 @@ Review the local commit.
     // Regression for the heading-collision misparse: a Summary that literally
     // contains a "## Verification" line must stay attributed to Summary when
     // the stored markdown is parsed back for the modal Activity block.
-    const result = parseTaskHandoff(`<claudian_handoff>
+    const result = parseTaskHandoff(`<specorator_handoff>
 summary: Reworked the parser.
 ## Verification
 That in-body heading is summary content.
 verification: npx jest passed.
 risks: None.
 next_action: Review.
-</claudian_handoff>`);
+</specorator_handoff>`);
 
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -66,34 +66,34 @@ next_action: Review.
     expect(sections.nextAction).toBe('Review.');
   });
 
-  it('rejects a handoff whose field embeds a Claudian marker', () => {
-    // TaskNoteStore refuses to write `<!-- claudian:` content into a generated
+  it('rejects a handoff whose field embeds a Specorator marker', () => {
+    // TaskNoteStore refuses to write `<!-- specorator:` content into a generated
     // region (it could spoof region or field markers); rejecting here keeps the
     // run on the graceful needs_handoff path instead of a hard write failure.
-    expect(parseTaskHandoff(`<claudian_handoff>
-summary: Contains a <!-- claudian:handoff-end --> marker.
+    expect(parseTaskHandoff(`<specorator_handoff>
+summary: Contains a <!-- specorator:handoff-end --> marker.
 verification: v
 risks: r
 next_action: n
-</claudian_handoff>`)).toEqual({
+</specorator_handoff>`)).toEqual({
       ok: false,
-      error: 'Handoff field contains a reserved Claudian marker: summary',
+      error: 'Handoff field contains a reserved Specorator marker: summary',
     });
   });
 
   it('rejects content without a handoff block', () => {
     expect(parseTaskHandoff('No structured handoff here.')).toEqual({
       ok: false,
-      error: 'Missing claudian_handoff block',
+      error: 'Missing specorator_handoff block',
     });
   });
 
   it('rejects a handoff block missing next_action', () => {
-    expect(parseTaskHandoff(`<claudian_handoff>
+    expect(parseTaskHandoff(`<specorator_handoff>
 summary: Done.
 verification: Tests passed.
 risks: None.
-</claudian_handoff>`)).toEqual({
+</specorator_handoff>`)).toEqual({
       ok: false,
       error: 'Missing handoff field: next_action',
     });

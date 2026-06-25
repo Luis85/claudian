@@ -1,10 +1,10 @@
 /* Git commit & push header action */
-.claudian-git-action {
+.specorator-git-action {
   display: flex;
   align-items: center;
 }
 
-.claudian-git-action-btn {
+.specorator-git-action-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -24,28 +24,28 @@
   flex-shrink: 0;
 }
 
-.claudian-git-action-btn:hover {
+.specorator-git-action-btn:hover {
   background: var(--background-modifier-hover);
   border-color: var(--background-modifier-border-hover);
   color: var(--interactive-accent);
 }
 
-.claudian-git-action-icon {
+.specorator-git-action-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-.claudian-git-action-icon svg {
+.specorator-git-action-icon svg {
   width: 14px;
   height: 14px;
 }
 
-.claudian-git-action-label {
+.specorator-git-action-label {
   white-space: nowrap;
 }
 
-.claudian-git-action-badge {
+.specorator-git-action-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;

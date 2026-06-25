@@ -1,11 +1,11 @@
 /* Plan mode toolbar toggle */
-.claudian-plan-mode-toggle {
+.specorator-plan-mode-toggle {
   display: flex;
   align-items: center;
   padding-left: 2px;
 }
 
-.claudian-plan-mode-button {
+.specorator-plan-mode-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -19,23 +19,23 @@
   flex-shrink: 0;
 }
 
-.claudian-plan-mode-icon {
+.specorator-plan-mode-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
-.claudian-plan-mode-icon svg {
+.specorator-plan-mode-icon svg {
   width: 14px;
   height: 14px;
 }
 
-.claudian-plan-mode-button:hover {
+.specorator-plan-mode-button:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }
 
-.claudian-plan-mode-button.active {
+.specorator-plan-mode-button.active {
   color: var(--color-orange);
   background: color-mix(in srgb, var(--color-orange) 12%, transparent);
 }

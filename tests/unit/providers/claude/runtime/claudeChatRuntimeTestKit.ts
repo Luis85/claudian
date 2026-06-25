@@ -5,12 +5,12 @@ import { createMockRuntimeHost, type MockRuntimeHost } from '@test/helpers/runti
 
 import { Logger } from '@/core/logging/Logger';
 import type { McpServerManager } from '@/core/mcp/McpServerManager';
-import type ClaudianPlugin from '@/main';
-import { ClaudianService } from '@/providers/claude/runtime/ClaudeChatRuntime';
+import type SpecoratorPlugin from '@/main';
+import { ClaudeChatRuntime } from '@/providers/claude/runtime/ClaudeChatRuntime';
 
 /**
- * Shared fixtures for the ClaudianService unit specs. The original monolithic
- * spec was split into per-surface sibling files (`ClaudianService.*.test.ts`);
+ * Shared fixtures for the ClaudeChatRuntime unit specs. The original monolithic
+ * spec was split into per-surface sibling files (`ClaudeChatRuntime.*.test.ts`);
  * every sibling drives the same plugin/MCP/host doubles through this kit so the
  * setup stays in one place. No `jest.mock()` calls live here — the SDK and
  * obsidian modules are mapped to manual mocks via `moduleNameMapper`, so this
@@ -35,11 +35,11 @@ export async function collectChunks(gen: AsyncGenerator<any>): Promise<any[]> {
   return chunks;
 }
 
-export interface ClaudianServiceTestContext {
-  mockPlugin: Partial<ClaudianPlugin>;
+export interface ClaudeChatRuntimeTestContext {
+  mockPlugin: Partial<SpecoratorPlugin>;
   mockMcpManager: MockMcpServerManager;
   host: MockRuntimeHost;
-  service: ClaudianService;
+  service: ClaudeChatRuntime;
 }
 
 /**
@@ -49,8 +49,8 @@ export interface ClaudianServiceTestContext {
  * hook is registered first, so the context is fresh by the time the alias
  * runs).
  */
-export function setupClaudianServiceTest(): ClaudianServiceTestContext {
-  const ctx = {} as ClaudianServiceTestContext;
+export function setupClaudeChatRuntimeTest(): ClaudeChatRuntimeTestContext {
+  const ctx = {} as ClaudeChatRuntimeTestContext;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -70,7 +70,7 @@ export function setupClaudianServiceTest(): ClaudianServiceTestContext {
         model: 'claude-3-5-sonnet',
         permissionMode: 'ask' as const,
         thinkingBudget: 0,
-        mediaFolder: 'claudian-media',
+        mediaFolder: 'specorator-media',
         systemPrompt: '',
         loadUserClaudeSettings: false,
         claudeCliPath: '/usr/local/bin/claude',
@@ -85,7 +85,7 @@ export function setupClaudianServiceTest(): ClaudianServiceTestContext {
         getPluginsKey: jest.fn().mockReturnValue(''),
       },
       logger: new Logger({ enabled: false, level: 'off' }),
-    } as unknown as ClaudianPlugin;
+    } as unknown as SpecoratorPlugin;
 
     ctx.mockMcpManager = {
       loadServers: jest.fn().mockResolvedValue(undefined),
@@ -97,7 +97,7 @@ export function setupClaudianServiceTest(): ClaudianServiceTestContext {
     } as unknown as MockMcpServerManager;
 
     ctx.host = createMockRuntimeHost();
-    ctx.service = new ClaudianService(ctx.mockPlugin as ClaudianPlugin, ctx.mockMcpManager, ctx.host);
+    ctx.service = new ClaudeChatRuntime(ctx.mockPlugin as SpecoratorPlugin, ctx.mockMcpManager, ctx.host);
   });
 
   return ctx;

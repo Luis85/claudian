@@ -4,12 +4,12 @@ import { parseFrontmatter } from '../../../utils/frontmatter';
 import { HANDOFF_FIELD_MARKER_STRINGS } from '../model/handoffSections';
 import type { TaskLedgerEntry, TaskPriority, TaskSpec, TaskStatus } from '../model/taskTypes';
 
-export const RUN_LEDGER_START = '<!-- claudian:run-ledger-start -->';
-export const RUN_LEDGER_END = '<!-- claudian:run-ledger-end -->';
-export const HANDOFF_START = '<!-- claudian:handoff-start -->';
-export const HANDOFF_END = '<!-- claudian:handoff-end -->';
+export const RUN_LEDGER_START = '<!-- specorator:run-ledger-start -->';
+export const RUN_LEDGER_END = '<!-- specorator:run-ledger-end -->';
+export const HANDOFF_START = '<!-- specorator:handoff-start -->';
+export const HANDOFF_END = '<!-- specorator:handoff-end -->';
 
-const CLAUDIAN_MARKER_PREFIX = '<!-- claudian:';
+const SPECORATOR_MARKER_PREFIX = '<!-- specorator:';
 
 /**
  * Default body of a freshly created work order's `## Context` section. Shared with
@@ -84,13 +84,13 @@ const SECTION_HEADINGS = Object.freeze({
 });
 
 /**
- * Strip any Claudian generated-region marker (`<!-- claudian:… -->`) from
+ * Strip any Specorator generated-region marker (`<!-- specorator:… -->`) from
  * arbitrary user input before it is written into the note body. Such a marker
  * would shadow the real ledger/handoff region markers, which
  * extract/replaceGeneratedRegion locate by `indexOf` — corrupting those blocks.
  */
-function stripClaudianMarkers(text: string): string {
-  return text.replace(/<!--\s*claudian:[\s\S]*?-->/g, '');
+function stripSpecoratorMarkers(text: string): string {
+  return text.replace(/<!--\s*specorator:[\s\S]*?-->/g, '');
 }
 
 /**
@@ -99,7 +99,7 @@ function stripClaudianMarkers(text: string): string {
  * notes without a title heading are left untouched.
  */
 function syncTitleHeading(body: string, title: string): string {
-  const safeTitle = stripClaudianMarkers(title).trim();
+  const safeTitle = stripSpecoratorMarkers(title).trim();
   const lines = body.split('\n');
   let inFence = false;
   for (let i = 0; i < lines.length; i += 1) {
@@ -122,7 +122,7 @@ export class TaskNoteStore {
       throw new Error('Missing YAML frontmatter');
     }
 
-    if (parsed.frontmatter.type !== 'claudian-work-order') {
+    if (parsed.frontmatter.type !== 'specorator-work-order') {
       throw new Error('Invalid work order type');
     }
 
@@ -254,7 +254,7 @@ export class TaskNoteStore {
    * embedded in the content are scrubbed to keep the real regions locatable.
    */
   private replaceSection(body: string, heading: string, content: string): string {
-    const safeContent = stripClaudianMarkers(content).trim();
+    const safeContent = stripSpecoratorMarkers(content).trim();
     const lines = body.split(/\r?\n/);
     const headingPattern = /^##\s+(.+?)\s*$/;
 
@@ -292,7 +292,7 @@ export class TaskNoteStore {
   }
 
   appendLedger(content: string, entry: TaskLedgerEntry): string {
-    this.assertNoEmbeddedClaudianMarkers(entry.message);
+    this.assertNoEmbeddedSpecoratorMarkers(entry.message);
 
     const currentLedger = this.extractGeneratedRegion(content, RUN_LEDGER_START, RUN_LEDGER_END);
     const nextLine = `- ${entry.timestamp} [${entry.status}] ${entry.message}`;
@@ -301,21 +301,21 @@ export class TaskNoteStore {
   }
 
   writeLedgerSnapshot(content: string, markdown: string): string {
-    this.assertNoEmbeddedClaudianMarkers(markdown);
+    this.assertNoEmbeddedSpecoratorMarkers(markdown);
 
     return this.replaceGeneratedRegion(content, RUN_LEDGER_START, RUN_LEDGER_END, markdown.trim());
   }
 
   writeHandoff(content: string, markdown: string): string {
     // The per-field markers emitted by renderHandoffMarkdown are the one
-    // sanctioned use of the claudian marker namespace inside a generated
+    // sanctioned use of the specorator marker namespace inside a generated
     // region; scrub exactly those, then reject anything else. Field bodies are
     // already marker-free — parseTaskHandoff rejects them upstream.
     let scrubbed = markdown;
     for (const marker of HANDOFF_FIELD_MARKER_STRINGS) {
       scrubbed = scrubbed.split(marker).join('');
     }
-    this.assertNoEmbeddedClaudianMarkers(scrubbed);
+    this.assertNoEmbeddedSpecoratorMarkers(scrubbed);
 
     return this.replaceGeneratedRegion(content, HANDOFF_START, HANDOFF_END, markdown.trim());
   }
@@ -420,9 +420,9 @@ export class TaskNoteStore {
     };
   }
 
-  private assertNoEmbeddedClaudianMarkers(markdown: string): void {
-    if (markdown.includes(CLAUDIAN_MARKER_PREFIX)) {
-      throw new Error('Generated task region content cannot contain Claudian markers');
+  private assertNoEmbeddedSpecoratorMarkers(markdown: string): void {
+    if (markdown.includes(SPECORATOR_MARKER_PREFIX)) {
+      throw new Error('Generated task region content cannot contain Specorator markers');
     }
   }
 

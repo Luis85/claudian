@@ -1,5 +1,5 @@
 /**
- * Claudian - apply-patch expanded-render helpers.
+ * Specorator - apply-patch expanded-render helpers.
  *
  * Extracted from ToolCallRenderer to keep `renderApplyPatchExpanded` below the
  * complexity thresholds. Each helper owns one fallback branch and reports
@@ -23,7 +23,7 @@ export function renderApplyPatchResultFallback(
   renderLines: (text: string, maxLines: number) => void,
 ): void {
   if (!result) {
-    container.createDiv({ cls: 'claudian-tool-empty', text: 'No result' });
+    container.createDiv({ cls: 'specorator-tool-empty', text: 'No result' });
     return;
   }
   if (!renderApplyPatchResultFileMatches(container, result)) {
@@ -51,7 +51,7 @@ export function renderApplyPatchChangeList(
   const list = Array.isArray(changes) ? changes : [];
   if (list.length === 0) return false;
 
-  const linesEl = container.createDiv({ cls: 'claudian-tool-lines' });
+  const linesEl = container.createDiv({ cls: 'specorator-tool-lines' });
   for (const change of list as unknown[]) {
     if (!change || typeof change !== 'object' || Array.isArray(change)) continue;
     const changeRecord = change as Record<string, unknown>;
@@ -59,7 +59,7 @@ export function renderApplyPatchChangeList(
     if (!path) continue;
     const movedTo = readMoveTarget(changeRecord.kind);
     const pathText = movedTo ? `${path} -> ${movedTo}` : path;
-    linesEl.createDiv({ cls: 'claudian-tool-line', text: pathText });
+    linesEl.createDiv({ cls: 'specorator-tool-line', text: pathText });
   }
   return true;
 }
@@ -76,11 +76,11 @@ export function renderApplyPatchResultFileMatches(
   const fileMatches = [...result.matchAll(/(?:update|add|delete|create|modify|Applied:\s*)(?:\w+:\s*)?([^\n,]+)/gi)];
   if (fileMatches.length === 0) return false;
 
-  const linesEl = container.createDiv({ cls: 'claudian-tool-lines' });
+  const linesEl = container.createDiv({ cls: 'specorator-tool-lines' });
   for (const match of fileMatches) {
     const filePath = match[1]?.trim();
     if (filePath) {
-      linesEl.createDiv({ cls: 'claudian-tool-line' }).setText(filePath);
+      linesEl.createDiv({ cls: 'specorator-tool-line' }).setText(filePath);
     }
   }
   return true;

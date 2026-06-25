@@ -23,7 +23,7 @@ export abstract class LibraryEditorModal extends Modal {
   protected abstract renderBody(root: HTMLElement): Promise<void>;
 
   async onOpen(): Promise<void> {
-    this.modalEl.addClass('claudian-library-modal');
+    this.modalEl.addClass('specorator-library-modal');
     this.titleEl.setText(this.title());
     await this.rerender();
   }
@@ -35,7 +35,7 @@ export abstract class LibraryEditorModal extends Modal {
   protected async rerender(): Promise<void> {
     const root = this.contentEl;
     root.empty();
-    root.addClass('claudian-library-modal-content');
+    root.addClass('specorator-library-modal-content');
     await this.renderBody(root);
   }
 

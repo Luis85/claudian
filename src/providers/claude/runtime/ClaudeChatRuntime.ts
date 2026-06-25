@@ -1,5 +1,5 @@
 /**
- * Claudian - Claude Agent SDK wrapper
+ * Specorator - Claude Agent SDK wrapper
  *
  * Handles communication with Claude via the Agent SDK. Manages streaming,
  * session persistence, permission modes, and security hooks.
@@ -54,7 +54,7 @@ import type {
   ToolCallInfo,
 } from '../../../core/types';
 import type { PluginContext } from '../../../core/types/PluginContext';
-import type { ClaudianSettings, PermissionMode } from '../../../core/types/settings';
+import type { PermissionMode,SpecoratorSettings } from '../../../core/types/settings';
 import { t } from '../../../i18n/i18n';
 import { getEnhancedPath, getMissingNodeError } from '../../../utils/env';
 import { getVaultPath } from '../../../utils/path';
@@ -154,7 +154,7 @@ interface ColdStartStreamState {
   usageState: ReturnType<typeof createTransformUsageState>;
 }
 
-export class ClaudianService implements ChatRuntime {
+export class ClaudeChatRuntime implements ChatRuntime {
   readonly providerId = CLAUDE_PROVIDER_CAPABILITIES.providerId;
   private plugin: PluginContext;
   private agentManager: Pick<AppAgentManager, 'setBuiltinAgentNames'> | null;
@@ -632,7 +632,7 @@ export class ClaudianService implements ChatRuntime {
   /**
    * Builds the base query options context from current state.
    */
-  private getScopedSettings(): ClaudianSettings {
+  private getScopedSettings(): SpecoratorSettings {
     return ProviderSettingsCoordinator.getProviderSettingsSnapshot(
       this.plugin.settings,
       this.providerId,
@@ -1469,10 +1469,10 @@ export class ClaudianService implements ChatRuntime {
         getPermissionMode: () => this.getScopedSettings().permissionMode as PermissionMode,
         resolveSDKPermissionMode: (mode) => this.resolveSDKPermissionMode(mode),
         mcpManager: this.mcpManager,
-        getClaudianToolServer: this.plugin.getClaudianToolServer
-          ? () => this.plugin.getClaudianToolServer!(this.currentBoundAgentTools)
+        getSpecoratorToolServer: this.plugin.getSpecoratorToolServer
+          ? () => this.plugin.getSpecoratorToolServer!(this.currentBoundAgentTools)
           : undefined,
-        getClaudianToolKey: () => this.plugin.getClaudianToolKey?.(this.currentBoundAgentTools) ?? '',
+        getSpecoratorToolKey: () => this.plugin.getSpecoratorToolKey?.(this.currentBoundAgentTools) ?? '',
         buildPersistentQueryConfig: (vaultPath, cliPath, externalContextPaths, boundAgentPrompt) =>
           this.buildPersistentQueryConfig(vaultPath, cliPath, externalContextPaths, undefined, boundAgentPrompt),
         needsRestart: (newConfig) => this.needsRestart(newConfig),
@@ -1576,8 +1576,8 @@ export class ClaudianService implements ChatRuntime {
       allowedTools: resolveColdStartAllowedTools(queryOptions?.allowedTools),
       hasEditorContext,
       externalContextPaths,
-      getClaudianToolServer: this.plugin.getClaudianToolServer
-        ? () => this.plugin.getClaudianToolServer!(this.currentBoundAgentTools)
+      getSpecoratorToolServer: this.plugin.getSpecoratorToolServer
+        ? () => this.plugin.getSpecoratorToolServer!(this.currentBoundAgentTools)
         : undefined,
     };
 

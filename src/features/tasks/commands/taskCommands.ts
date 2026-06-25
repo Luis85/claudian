@@ -2,7 +2,7 @@ import { normalizePath, Notice, TFile, TFolder } from 'obsidian';
 
 import { asSettingsBag } from '../../../core/types/settings';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import type { BrowserSelectionContext } from '../../../utils/browser';
 import { resolveAgentBoardDefaultModel } from '../defaultModelResolver';
 import { resolveAgentBoardDefaultProvider } from '../defaultProviderResolver';
@@ -63,7 +63,7 @@ function workOrderFrontmatter(args: FrontmatterArgs): string {
   const loopLine = args.loop ? `\nloop: ${JSON.stringify(args.loop)}` : '';
   const agentLine = args.agent ? `\nagent: ${JSON.stringify(args.agent)}` : '';
   return `---
-type: claudian-work-order
+type: specorator-work-order
 schema_version: 1
 id: ${args.id}
 title: ${JSON.stringify(args.title)}
@@ -160,7 +160,7 @@ ${GENERATED_REGIONS_TAIL}`;
 
 function buildExampleTemplateMarkdown(): string {
   return `---
-type: claudian-work-order-template
+type: specorator-work-order-template
 schema_version: 1
 name: Example template
 description: Starting point for a custom work-order template.
@@ -201,14 +201,14 @@ function isoDate(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-async function ensureFolder(plugin: ClaudianPlugin, folder: string): Promise<void> {
+async function ensureFolder(plugin: SpecoratorPlugin, folder: string): Promise<void> {
   const existing = plugin.app.vault.getAbstractFileByPath(folder);
   if (existing instanceof TFolder) return;
   if (existing) return;
   await plugin.app.vault.createFolder(folder);
 }
 
-function uniquePath(plugin: ClaudianPlugin, basePath: string): string {
+function uniquePath(plugin: SpecoratorPlugin, basePath: string): string {
   if (!plugin.app.vault.getAbstractFileByPath(basePath)) return basePath;
   const withoutExt = stripMarkdownExtension(basePath);
   let counter = 2;
@@ -228,7 +228,7 @@ export function resolveArchiveFolder(setting: string): string {
  * Returns the new path on success, or null if the note was missing.
  */
 export async function archiveWorkOrder(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   task: TaskSpec,
 ): Promise<string | null> {
   const file = plugin.app.vault.getAbstractFileByPath(task.path);
@@ -252,7 +252,7 @@ export async function archiveWorkOrder(
  * resolves to a TFile (already moved/deleted/shadowed by a TFolder).
  */
 export async function deleteWorkOrder(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   task: TaskSpec,
 ): Promise<boolean> {
   const file = plugin.app.vault.getAbstractFileByPath(task.path);
@@ -290,7 +290,7 @@ const WORK_ORDER_MARKDOWN_BUILDERS: WorkOrderMarkdownBuilders = {
 };
 
 export async function createWorkOrderFromSeed(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   seed: WorkOrderSeed,
   options?: CreateWorkOrderOptions,
 ): Promise<TFile | null> {
@@ -346,14 +346,14 @@ export async function createWorkOrderFromSeed(
 }
 
 export async function createWorkOrder(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   source?: TFile | TFolder | null,
   options?: CreateWorkOrderOptions,
 ): Promise<TFile | null> {
   return createWorkOrderFromSeed(plugin, buildSeedFromSource(source), options);
 }
 
-export async function createWorkOrderTemplate(plugin: ClaudianPlugin): Promise<TFile | null> {
+export async function createWorkOrderTemplate(plugin: SpecoratorPlugin): Promise<TFile | null> {
   const folder = normalizePath(plugin.settings.agentBoardTemplateFolder || 'Agent Board/templates');
   await ensureFolder(plugin, folder);
   const filePath = uniquePath(plugin, normalizePath(`${folder}/work-order-template.md`));
@@ -440,7 +440,7 @@ export function buildBrowserSeed(context: BrowserSelectionContext): WorkOrderSee
   };
 }
 
-export async function createWorkOrderFromBrowserSelection(plugin: ClaudianPlugin): Promise<TFile | null> {
+export async function createWorkOrderFromBrowserSelection(plugin: SpecoratorPlugin): Promise<TFile | null> {
   const context = plugin.getActiveBrowserSelection();
   if (!context || !context.selectedText.trim()) {
     new Notice(t('tasks.create.needsBrowserSelection'));

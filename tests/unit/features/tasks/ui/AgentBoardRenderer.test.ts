@@ -19,7 +19,7 @@ function makeTask(id: string, status: TaskStatus): TaskSpec {
   return {
     path: `tasks/${id}.md`,
     frontmatter: {
-      type: 'claudian-work-order',
+      type: 'specorator-work-order',
       schema_version: 1,
       id,
       title: `Task ${id}`,
@@ -160,26 +160,26 @@ describe('AgentBoardRenderer — "Run next ready" button visibility', () => {
 });
 
 function findCardCluster(host: HTMLElement): HTMLElement | null {
-  return host.querySelector('.claudian-agent-board-card-actions') as HTMLElement | null;
+  return host.querySelector('.specorator-agent-board-card-actions') as HTMLElement | null;
 }
 
 function findClusterPrimary(host: HTMLElement): HTMLButtonElement | null {
-  return host.querySelector('.claudian-agent-board-card-action-primary') as HTMLButtonElement | null;
+  return host.querySelector('.specorator-agent-board-card-action-primary') as HTMLButtonElement | null;
 }
 
 function findClusterSecondary(host: HTMLElement): HTMLButtonElement | null {
-  return host.querySelector('.claudian-agent-board-card-action-secondary') as HTMLButtonElement | null;
+  return host.querySelector('.specorator-agent-board-card-action-secondary') as HTMLButtonElement | null;
 }
 
 function findClusterTrigger(host: HTMLElement): HTMLButtonElement | null {
-  return host.querySelector('.claudian-agent-board-card-action-more') as HTMLButtonElement | null;
+  return host.querySelector('.specorator-agent-board-card-action-more') as HTMLButtonElement | null;
 }
 
 function openClusterMenu(host: HTMLElement): HTMLElement {
   const trigger = findClusterTrigger(host);
   if (!trigger) throw new Error('cluster ⋯ trigger not found');
   trigger.click();
-  const menu = document.querySelector('.claudian-agent-board-card-menu') as HTMLElement | null;
+  const menu = document.querySelector('.specorator-agent-board-card-menu') as HTMLElement | null;
   if (!menu) throw new Error('cluster overflow menu did not open');
   return menu;
 }
@@ -197,7 +197,7 @@ function findMenuItem(menu: HTMLElement, label: string): HTMLButtonElement | nul
 afterEach(() => {
   // The portal popover mounts on document.body; ensure no detached menu leaks
   // across tests if a case forgets to close it.
-  document.body.querySelectorAll('.claudian-agent-board-card-menu').forEach((el) => el.remove());
+  document.body.querySelectorAll('.specorator-agent-board-card-menu').forEach((el) => el.remove());
 });
 
 describe('AgentBoardRenderer — hover action cluster (per-status primary + ⋯ menu)', () => {
@@ -268,7 +268,7 @@ describe('AgentBoardRenderer — hover action cluster (per-status primary + ⋯ 
 
     const primary = findClusterPrimary(host);
     expect(primary?.textContent).toContain('Stop');
-    expect(primary?.classList.contains('claudian-agent-board-card-action-primary--danger')).toBe(true);
+    expect(primary?.classList.contains('specorator-agent-board-card-action-primary--danger')).toBe(true);
     primary?.click();
     expect(callbacks.onStop).toHaveBeenCalledWith(task);
 
@@ -334,7 +334,7 @@ describe('AgentBoardRenderer — hover action cluster (per-status primary + ⋯ 
       const menu = openClusterMenu(host);
       expect(menuItemTexts(menu)).toEqual(['Open note', 'Open conversation', 'Stop']);
       const stop = findMenuItem(menu, 'Stop');
-      expect(stop?.classList.contains('claudian-agent-board-card-menu-item--danger')).toBe(true);
+      expect(stop?.classList.contains('specorator-agent-board-card-menu-item--danger')).toBe(true);
       stop?.click();
       expect(callbacks.onStop).toHaveBeenCalledWith(task);
     },
@@ -372,7 +372,7 @@ describe('AgentBoardRenderer — hover action cluster (per-status primary + ⋯ 
     const menu = openClusterMenu(host);
     expect(menuItemTexts(menu)).toEqual(['Mark failed', 'Open note']);
     const markFailed = findMenuItem(menu, 'Mark failed');
-    expect(markFailed?.classList.contains('claudian-agent-board-card-menu-item--danger')).toBe(true);
+    expect(markFailed?.classList.contains('specorator-agent-board-card-menu-item--danger')).toBe(true);
     markFailed?.click();
     expect(callbacks.onMarkFailed).toHaveBeenCalledWith(task);
   });
@@ -386,14 +386,14 @@ describe('AgentBoardRenderer — hover action cluster (per-status primary + ⋯ 
 
     const primary = findClusterPrimary(host);
     expect(primary?.textContent).toContain('Reopen');
-    expect(primary?.classList.contains('claudian-agent-board-card-action-primary--ghost')).toBe(true);
+    expect(primary?.classList.contains('specorator-agent-board-card-action-primary--ghost')).toBe(true);
     primary?.click();
     expect(callbacks.onReopen).toHaveBeenCalledWith(task);
 
     const menu = openClusterMenu(host);
     expect(menuItemTexts(menu)).toEqual(['Open note', 'Archive']);
     const archive = findMenuItem(menu, 'Archive');
-    expect(archive?.classList.contains('claudian-agent-board-card-menu-item--danger')).toBe(true);
+    expect(archive?.classList.contains('specorator-agent-board-card-menu-item--danger')).toBe(true);
     archive?.click();
     expect(callbacks.onArchive).toHaveBeenCalledWith(task);
   });
@@ -461,10 +461,10 @@ describe('AgentBoardRenderer — live cards keep the cluster persistent', () => 
       renderer.render(host, makeState({ live: [makeTask('p', status)] }), makeCallbacks());
       const card = findFirstCard(host);
       const cluster = findCardCluster(host);
-      expect(cluster?.classList.contains('claudian-agent-board-card-actions--persistent')).toBe(true);
+      expect(cluster?.classList.contains('specorator-agent-board-card-actions--persistent')).toBe(true);
       // The title row reserves right padding so the persistent buttons never
       // overlap the title text (CSS keys off this modifier on the card).
-      expect(card?.classList.contains('claudian-agent-board-card--live-actions')).toBe(true);
+      expect(card?.classList.contains('specorator-agent-board-card--live-actions')).toBe(true);
     },
   );
 
@@ -472,8 +472,8 @@ describe('AgentBoardRenderer — live cards keep the cluster persistent', () => 
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
-    expect(findCardCluster(host)?.classList.contains('claudian-agent-board-card-actions--persistent')).toBe(false);
-    expect(findFirstCard(host)?.classList.contains('claudian-agent-board-card--live-actions')).toBe(false);
+    expect(findCardCluster(host)?.classList.contains('specorator-agent-board-card-actions--persistent')).toBe(false);
+    expect(findFirstCard(host)?.classList.contains('specorator-agent-board-card--live-actions')).toBe(false);
   });
 });
 
@@ -498,7 +498,7 @@ describe('AgentBoardRenderer — ⋯ overflow menu (portal-positioned popover)',
       expect(menu.getAttribute('role')).toBe('menu');
       // The portal lives directly under document.body, not nested in the renderer host.
       expect(menu.parentElement).toBe(document.body);
-      expect(host.querySelector('.claudian-agent-board-card-menu')).toBeNull();
+      expect(host.querySelector('.specorator-agent-board-card-menu')).toBeNull();
     } finally {
       host.remove();
     }
@@ -514,7 +514,7 @@ describe('AgentBoardRenderer — ⋯ overflow menu (portal-positioned popover)',
     // inbox menu: Open note, Archive (Run now removed — inbox isn't runnable).
     expect(items.length).toBe(2);
     items.forEach((item) => {
-      expect(item.querySelector('.claudian-agent-board-card-menu-item-icon')).not.toBeNull();
+      expect(item.querySelector('.specorator-agent-board-card-menu-item-icon')).not.toBeNull();
     });
   });
 
@@ -525,12 +525,12 @@ describe('AgentBoardRenderer — ⋯ overflow menu (portal-positioned popover)',
     const trigger = findClusterTrigger(host)!;
     stubGeometry(trigger, { top: 100, bottom: 120, left: 200, right: 226 }, 800);
     trigger.click();
-    const menu = document.querySelector('.claudian-agent-board-card-menu') as HTMLElement;
+    const menu = document.querySelector('.specorator-agent-board-card-menu') as HTMLElement;
     // position: fixed comes from the menu CSS class; only the dynamic top/left are inline.
-    expect(menu.classList.contains('claudian-agent-board-card-menu')).toBe(true);
+    expect(menu.classList.contains('specorator-agent-board-card-menu')).toBe(true);
     // Room below (bottom 120 + menu height < 800) → drops down just under the trigger.
     expect(parseFloat(menu.style.top)).toBeGreaterThanOrEqual(120);
-    expect(menu.classList.contains('claudian-agent-board-card-menu--up')).toBe(false);
+    expect(menu.classList.contains('specorator-agent-board-card-menu--up')).toBe(false);
   });
 
   it('flips upward when the menu would overflow the viewport bottom', () => {
@@ -541,8 +541,8 @@ describe('AgentBoardRenderer — ⋯ overflow menu (portal-positioned popover)',
     // Trigger sits near the very bottom of a short viewport → no room below.
     stubGeometry(trigger, { top: 590, bottom: 598, left: 200, right: 226 }, 600);
     trigger.click();
-    const menu = document.querySelector('.claudian-agent-board-card-menu') as HTMLElement;
-    expect(menu.classList.contains('claudian-agent-board-card-menu--up')).toBe(true);
+    const menu = document.querySelector('.specorator-agent-board-card-menu') as HTMLElement;
+    expect(menu.classList.contains('specorator-agent-board-card-menu--up')).toBe(true);
     // Dropped up: the menu's top is above the trigger's top.
     expect(parseFloat(menu.style.top)).toBeLessThan(590);
   });
@@ -555,9 +555,9 @@ describe('AgentBoardRenderer — ⋯ overflow menu (portal-positioned popover)',
       renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
       const trigger = findClusterTrigger(host)!;
       trigger.click();
-      expect(document.querySelector('.claudian-agent-board-card-menu')).not.toBeNull();
+      expect(document.querySelector('.specorator-agent-board-card-menu')).not.toBeNull();
       document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-      expect(document.querySelector('.claudian-agent-board-card-menu')).toBeNull();
+      expect(document.querySelector('.specorator-agent-board-card-menu')).toBeNull();
       expect(document.activeElement).toBe(trigger);
     } finally {
       host.remove();
@@ -572,9 +572,9 @@ describe('AgentBoardRenderer — ⋯ overflow menu (portal-positioned popover)',
       renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
       const trigger = findClusterTrigger(host)!;
       trigger.click();
-      const menu = document.querySelector('.claudian-agent-board-card-menu') as HTMLElement;
+      const menu = document.querySelector('.specorator-agent-board-card-menu') as HTMLElement;
       menu.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-      expect(document.querySelector('.claudian-agent-board-card-menu')).toBeNull();
+      expect(document.querySelector('.specorator-agent-board-card-menu')).toBeNull();
       expect(document.activeElement).toBe(trigger);
     } finally {
       host.remove();
@@ -593,7 +593,7 @@ describe('AgentBoardRenderer — ⋯ overflow menu (portal-positioned popover)',
       // trigger so keyboard users are never stranded after running an action.
       const item = menu.querySelector('[role="menuitem"]') as HTMLButtonElement;
       item.click();
-      expect(document.querySelector('.claudian-agent-board-card-menu')).toBeNull();
+      expect(document.querySelector('.specorator-agent-board-card-menu')).toBeNull();
       expect(document.activeElement).toBe(trigger);
     } finally {
       host.remove();
@@ -606,14 +606,14 @@ describe('AgentBoardRenderer — ⋯ overflow menu (portal-positioned popover)',
     renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
 
     findClusterTrigger(host)!.click();
-    expect(document.querySelector('.claudian-agent-board-card-menu')).not.toBeNull();
+    expect(document.querySelector('.specorator-agent-board-card-menu')).not.toBeNull();
     window.dispatchEvent(new Event('scroll'));
-    expect(document.querySelector('.claudian-agent-board-card-menu')).toBeNull();
+    expect(document.querySelector('.specorator-agent-board-card-menu')).toBeNull();
 
     findClusterTrigger(host)!.click();
-    expect(document.querySelector('.claudian-agent-board-card-menu')).not.toBeNull();
+    expect(document.querySelector('.specorator-agent-board-card-menu')).not.toBeNull();
     window.dispatchEvent(new Event('resize'));
-    expect(document.querySelector('.claudian-agent-board-card-menu')).toBeNull();
+    expect(document.querySelector('.specorator-agent-board-card-menu')).toBeNull();
   });
 
   it('clicking the ⋯ trigger again closes an open menu (toggle)', () => {
@@ -622,9 +622,9 @@ describe('AgentBoardRenderer — ⋯ overflow menu (portal-positioned popover)',
     renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
     const trigger = findClusterTrigger(host)!;
     trigger.click();
-    expect(document.querySelector('.claudian-agent-board-card-menu')).not.toBeNull();
+    expect(document.querySelector('.specorator-agent-board-card-menu')).not.toBeNull();
     trigger.click();
-    expect(document.querySelector('.claudian-agent-board-card-menu')).toBeNull();
+    expect(document.querySelector('.specorator-agent-board-card-menu')).toBeNull();
   });
 
   it('a full re-render closes any open portal menu (no leaked detached popover)', () => {
@@ -632,10 +632,10 @@ describe('AgentBoardRenderer — ⋯ overflow menu (portal-positioned popover)',
     const host = document.createElement('div');
     renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
     findClusterTrigger(host)!.click();
-    expect(document.querySelector('.claudian-agent-board-card-menu')).not.toBeNull();
+    expect(document.querySelector('.specorator-agent-board-card-menu')).not.toBeNull();
     // Re-render (e.g. board refresh) must tear the portal down.
     renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
-    expect(document.querySelector('.claudian-agent-board-card-menu')).toBeNull();
+    expect(document.querySelector('.specorator-agent-board-card-menu')).toBeNull();
   });
 
   it('selecting a menu item closes the menu', () => {
@@ -644,7 +644,7 @@ describe('AgentBoardRenderer — ⋯ overflow menu (portal-positioned popover)',
     renderer.render(host, makeState({ done: [makeTask('d', 'done')] }), makeCallbacks());
     const menu = openClusterMenu(host);
     findMenuItem(menu, 'Open note')?.click();
-    expect(document.querySelector('.claudian-agent-board-card-menu')).toBeNull();
+    expect(document.querySelector('.specorator-agent-board-card-menu')).toBeNull();
   });
 });
 
@@ -654,7 +654,7 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
       const renderer = new AgentBoardRenderer();
       const host = document.createElement('div');
       renderer.render(host, makeState({ [status]: [makeTask('a', status)] }), makeCallbacks());
-      expect(host.querySelector('.claudian-agent-board-card-live-strip')).not.toBeNull();
+      expect(host.querySelector('.specorator-agent-board-card-live-strip')).not.toBeNull();
     });
   }
 
@@ -663,7 +663,7 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
       const renderer = new AgentBoardRenderer();
       const host = document.createElement('div');
       renderer.render(host, makeState({ [status]: [makeTask('a', status)] }), makeCallbacks());
-      expect(host.querySelector('.claudian-agent-board-card-live-strip')).toBeNull();
+      expect(host.querySelector('.specorator-agent-board-card-live-strip')).toBeNull();
     });
   }
 
@@ -671,10 +671,10 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     renderer.render(host, makeState({ running: [makeTask('a', 'running')] }), makeCallbacks());
-    const meta = host.querySelector('.claudian-agent-board-card-live-strip--meta');
-    expect(meta?.querySelector('.claudian-agent-board-card-live-strip--dot')).not.toBeNull();
-    expect(meta?.querySelector('.claudian-agent-board-card-live-strip--caption')).not.toBeNull();
-    expect(host.querySelector('.claudian-agent-board-card-live-strip--ledger')).not.toBeNull();
+    const meta = host.querySelector('.specorator-agent-board-card-live-strip--meta');
+    expect(meta?.querySelector('.specorator-agent-board-card-live-strip--dot')).not.toBeNull();
+    expect(meta?.querySelector('.specorator-agent-board-card-live-strip--caption')).not.toBeNull();
+    expect(host.querySelector('.specorator-agent-board-card-live-strip--ledger')).not.toBeNull();
   });
 
   it('renders the attempt counter + elapsed caption from the seeded data sources', () => {
@@ -682,7 +682,7 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
     const host = document.createElement('div');
     renderer.render(host, makeState({ running: [makeTask('a', 'running')] }), makeCallbacks());
     renderer.patchLiveStrip('a', { lastLedger: 'tool: Edit', elapsedMs: 65_000, attemptNumber: 3, heartbeatAgeMs: 2_000 });
-    const caption = host.querySelector('.claudian-agent-board-card-live-strip--caption');
+    const caption = host.querySelector('.specorator-agent-board-card-live-strip--caption');
     expect(caption?.textContent).toBe('1m 5s · attempt 3');
   });
 
@@ -692,7 +692,7 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
     renderer.render(host, makeState({ running: [makeTask('a', 'running')] }), makeCallbacks());
     const long = 'tool: Edit a very long path/that/keeps/going/and/going/src/foo.ts';
     renderer.patchLiveStrip('a', { lastLedger: long, elapsedMs: 1_000, attemptNumber: 1, heartbeatAgeMs: 2_000 });
-    expect(host.querySelector('.claudian-agent-board-card-live-strip--ledger')?.textContent).toBe(long);
+    expect(host.querySelector('.specorator-agent-board-card-live-strip--ledger')?.textContent).toBe(long);
   });
 
   it.each([
@@ -704,8 +704,8 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
     const host = document.createElement('div');
     renderer.render(host, makeState({ running: [makeTask('a', 'running')] }), makeCallbacks());
     renderer.patchLiveStrip('a', { lastLedger: 'x', elapsedMs: 1_000, attemptNumber: 1, heartbeatAgeMs: ageMs });
-    const dot = host.querySelector('.claudian-agent-board-card-live-strip--dot') as HTMLElement;
-    expect(dot.classList.contains(`claudian-stale-${tier}`)).toBe(true);
+    const dot = host.querySelector('.specorator-agent-board-card-live-strip--dot') as HTMLElement;
+    expect(dot.classList.contains(`specorator-stale-${tier}`)).toBe(true);
     expect(dot.textContent).toBe(glyph);
     expect(dot.getAttribute('aria-label')).toBe(label);
   });
@@ -714,17 +714,17 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     renderer.render(host, makeState({ running: [makeTask('a', 'running')] }), makeCallbacks());
-    const card = host.querySelector('.claudian-agent-board-card');
-    const dot = host.querySelector('.claudian-agent-board-card-live-strip--dot');
-    const caption = host.querySelector('.claudian-agent-board-card-live-strip--caption');
-    const ledgerEl = host.querySelector('.claudian-agent-board-card-live-strip--ledger');
+    const card = host.querySelector('.specorator-agent-board-card');
+    const dot = host.querySelector('.specorator-agent-board-card-live-strip--dot');
+    const caption = host.querySelector('.specorator-agent-board-card-live-strip--caption');
+    const ledgerEl = host.querySelector('.specorator-agent-board-card-live-strip--ledger');
     renderer.patchLiveStrip('a', { lastLedger: 'tool: Edit src/foo.ts', elapsedMs: 12_000, attemptNumber: 1, heartbeatAgeMs: 2_000 });
     expect(ledgerEl?.textContent).toBe('tool: Edit src/foo.ts');
     // Same DOM nodes survive the patch (in-place update, not a rebuild).
-    expect(host.querySelector('.claudian-agent-board-card')).toBe(card);
-    expect(host.querySelector('.claudian-agent-board-card-live-strip--dot')).toBe(dot);
-    expect(host.querySelector('.claudian-agent-board-card-live-strip--caption')).toBe(caption);
-    expect(host.querySelector('.claudian-agent-board-card-live-strip--ledger')).toBe(ledgerEl);
+    expect(host.querySelector('.specorator-agent-board-card')).toBe(card);
+    expect(host.querySelector('.specorator-agent-board-card-live-strip--dot')).toBe(dot);
+    expect(host.querySelector('.specorator-agent-board-card-live-strip--caption')).toBe(caption);
+    expect(host.querySelector('.specorator-agent-board-card-live-strip--ledger')).toBe(ledgerEl);
   });
 
   it('patchCard shows a needs_input reply box seeded with the default value', () => {
@@ -733,8 +733,8 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
     const task = makeTask('a', 'needs_input');
     renderer.render(host, makeState({ needs_input: [task] }), makeCallbacks());
     renderer.patchCard('a', task, { question: 'which env?', defaultValue: '.env.local' });
-    const field = host.querySelector('.claudian-agent-board-card-reply--field') as HTMLInputElement | null;
-    expect(host.querySelector('.claudian-agent-board-card-reply')).not.toBeNull();
+    const field = host.querySelector('.specorator-agent-board-card-reply--field') as HTMLInputElement | null;
+    expect(host.querySelector('.specorator-agent-board-card-reply')).not.toBeNull();
     expect(field?.value).toBe('.env.local');
   });
 
@@ -745,7 +745,7 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
     const task = makeTask('a', 'needs_input');
     renderer.render(host, makeState({ needs_input: [task] }), callbacks);
     renderer.patchCard('a', task, { question: 'which env?' });
-    const field = host.querySelector('.claudian-agent-board-card-reply--field') as HTMLInputElement;
+    const field = host.querySelector('.specorator-agent-board-card-reply--field') as HTMLInputElement;
     field.value = 'my answer';
     findButton(host, 'Send')?.click();
     expect(callbacks.onReply).toHaveBeenCalledWith(task, 'my answer');
@@ -760,7 +760,7 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
     renderer.patchCard('a', task, { action: 'drop table', risk: 'high' });
     findButton(host, 'Approve')?.click();
     expect(callbacks.onApprove).toHaveBeenCalledWith(task);
-    const reason = host.querySelector('.claudian-agent-board-card-reply--field') as HTMLInputElement;
+    const reason = host.querySelector('.specorator-agent-board-card-reply--field') as HTMLInputElement;
     reason.value = 'too risky';
     findButton(host, 'Reject')?.click();
     expect(callbacks.onReject).toHaveBeenCalledWith(task, 'too risky');
@@ -774,10 +774,10 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
     renderer.render(host, makeState({ needs_input: [task] }), makeCallbacks());
 
     // Paused: footer is hidden (not destroyed), reply surface shown.
-    const footer = host.querySelector('.claudian-agent-board-card-footer') as HTMLElement;
+    const footer = host.querySelector('.specorator-agent-board-card-footer') as HTMLElement;
     expect(footer).not.toBeNull();
     expect(footer.classList.contains('is-hidden')).toBe(true);
-    expect(host.querySelector('.claudian-agent-board-card-reply')).not.toBeNull();
+    expect(host.querySelector('.specorator-agent-board-card-reply')).not.toBeNull();
 
     // Resume to a non-reply status via patchCard (no full re-render): the footer
     // (same DOM node) comes back and the reply surface is removed.
@@ -785,9 +785,9 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
     resumed.sections.acceptanceCriteria = '- [x] one\n- [ ] two';
     renderer.patchCard('a', resumed);
     expect(footer.classList.contains('is-hidden')).toBe(false);
-    expect(host.querySelector('.claudian-agent-board-card-reply')).toBeNull();
-    expect(host.querySelector('.claudian-agent-board-card-progress')).not.toBeNull();
-    expect(host.querySelector('.claudian-agent-board-card-assignee')).not.toBeNull();
+    expect(host.querySelector('.specorator-agent-board-card-reply')).toBeNull();
+    expect(host.querySelector('.specorator-agent-board-card-progress')).not.toBeNull();
+    expect(host.querySelector('.specorator-agent-board-card-assignee')).not.toBeNull();
   });
 
   it('patchCard swaps the status dot color + aria-label in place (no full re-render)', () => {
@@ -795,13 +795,13 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
     const host = document.createElement('div');
     const task = makeTask('a', 'running');
     renderer.render(host, makeState({ running: [task] }), makeCallbacks());
-    const card = host.querySelector('.claudian-agent-board-card');
-    const dot = host.querySelector('.claudian-agent-board-card-status-dot') as HTMLElement;
-    expect(dot.classList.contains('claudian-agent-board-card-status-dot--running')).toBe(true);
+    const card = host.querySelector('.specorator-agent-board-card');
+    const dot = host.querySelector('.specorator-agent-board-card-status-dot') as HTMLElement;
+    expect(dot.classList.contains('specorator-agent-board-card-status-dot--running')).toBe(true);
     renderer.patchCard('a', makeTask('a', 'review'), null);
-    expect(host.querySelector('.claudian-agent-board-card')).toBe(card);
-    expect(dot.classList.contains('claudian-agent-board-card-status-dot--running')).toBe(false);
-    expect(dot.classList.contains('claudian-agent-board-card-status-dot--review')).toBe(true);
+    expect(host.querySelector('.specorator-agent-board-card')).toBe(card);
+    expect(dot.classList.contains('specorator-agent-board-card-status-dot--running')).toBe(false);
+    expect(dot.classList.contains('specorator-agent-board-card-status-dot--review')).toBe(true);
     expect(dot.getAttribute('aria-label')).toBe('Review');
   });
 
@@ -810,9 +810,9 @@ describe('AgentBoardRenderer — live strip + paused reply', () => {
     const host = document.createElement('div');
     const task = makeTask('a', 'needs_input');
     renderer.render(host, makeState({ needs_input: [task] }), makeCallbacks());
-    expect(host.querySelector('.claudian-agent-board-card-reply')).not.toBeNull();
+    expect(host.querySelector('.specorator-agent-board-card-reply')).not.toBeNull();
     renderer.patchCard('a', makeTask('a', 'review'), null);
-    expect(host.querySelector('.claudian-agent-board-card-reply')).toBeNull();
+    expect(host.querySelector('.specorator-agent-board-card-reply')).toBeNull();
   });
 });
 
@@ -821,9 +821,9 @@ describe('AgentBoardRenderer — card body (title dot / meta / footer)', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     renderer.render(host, makeState({ needs_approval: [makeTask('a', 'needs_approval')] }), makeCallbacks());
-    const dot = host.querySelector('.claudian-agent-board-card-status-dot') as HTMLElement;
+    const dot = host.querySelector('.specorator-agent-board-card-status-dot') as HTMLElement;
     expect(dot).not.toBeNull();
-    expect(dot.classList.contains('claudian-agent-board-card-status-dot--needs_approval')).toBe(true);
+    expect(dot.classList.contains('specorator-agent-board-card-status-dot--needs_approval')).toBe(true);
     // a11y: the dot announces the status (no visible text badge anymore).
     expect(dot.getAttribute('aria-label')).toBe('Needs approval');
     expect(dot.getAttribute('title')).toBe('Needs approval');
@@ -833,20 +833,20 @@ describe('AgentBoardRenderer — card body (title dot / meta / footer)', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     renderer.render(host, makeState({ running: [makeTask('a', 'running')] }), makeCallbacks());
-    const liveDot = host.querySelector('.claudian-agent-board-card-status-dot') as HTMLElement;
-    expect(liveDot.classList.contains('claudian-agent-board-card-status-dot--live')).toBe(true);
+    const liveDot = host.querySelector('.specorator-agent-board-card-status-dot') as HTMLElement;
+    expect(liveDot.classList.contains('specorator-agent-board-card-status-dot--live')).toBe(true);
 
     const host2 = document.createElement('div');
     new AgentBoardRenderer().render(host2, makeState({ ready: [makeTask('b', 'ready')] }), makeCallbacks());
-    const staticDot = host2.querySelector('.claudian-agent-board-card-status-dot') as HTMLElement;
-    expect(staticDot.classList.contains('claudian-agent-board-card-status-dot--live')).toBe(false);
+    const staticDot = host2.querySelector('.specorator-agent-board-card-status-dot') as HTMLElement;
+    expect(staticDot.classList.contains('specorator-agent-board-card-status-dot--live')).toBe(false);
   });
 
   it('no longer renders the old text status badge', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     renderer.render(host, makeState({ ready: [makeTask('a', 'ready')] }), makeCallbacks());
-    expect(host.querySelector('.claudian-agent-board-status-badge')).toBeNull();
+    expect(host.querySelector('.specorator-agent-board-status-badge')).toBeNull();
   });
 
   it('renders provider/model with truncation classes on the meta engine cell', () => {
@@ -856,7 +856,7 @@ describe('AgentBoardRenderer — card body (title dot / meta / footer)', () => {
     task.frontmatter.provider = 'claude';
     task.frontmatter.model = 'sonnet';
     renderer.render(host, makeState({ ready: [task] }), makeCallbacks());
-    const engine = host.querySelector('.claudian-agent-board-card-meta-engine') as HTMLElement;
+    const engine = host.querySelector('.specorator-agent-board-card-meta-engine') as HTMLElement;
     expect(engine).not.toBeNull();
     expect(engine.textContent).toContain('claude');
     expect(engine.textContent).toContain('sonnet');
@@ -868,13 +868,13 @@ describe('AgentBoardRenderer — card body (title dot / meta / footer)', () => {
     const task = makeTask('a', 'ready');
     task.frontmatter.priority = '1 - high';
     renderer.render(host, makeState({ ready: [task] }), makeCallbacks());
-    const prio = host.querySelector('.claudian-agent-board-card-priority') as HTMLElement;
+    const prio = host.querySelector('.specorator-agent-board-card-priority') as HTMLElement;
     expect(prio).not.toBeNull();
-    expect(prio.classList.contains('claudian-agent-board-card-priority--high')).toBe(true);
-    const bars = prio.querySelectorAll('.claudian-agent-board-card-priority-bar');
+    expect(prio.classList.contains('specorator-agent-board-card-priority--high')).toBe(true);
+    const bars = prio.querySelectorAll('.specorator-agent-board-card-priority-bar');
     expect(bars).toHaveLength(3);
     // "1 - high" → 2 bars filled (low=1, normal=2, high=2? ascending: urgent=3, high=2, normal=2…)
-    const filled = prio.querySelectorAll('.claudian-agent-board-card-priority-bar.is-filled');
+    const filled = prio.querySelectorAll('.specorator-agent-board-card-priority-bar.is-filled');
     expect(filled.length).toBeGreaterThan(0);
     expect(prio.textContent).toContain('1 - high');
   });
@@ -886,11 +886,11 @@ describe('AgentBoardRenderer — card body (title dot / meta / footer)', () => {
     // A legacy/hand-authored value outside the canonical priority set.
     (task.frontmatter as { priority: string }).priority = 'normal';
     expect(() => renderer.render(host, makeState({ ready: [task] }), makeCallbacks())).not.toThrow();
-    const prio = host.querySelector('.claudian-agent-board-card-priority') as HTMLElement;
+    const prio = host.querySelector('.specorator-agent-board-card-priority') as HTMLElement;
     expect(prio).not.toBeNull();
     // Falls back to the normal styling, but still shows the raw value as the label.
-    expect(prio.classList.contains('claudian-agent-board-card-priority--normal')).toBe(true);
-    expect(host.querySelector('.claudian-agent-board-card-priority-label')?.textContent).toBe('normal');
+    expect(prio.classList.contains('specorator-agent-board-card-priority--normal')).toBe(true);
+    expect(host.querySelector('.specorator-agent-board-card-priority-label')?.textContent).toBe('normal');
   });
 
   it('renders acceptance progress in the footer with done/total and a track', () => {
@@ -899,10 +899,10 @@ describe('AgentBoardRenderer — card body (title dot / meta / footer)', () => {
     const task = makeTask('a', 'ready');
     task.sections.acceptanceCriteria = '- [x] one\n- [ ] two\n- [ ] three';
     renderer.render(host, makeState({ ready: [task] }), makeCallbacks());
-    const footer = host.querySelector('.claudian-agent-board-card-footer') as HTMLElement;
+    const footer = host.querySelector('.specorator-agent-board-card-footer') as HTMLElement;
     expect(footer).not.toBeNull();
-    expect(footer.querySelector('.claudian-agent-board-card-progress-track')).not.toBeNull();
-    expect(footer.querySelector('.claudian-agent-board-card-progress-count')?.textContent).toBe('1/3');
+    expect(footer.querySelector('.specorator-agent-board-card-progress-track')).not.toBeNull();
+    expect(footer.querySelector('.specorator-agent-board-card-progress-count')?.textContent).toBe('1/3');
   });
 
   it('marks the progress complete (green) when all acceptance criteria are checked', () => {
@@ -911,9 +911,9 @@ describe('AgentBoardRenderer — card body (title dot / meta / footer)', () => {
     const task = makeTask('a', 'ready');
     task.sections.acceptanceCriteria = '- [x] one\n- [x] two';
     renderer.render(host, makeState({ ready: [task] }), makeCallbacks());
-    const progress = host.querySelector('.claudian-agent-board-card-progress') as HTMLElement;
+    const progress = host.querySelector('.specorator-agent-board-card-progress') as HTMLElement;
     expect(progress.classList.contains('is-complete')).toBe(true);
-    expect(progress.querySelector('.claudian-agent-board-card-progress-count')?.textContent).toBe('2/2');
+    expect(progress.querySelector('.specorator-agent-board-card-progress-count')?.textContent).toBe('2/2');
   });
 
   it('renders the assignee avatar in the 20px slot at the footer far right', () => {
@@ -922,11 +922,11 @@ describe('AgentBoardRenderer — card body (title dot / meta / footer)', () => {
     const task = makeTask('a', 'ready');
     task.sections.acceptanceCriteria = '- [ ] one';
     renderer.render(host, makeState({ ready: [task] }), makeCallbacks());
-    const footer = host.querySelector('.claudian-agent-board-card-footer') as HTMLElement;
-    const slot = footer.querySelector('.claudian-agent-board-card-assignee') as HTMLElement;
+    const footer = host.querySelector('.specorator-agent-board-card-footer') as HTMLElement;
+    const slot = footer.querySelector('.specorator-agent-board-card-assignee') as HTMLElement;
     expect(slot).not.toBeNull();
     // The persona avatar fills the slot. No agent id → Standard.
-    const avatar = slot.querySelector('.claudian-agent-avatar') as HTMLElement;
+    const avatar = slot.querySelector('.specorator-agent-avatar') as HTMLElement;
     expect(avatar).not.toBeNull();
     expect(avatar.getAttribute('title')).toBe('Standard');
     expect(avatar.getAttribute('data-icon')).toBe('cpu');
@@ -939,7 +939,7 @@ describe('AgentBoardRenderer — card body (title dot / meta / footer)', () => {
     const task = makeTask('a', 'ready');
     task.frontmatter.agent = 'persona-not-yet-shipped';
     renderer.render(host, makeState({ ready: [task] }), makeCallbacks());
-    const avatar = host.querySelector('.claudian-agent-board-card-assignee .claudian-agent-avatar') as HTMLElement;
+    const avatar = host.querySelector('.specorator-agent-board-card-assignee .specorator-agent-avatar') as HTMLElement;
     expect(avatar).not.toBeNull();
     expect(avatar.getAttribute('title')).toBe('Standard');
   });
@@ -949,11 +949,11 @@ describe('AgentBoardRenderer — card body (title dot / meta / footer)', () => {
     const host = document.createElement('div');
     // No acceptance criteria → no progress; footer still renders so the slot stays right-aligned.
     renderer.render(host, makeState({ ready: [makeTask('a', 'ready')] }), makeCallbacks());
-    const footer = host.querySelector('.claudian-agent-board-card-footer') as HTMLElement;
+    const footer = host.querySelector('.specorator-agent-board-card-footer') as HTMLElement;
     expect(footer).not.toBeNull();
-    expect(footer.querySelector('.claudian-agent-board-card-progress')).toBeNull();
-    expect(footer.querySelector('.claudian-agent-board-card-footer-spacer')).not.toBeNull();
-    expect(footer.querySelector('.claudian-agent-board-card-assignee')).not.toBeNull();
+    expect(footer.querySelector('.specorator-agent-board-card-progress')).toBeNull();
+    expect(footer.querySelector('.specorator-agent-board-card-footer-spacer')).not.toBeNull();
+    expect(footer.querySelector('.specorator-agent-board-card-assignee')).not.toBeNull();
   });
 
   it('hides the footer (kept in DOM as a patch seam) while a reply surface is shown', () => {
@@ -962,10 +962,10 @@ describe('AgentBoardRenderer — card body (title dot / meta / footer)', () => {
     const task = makeTask('a', 'needs_input');
     task.sections.acceptanceCriteria = '- [ ] one';
     renderer.render(host, makeState({ needs_input: [task] }), makeCallbacks());
-    expect(host.querySelector('.claudian-agent-board-card-reply')).not.toBeNull();
+    expect(host.querySelector('.specorator-agent-board-card-reply')).not.toBeNull();
     // The footer is hidden (not destroyed) so a resumed card keeps its progress
     // + assignee patch seams; `is-hidden` visually omits it.
-    const footer = host.querySelector('.claudian-agent-board-card-footer') as HTMLElement;
+    const footer = host.querySelector('.specorator-agent-board-card-footer') as HTMLElement;
     expect(footer).not.toBeNull();
     expect(footer.classList.contains('is-hidden')).toBe(true);
   });
@@ -992,7 +992,7 @@ describe('AgentBoardRenderer — Auto-run switch (renamed queue toggle)', () => 
   }
 
   function findSwitch(host: HTMLElement): HTMLElement | null {
-    return host.querySelector('.claudian-agent-board-toolbar-autorun') as HTMLElement | null;
+    return host.querySelector('.specorator-agent-board-toolbar-autorun') as HTMLElement | null;
   }
 
   it('renders a role=switch control labelled "Auto-run" with a tooltip', () => {
@@ -1015,11 +1015,11 @@ describe('AgentBoardRenderer — Auto-run switch (renamed queue toggle)', () => 
     renderQueue(host, { paused: false });
     const sw = findSwitch(host)!;
     expect(sw.getAttribute('aria-checked')).toBe('true');
-    expect(sw.classList.contains('claudian-agent-board-toolbar-autorun--on')).toBe(true);
-    expect(sw.classList.contains('claudian-agent-board-toolbar-autorun--off')).toBe(false);
+    expect(sw.classList.contains('specorator-agent-board-toolbar-autorun--on')).toBe(true);
+    expect(sw.classList.contains('specorator-agent-board-toolbar-autorun--off')).toBe(false);
     // Thumb carries the translate class only when ON.
-    const thumb = sw.querySelector('.claudian-agent-board-toolbar-autorun-thumb') as HTMLElement;
-    expect(thumb.classList.contains('claudian-agent-board-toolbar-autorun-thumb--on')).toBe(true);
+    const thumb = sw.querySelector('.specorator-agent-board-toolbar-autorun-thumb') as HTMLElement;
+    expect(thumb.classList.contains('specorator-agent-board-toolbar-autorun-thumb--on')).toBe(true);
   });
 
   it('renders OFF (aria-checked=false) with the off visual when paused', () => {
@@ -1027,10 +1027,10 @@ describe('AgentBoardRenderer — Auto-run switch (renamed queue toggle)', () => 
     renderQueue(host, { paused: true });
     const sw = findSwitch(host)!;
     expect(sw.getAttribute('aria-checked')).toBe('false');
-    expect(sw.classList.contains('claudian-agent-board-toolbar-autorun--off')).toBe(true);
-    expect(sw.classList.contains('claudian-agent-board-toolbar-autorun--on')).toBe(false);
-    const thumb = sw.querySelector('.claudian-agent-board-toolbar-autorun-thumb') as HTMLElement;
-    expect(thumb.classList.contains('claudian-agent-board-toolbar-autorun-thumb--on')).toBe(false);
+    expect(sw.classList.contains('specorator-agent-board-toolbar-autorun--off')).toBe(true);
+    expect(sw.classList.contains('specorator-agent-board-toolbar-autorun--on')).toBe(false);
+    const thumb = sw.querySelector('.specorator-agent-board-toolbar-autorun-thumb') as HTMLElement;
+    expect(thumb.classList.contains('specorator-agent-board-toolbar-autorun-thumb--on')).toBe(false);
   });
 
   it('is OFF when the watcher is halted (a halt forces a paused presentation)', () => {
@@ -1038,16 +1038,16 @@ describe('AgentBoardRenderer — Auto-run switch (renamed queue toggle)', () => 
     renderQueue(host, { halted: true, haltReason: 'boom' });
     const sw = findSwitch(host)!;
     expect(sw.getAttribute('aria-checked')).toBe('false');
-    expect(sw.classList.contains('claudian-agent-board-toolbar-autorun--off')).toBe(true);
+    expect(sw.classList.contains('specorator-agent-board-toolbar-autorun--off')).toBe(true);
   });
 
   it('renders the switch track + thumb structure', () => {
     const host = document.createElement('div');
     renderQueue(host);
     const sw = findSwitch(host)!;
-    expect(sw.querySelector('.claudian-agent-board-toolbar-autorun-track')).not.toBeNull();
-    expect(sw.querySelector('.claudian-agent-board-toolbar-autorun-thumb')).not.toBeNull();
-    expect(sw.querySelector('.claudian-agent-board-toolbar-autorun-label')?.textContent).toBe('Auto-run');
+    expect(sw.querySelector('.specorator-agent-board-toolbar-autorun-track')).not.toBeNull();
+    expect(sw.querySelector('.specorator-agent-board-toolbar-autorun-thumb')).not.toBeNull();
+    expect(sw.querySelector('.specorator-agent-board-toolbar-autorun-label')?.textContent).toBe('Auto-run');
   });
 
   it('invokes onToggle on click', () => {
@@ -1074,9 +1074,9 @@ describe('AgentBoardRenderer — Auto-run switch (renamed queue toggle)', () => 
   it('renders the active count with a soft-ring dot', () => {
     const host = document.createElement('div');
     renderQueue(host, { slotOccupied: 1, slotCapacity: 2 });
-    const active = host.querySelector('.claudian-agent-board-toolbar--queue-active-count');
+    const active = host.querySelector('.specorator-agent-board-toolbar--queue-active-count');
     expect(active?.textContent).toContain('1/2 active');
-    expect(active?.querySelector('.claudian-agent-board-toolbar-active-dot')).not.toBeNull();
+    expect(active?.querySelector('.specorator-agent-board-toolbar-active-dot')).not.toBeNull();
   });
 
   it('renders the right-side work-order tab + free count', () => {
@@ -1097,7 +1097,7 @@ describe('AgentBoardRenderer — Auto-run switch (renamed queue toggle)', () => 
       },
       makeCallbacks(),
     );
-    const slots = host.querySelector('.claudian-agent-board-slots');
+    const slots = host.querySelector('.specorator-agent-board-slots');
     expect(slots?.textContent).toContain('Work-order tabs 1/4');
     expect(slots?.textContent).toContain('3 free');
   });
@@ -1106,14 +1106,14 @@ describe('AgentBoardRenderer — Auto-run switch (renamed queue toggle)', () => 
     const host = document.createElement('div');
     renderQueue(host, { consecutiveFailures: 2 });
     expect(
-      host.querySelector('.claudian-agent-board-toolbar--queue-failure-count')?.textContent,
+      host.querySelector('.specorator-agent-board-toolbar--queue-failure-count')?.textContent,
     ).toContain('2');
   });
 
   it('preserves the halt caption (historical "Queue halted" wording) near the switch', () => {
     const host = document.createElement('div');
     renderQueue(host, { halted: true, haltReason: '3 consecutive failures · last: boom' });
-    const caption = host.querySelector('.claudian-agent-board-toolbar--queue-failure-count');
+    const caption = host.querySelector('.specorator-agent-board-toolbar--queue-failure-count');
     expect(caption?.textContent).toContain('Queue halted');
     expect(caption?.textContent).toContain('boom');
   });
@@ -1138,15 +1138,15 @@ describe('AgentBoardRenderer — merged board toolbar', () => {
       },
     }, makeCallbacks());
 
-    const toolbars = host.querySelectorAll('.claudian-agent-board-toolbar');
+    const toolbars = host.querySelectorAll('.specorator-agent-board-toolbar');
     expect(toolbars).toHaveLength(1);
-    const actions = toolbars[0].querySelector('.claudian-agent-board-toolbar-actions');
+    const actions = toolbars[0].querySelector('.specorator-agent-board-toolbar-actions');
     expect(actions?.textContent).toContain('Add work order');
     expect(actions?.textContent).toContain('Auto-run');
     // Equalized buttons + the vertical divider live in the actions cluster.
-    expect(actions?.querySelector('.claudian-agent-board-toolbar-divider')).not.toBeNull();
-    expect(toolbars[0].querySelector('.claudian-agent-board-toolbar-info')?.textContent).toContain('Work-order tabs');
-    expect(host.querySelector('.claudian-agent-board-header')).toBeNull();
+    expect(actions?.querySelector('.specorator-agent-board-toolbar-divider')).not.toBeNull();
+    expect(toolbars[0].querySelector('.specorator-agent-board-toolbar-info')?.textContent).toContain('Work-order tabs');
+    expect(host.querySelector('.specorator-agent-board-header')).toBeNull();
   });
 
   it('equalizes the Add work order (cta) and Run next ready (tool) buttons', () => {
@@ -1155,10 +1155,10 @@ describe('AgentBoardRenderer — merged board toolbar', () => {
     renderer.render(host, makeState({ ready: [makeTask('r', 'ready')] }), makeCallbacks());
     const add = findButton(host, 'Add work order');
     const runNext = findRunNextButton(host);
-    expect(add?.classList.contains('claudian-agent-board-toolbar-btn')).toBe(true);
+    expect(add?.classList.contains('specorator-agent-board-toolbar-btn')).toBe(true);
     expect(add?.classList.contains('mod-cta')).toBe(true);
-    expect(runNext?.classList.contains('claudian-agent-board-toolbar-btn')).toBe(true);
-    expect(runNext?.classList.contains('claudian-agent-board-toolbar-btn--tool')).toBe(true);
+    expect(runNext?.classList.contains('specorator-agent-board-toolbar-btn')).toBe(true);
+    expect(runNext?.classList.contains('specorator-agent-board-toolbar-btn--tool')).toBe(true);
     // Run next ready carries a leading play icon.
     expect(runNext?.querySelector('[data-icon="play"]')).not.toBeNull();
   });
@@ -1188,7 +1188,7 @@ describe('AgentBoardRenderer — recovery actions live in the hover cluster', ()
       const renderer = new AgentBoardRenderer();
       const host = document.createElement('div');
       renderer.render(host, makeState({ live: [makeTask('p', status)] }), makeCallbacks());
-      expect(host.querySelector('.claudian-agent-board-card-reply')).not.toBeNull();
+      expect(host.querySelector('.specorator-agent-board-card-reply')).not.toBeNull();
       expect(findClusterTrigger(host)).not.toBeNull();
       // No in-card primary — the reply surface owns the live controls.
       expect(findClusterPrimary(host)).toBeNull();
@@ -1207,7 +1207,7 @@ describe('AgentBoardRenderer — skip chip', () => {
         acked = true;
       },
     });
-    const chip = host.querySelector('.claudian-agent-board-card-skip-chip');
+    const chip = host.querySelector('.specorator-agent-board-card-skip-chip');
     expect(chip?.textContent).toContain("provider 'codex' is disabled");
     (chip as HTMLElement)?.click();
     expect(acked).toBe(true);
@@ -1217,12 +1217,12 @@ describe('AgentBoardRenderer — skip chip', () => {
     const host = document.createElement('div');
     const renderer = new AgentBoardRenderer();
     renderer.renderSkipChip(host, { reason: null, onAck: () => {} });
-    expect(host.querySelector('.claudian-agent-board-card-skip-chip')).toBeNull();
+    expect(host.querySelector('.specorator-agent-board-card-skip-chip')).toBeNull();
   });
 });
 
 function findFirstCard(host: HTMLElement): HTMLElement | null {
-  return host.querySelector('.claudian-agent-board-card') as HTMLElement | null;
+  return host.querySelector('.specorator-agent-board-card') as HTMLElement | null;
 }
 
 describe('AgentBoardRenderer — contextmenu listener', () => {
@@ -1308,7 +1308,7 @@ describe('AgentBoardRenderer — collapsible lanes', () => {
     const host = document.createElement('div');
     const callbacks = makeCallbacks();
     renderer.render(host, stateWith(makeCollapsibleLane(false)), callbacks);
-    const chevron = host.querySelector('.claudian-agent-board-lane-collapse-toggle') as HTMLButtonElement | null;
+    const chevron = host.querySelector('.specorator-agent-board-lane-collapse-toggle') as HTMLButtonElement | null;
     expect(chevron).not.toBeNull();
     expect(chevron?.getAttribute('aria-label')).toBe('Collapse lane');
     chevron?.click();
@@ -1319,7 +1319,7 @@ describe('AgentBoardRenderer — collapsible lanes', () => {
     const renderer = new AgentBoardRenderer();
     const host = document.createElement('div');
     renderer.render(host, makeState({ done: [makeTask('d', 'done')] }), makeCallbacks());
-    expect(host.querySelector('.claudian-agent-board-lane-collapse-toggle')).toBeNull();
+    expect(host.querySelector('.specorator-agent-board-lane-collapse-toggle')).toBeNull();
   });
 
   it('renders a strip with rotated title and count when collapsed; click expands', () => {
@@ -1327,16 +1327,16 @@ describe('AgentBoardRenderer — collapsible lanes', () => {
     const host = document.createElement('div');
     const callbacks = makeCallbacks();
     renderer.render(host, stateWith(makeCollapsibleLane(true)), callbacks);
-    const strip = host.querySelector('.claudian-agent-board-lane--collapsed') as HTMLElement | null;
+    const strip = host.querySelector('.specorator-agent-board-lane--collapsed') as HTMLElement | null;
     expect(strip).not.toBeNull();
     expect(strip?.getAttribute('role')).toBe('button');
     expect(strip?.getAttribute('aria-expanded')).toBe('false');
     expect(strip?.getAttribute('aria-label')).toBe('Expand lane Done');
     // Cards must not render inside the collapsed strip — the count badge speaks for them.
-    expect(host.querySelector('.claudian-agent-board-card')).toBeNull();
-    const titleVertical = strip?.querySelector('.claudian-agent-board-lane-title-vertical');
+    expect(host.querySelector('.specorator-agent-board-card')).toBeNull();
+    const titleVertical = strip?.querySelector('.specorator-agent-board-lane-title-vertical');
     expect(titleVertical?.textContent).toBe('Done');
-    const count = strip?.querySelector('.claudian-agent-board-lane-count');
+    const count = strip?.querySelector('.specorator-agent-board-lane-count');
     expect(count?.textContent).toBe('1');
     strip?.click();
     expect(callbacks.onToggleLaneCollapse).toHaveBeenCalledWith('done');
@@ -1348,7 +1348,7 @@ describe('AgentBoardRenderer — collapsible lanes', () => {
     const host = document.createElement('div');
     const callbacks = makeCallbacks();
     renderer.render(host, stateWith(makeCollapsibleLane(false)), callbacks);
-    const chevron = host.querySelector('.claudian-agent-board-lane-collapse-toggle') as HTMLButtonElement | null;
+    const chevron = host.querySelector('.specorator-agent-board-lane-collapse-toggle') as HTMLButtonElement | null;
     chevron?.click();
     expect(callbacks.onOpenDetail).not.toHaveBeenCalled();
   });
@@ -1358,7 +1358,7 @@ describe('AgentBoardRenderer — collapsible lanes', () => {
     const host = document.createElement('div');
     const callbacks = makeCallbacks();
     renderer.render(host, stateWith(makeCollapsibleLane(true)), callbacks);
-    const strip = host.querySelector('.claudian-agent-board-lane--collapsed') as HTMLElement;
+    const strip = host.querySelector('.specorator-agent-board-lane--collapsed') as HTMLElement;
     expect(strip.getAttribute('tabindex')).toBe('0');
     expect(strip.getAttribute('aria-expanded')).toBe('false');
 
@@ -1375,11 +1375,11 @@ describe('AgentBoardRenderer — borderless lane header', () => {
     const host = document.createElement('div');
     renderer.render(host, makeState({ ready: [makeTask('a', 'ready'), makeTask('b', 'ready')] }), makeCallbacks());
 
-    const header = host.querySelector('.claudian-agent-board-lane-header');
+    const header = host.querySelector('.specorator-agent-board-lane-header');
     expect(header).not.toBeNull();
-    expect(header?.querySelector('.claudian-agent-board-lane-title')?.textContent).toBe('ready');
+    expect(header?.querySelector('.specorator-agent-board-lane-title')?.textContent).toBe('ready');
 
-    const pill = host.querySelector('.claudian-agent-board-lane-count');
+    const pill = host.querySelector('.specorator-agent-board-lane-count');
     expect(pill).not.toBeNull();
     expect(pill?.textContent).toBe('2');
   });
@@ -1389,13 +1389,13 @@ describe('AgentBoardRenderer — borderless lane header', () => {
     const host = document.createElement('div');
     renderer.render(host, makeState({ inbox: [makeTask('a', 'inbox')] }), makeCallbacks());
     // Source text is the lane title verbatim; text-transform handles the visual case.
-    expect(host.querySelector('.claudian-agent-board-lane-title')?.textContent).toBe('inbox');
+    expect(host.querySelector('.specorator-agent-board-lane-title')?.textContent).toBe('inbox');
   });
 });
 
 describe('AgentBoardRenderer — Inbox add-work-order row', () => {
   function addRow(host: HTMLElement): HTMLButtonElement | null {
-    return host.querySelector('.claudian-agent-board-lane-add') as HTMLButtonElement | null;
+    return host.querySelector('.specorator-agent-board-lane-add') as HTMLButtonElement | null;
   }
 
   it('renders a dashed add-work-order row only in the Inbox lane', () => {
@@ -1407,10 +1407,10 @@ describe('AgentBoardRenderer — Inbox add-work-order row', () => {
       makeCallbacks(),
     );
 
-    const inboxLane = host.querySelectorAll('.claudian-agent-board-lane')[0];
-    expect(inboxLane.querySelector('.claudian-agent-board-lane-add')).not.toBeNull();
+    const inboxLane = host.querySelectorAll('.specorator-agent-board-lane')[0];
+    expect(inboxLane.querySelector('.specorator-agent-board-lane-add')).not.toBeNull();
     // Exactly one add row across the whole board.
-    expect(host.querySelectorAll('.claudian-agent-board-lane-add')).toHaveLength(1);
+    expect(host.querySelectorAll('.specorator-agent-board-lane-add')).toHaveLength(1);
   });
 
   it('renders the add row even when the Inbox lane has no tasks', () => {
@@ -1485,6 +1485,6 @@ describe('AgentBoardRenderer — Inbox add-work-order row', () => {
       { layout: { lanes: [lane], errors: [] }, invalidNotes: [], slots: { used: 0, max: 1 } },
       makeCallbacks(),
     );
-    expect(host.querySelector('.claudian-agent-board-lane-add')).toBeNull();
+    expect(host.querySelector('.specorator-agent-board-lane-add')).toBeNull();
   });
 });

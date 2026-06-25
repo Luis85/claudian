@@ -101,7 +101,7 @@ describe('SearchResultsView', () => {
     expect(generalSections.length).toBeGreaterThan(0);
 
     // Check breadcrumbs contain expected paths
-    const breadcrumbs = host.querySelectorAll('.claudian-search-breadcrumb');
+    const breadcrumbs = host.querySelectorAll('.specorator-search-breadcrumb');
     const breadcrumbTexts = Array.from(breadcrumbs).map((b) => b.textContent);
     expect(breadcrumbTexts.some((t) => t?.includes('general'))).toBe(true);
   });
@@ -141,7 +141,7 @@ describe('SearchResultsView', () => {
     const results = [makeField('claude.models.cliPath', 'CLI path', 'claude', 'models')];
     new SearchResultsView(host, results, jest.fn(), jest.fn()).render();
 
-    const breadcrumb = host.querySelector('.claudian-search-breadcrumb');
+    const breadcrumb = host.querySelector('.specorator-search-breadcrumb');
     expect(breadcrumb?.textContent).toContain('claude');
     expect(breadcrumb?.textContent).toContain('models');
   });

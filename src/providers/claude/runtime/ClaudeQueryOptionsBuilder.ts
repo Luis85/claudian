@@ -12,7 +12,7 @@ import {
 } from '../../../core/prompt/mainAgent';
 import type { AppPluginManager } from '../../../core/providers/types';
 import { asSettingsBag } from '../../../core/types';
-import type { ClaudianSettings, PermissionMode } from '../../../core/types/settings';
+import type { PermissionMode,SpecoratorSettings } from '../../../core/types/settings';
 import {
   type ClaudeSafeMode,
   getClaudeProviderSettings,
@@ -32,7 +32,7 @@ import {
 export interface QueryOptionsContext {
   vaultPath: string;
   cliPath: string;
-  settings: ClaudianSettings;
+  settings: SpecoratorSettings;
   customEnv: Record<string, string>;
   enhancedPath: string;
   mcpManager: McpServerManager;
@@ -70,8 +70,8 @@ export interface ColdStartQueryContext extends QueryOptionsContext {
   allowedTools?: string[];
   hasEditorContext: boolean;
   externalContextPaths?: string[];
-  /** Optional in-process Claudian user-tool MCP server (Claude only). */
-  getClaudianToolServer?: () => unknown;
+  /** Optional in-process Specorator user-tool MCP server (Claude only). */
+  getSpecoratorToolServer?: () => unknown;
 }
 
 export class QueryOptionsBuilder {
@@ -88,7 +88,7 @@ export class QueryOptionsBuilder {
     if (currentConfig.settingSources !== newConfig.settingSources) return true;
     if (currentConfig.claudeCliPath !== newConfig.claudeCliPath) return true;
 
-    // Note: Permission mode is handled dynamically via setPermissionMode() in ClaudianService.
+    // Note: Permission mode is handled dynamically via setPermissionMode() in ClaudeChatRuntime.
     // Since allowDangerouslySkipPermissions is always true, both directions work without restart.
 
     if (currentConfig.enableChrome !== newConfig.enableChrome) return true;
@@ -227,11 +227,11 @@ export class QueryOptionsBuilder {
     const mcpServers: Record<string, unknown> = {
       ...ctx.mcpManager.getActiveServers(combinedMentions),
     };
-    const claudianToolServer = ctx.getClaudianToolServer?.();
-    if (claudianToolServer) {
-      // Key must match CLAUDIAN_TOOL_SERVER_NAME in features/tools; kept as a
+    const specoratorToolServer = ctx.getSpecoratorToolServer?.();
+    if (specoratorToolServer) {
+      // Key must match SPECORATOR_TOOL_SERVER_NAME in features/tools; kept as a
       // literal because providers must not import from the features layer.
-      mcpServers['claudian'] = claudianToolServer;
+      mcpServers['specorator'] = specoratorToolServer;
     }
 
     if (Object.keys(mcpServers).length > 0) {
@@ -351,7 +351,7 @@ export class QueryOptionsBuilder {
 
   private static applyThinking(
     options: Options,
-    settings: ClaudianSettings,
+    settings: SpecoratorSettings,
     model: string
   ): void {
     const effortLevel = resolveEffortLevel(model, settings.effortLevel);

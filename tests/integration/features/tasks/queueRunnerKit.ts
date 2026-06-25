@@ -6,7 +6,7 @@ export function makeTask(id: string, overrides: Partial<TaskSpec['frontmatter']>
   return {
     path: `tasks/${id}.md`,
     frontmatter: {
-      type: 'claudian-work-order',
+      type: 'specorator-work-order',
       schema_version: 1,
       id,
       title: id,

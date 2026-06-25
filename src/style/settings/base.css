@@ -1,6 +1,6 @@
 /* ── Settings tab navigation ── */
 
-.claudian-settings-tabs {
+.specorator-settings-tabs {
   display: flex;
   gap: 2px;
   border-bottom: 1px solid var(--background-modifier-border);
@@ -11,68 +11,68 @@
  * Registry renderTab emits a Setting().setHeading() per section so the
  * heading row matches the legacy `setHeading()` rows in renderGeneralTab.
  * Field rows wrap their Obsidian Setting and inherit the panel-wide
- * `.claudian-settings .setting-item` styles defined further down. */
+ * `.specorator-settings .setting-item` styles defined further down. */
 
-.claudian-settings-section {
+.specorator-settings-section {
   margin-bottom: 0;
 }
 
-.claudian-settings-field {
+.specorator-settings-field {
   margin-bottom: 0;
 }
 
 /* First-run banner */
-.claudian-first-run-banner-host {
+.specorator-first-run-banner-host {
   margin-bottom: 20px;
 }
 
-.claudian-first-run-banner {
+.specorator-first-run-banner {
   padding: 16px 20px;
   border: 1px solid var(--interactive-accent);
   border-radius: 8px;
   background: var(--background-secondary);
 }
 
-.claudian-first-run-banner h2,
-.claudian-first-run-banner h3 {
+.specorator-first-run-banner h2,
+.specorator-first-run-banner h3 {
   margin: 0 0 6px;
   color: var(--text-normal);
   font-size: var(--font-ui-large);
 }
 
-.claudian-first-run-banner > p {
+.specorator-first-run-banner > p {
   margin: 0 0 16px;
   color: var(--text-muted);
   font-size: var(--font-ui-small);
 }
 
-.claudian-first-run-row {
+.specorator-first-run-row {
   display: flex;
   align-items: flex-start;
   gap: 10px;
   padding: 8px 0;
 }
 
-.claudian-first-run-row + .claudian-first-run-row {
+.specorator-first-run-row + .specorator-first-run-row {
   border-top: 1px solid var(--background-modifier-border);
 }
 
-.claudian-first-run-row input[type="checkbox"] {
+.specorator-first-run-row input[type="checkbox"] {
   margin: 4px 0 0;
 }
 
-.claudian-first-run-row > div {
+.specorator-first-run-row > div {
   flex: 1;
   font-size: var(--font-ui-small);
   color: var(--text-normal);
   line-height: 1.4;
 }
 
-.claudian-first-run-row strong {
+.specorator-first-run-row strong {
   font-weight: var(--font-semibold);
 }
 
-.claudian-first-run-row code {
+.specorator-first-run-row code {
   padding: 1px 5px;
   background: var(--background-primary);
   border: 1px solid var(--background-modifier-border);
@@ -81,7 +81,7 @@
   font-size: var(--font-ui-smaller);
 }
 
-.claudian-first-run-actions {
+.specorator-first-run-actions {
   display: flex;
   gap: 8px;
   margin-top: 16px;
@@ -89,36 +89,36 @@
   border-top: 1px solid var(--background-modifier-border);
 }
 
-.claudian-first-run-actions button {
+.specorator-first-run-actions button {
   padding: 6px 16px;
   border-radius: 4px;
   font-size: var(--font-ui-small);
   cursor: pointer;
 }
 
-.claudian-first-run-actions button[data-action="enable"] {
+.specorator-first-run-actions button[data-action="enable"] {
   background: var(--interactive-accent);
   color: var(--text-on-accent);
   border: 1px solid var(--interactive-accent);
 }
 
-.claudian-first-run-actions button[data-action="enable"]:hover {
+.specorator-first-run-actions button[data-action="enable"]:hover {
   background: var(--interactive-accent-hover);
 }
 
-.claudian-first-run-actions button[data-action="dismiss"] {
+.specorator-first-run-actions button[data-action="dismiss"] {
   background: transparent;
   color: var(--text-muted);
   border: 1px solid var(--background-modifier-border);
 }
 
-.claudian-first-run-actions button[data-action="dismiss"]:hover {
+.specorator-first-run-actions button[data-action="dismiss"]:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }
 
 /* Agent Board tab — registry-rendered settings */
-.claudian-agent-board-folder-warning {
+.specorator-agent-board-folder-warning {
   margin: 8px 0;
   padding: 10px 14px;
   border-left: 3px solid var(--text-warning);
@@ -128,7 +128,7 @@
   color: var(--text-normal);
 }
 
-.claudian-agent-board-hint {
+.specorator-agent-board-hint {
   display: inline-block;
   margin-top: 4px;
   font-size: var(--font-ui-smaller);
@@ -136,7 +136,7 @@
   font-style: italic;
 }
 
-.claudian-settings-tab {
+.specorator-settings-tab {
   padding: 8px 16px;
   border: none;
   background: transparent;
@@ -149,25 +149,25 @@
   margin-bottom: -1px;
 }
 
-.claudian-settings-tab:hover {
+.specorator-settings-tab:hover {
   color: var(--text-normal);
 }
 
-.claudian-settings-tab--active {
+.specorator-settings-tab--active {
   color: var(--text-normal);
   border-bottom-color: var(--interactive-accent);
 }
 
-.claudian-settings-tab-content {
+.specorator-settings-tab-content {
   display: none;
 }
 
-.claudian-settings-tab-content--active {
+.specorator-settings-tab-content--active {
   display: block;
 }
 
 /* Codex placeholder */
-.claudian-settings-codex-placeholder {
+.specorator-settings-codex-placeholder {
   padding: 40px 20px;
   text-align: center;
   color: var(--text-muted);
@@ -175,39 +175,39 @@
 }
 
 /* Settings page - remove separator lines from setting items */
-.claudian-settings .setting-item {
+.specorator-settings .setting-item {
   border-top: none;
 }
 
 /* Settings section headings (via setHeading()) */
-.claudian-settings .setting-item-heading {
+.specorator-settings .setting-item-heading {
   padding-top: 18px;
   margin-top: 12px;
   border-top: 1px solid var(--background-modifier-border);
 }
 
-.claudian-settings .setting-item-heading:first-child {
+.specorator-settings .setting-item-heading:first-child {
   padding-top: 0;
   margin-top: 0;
   border-top: none;
 }
 
-.claudian-settings .setting-item-heading .setting-item-name {
+.specorator-settings .setting-item-heading .setting-item-name {
   font-size: var(--font-ui-medium);
   font-weight: var(--font-semibold);
   color: var(--text-normal);
 }
 
 /* Custom section descriptions - align with items */
-.claudian-sp-settings-desc,
-.claudian-mcp-settings-desc,
-.claudian-plugin-settings-desc,
-.claudian-approved-desc {
+.specorator-sp-settings-desc,
+.specorator-mcp-settings-desc,
+.specorator-plugin-settings-desc,
+.specorator-approved-desc {
   padding: 0 12px;
 }
 
 /* Unified icon action buttons for settings */
-.claudian-settings-action-btn {
+.specorator-settings-action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -222,58 +222,58 @@
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.claudian-settings-action-btn:hover {
+.specorator-settings-action-btn:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }
 
-.claudian-settings-action-btn svg {
+.specorator-settings-action-btn svg {
   width: 14px;
   height: 14px;
 }
 
-.claudian-settings-delete-btn:hover {
+.specorator-settings-delete-btn:hover {
   color: var(--text-error);
 }
 
-.claudian-setting-validation {
+.specorator-setting-validation {
   font-size: var(--font-ui-smaller);
   margin-top: -0.5em;
   margin-bottom: 0.5em;
 }
 
-.claudian-setting-validation-error {
+.specorator-setting-validation-error {
   color: var(--text-error);
 }
 
-.claudian-setting-validation-warning {
+.specorator-setting-validation-warning {
   color: var(--text-warning);
 }
 
-.claudian-cli-path-validation {
+.specorator-cli-path-validation {
   color: var(--text-error);
   font-size: 0.85em;
   margin-top: -0.5em;
   margin-bottom: 0.5em;
 }
 
-.claudian-settings-cli-path-input {
+.specorator-settings-cli-path-input {
   width: 100%;
 }
 
-.claudian-settings-cli-path-input.claudian-input-error {
+.specorator-settings-cli-path-input.specorator-input-error {
   border-color: var(--text-error);
 }
 
 /* Hotkey grid - 3 columns */
-.claudian-hotkey-grid {
+.specorator-hotkey-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 4px 12px;
   padding: 4px 0;
 }
 
-.claudian-hotkey-item {
+.specorator-hotkey-item {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -282,17 +282,17 @@
   border-radius: 6px;
 }
 
-.claudian-hotkey-item:hover {
+.specorator-hotkey-item:hover {
   background: var(--background-modifier-hover);
 }
 
-.claudian-hotkey-name {
+.specorator-hotkey-name {
   flex: 1;
   color: var(--text-normal);
   font-size: var(--font-ui-small);
 }
 
-.claudian-hotkey-badge {
+.specorator-hotkey-badge {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   background: var(--background-modifier-hover);
@@ -302,13 +302,13 @@
 }
 
 /* Media folder input width */
-.claudian-settings-media-input {
+.specorator-settings-media-input {
   width: 200px;
 }
 
 /* ── Shared settings panel layout (used by slash-settings + agent-settings) ── */
 
-.claudian-sp-header {
+.specorator-sp-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -316,18 +316,18 @@
   padding: 0 12px;
 }
 
-.claudian-sp-label {
+.specorator-sp-label {
   font-size: var(--font-ui-small);
   color: var(--text-muted);
   font-weight: var(--font-medium);
 }
 
-.claudian-sp-header-actions {
+.specorator-sp-header-actions {
   display: flex;
   gap: 4px;
 }
 
-.claudian-sp-empty-state {
+.specorator-sp-empty-state {
   padding: 20px;
   text-align: center;
   color: var(--text-muted);
@@ -336,14 +336,14 @@
   margin-top: 8px;
 }
 
-.claudian-sp-list {
+.specorator-sp-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-top: 8px;
 }
 
-.claudian-sp-item {
+.specorator-sp-item {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -352,48 +352,48 @@
   border-radius: 6px;
 }
 
-.claudian-sp-item:hover {
+.specorator-sp-item:hover {
   background: var(--background-modifier-hover);
 }
 
-.claudian-sp-info {
+.specorator-sp-info {
   flex: 1;
   min-width: 0;
 }
 
-.claudian-sp-item-header {
+.specorator-sp-item-header {
   display: flex;
   align-items: baseline;
   gap: 8px;
 }
 
-.claudian-sp-item-name {
+.specorator-sp-item-name {
   font-weight: 600;
   font-family: var(--font-monospace);
   color: var(--text-normal);
 }
 
-.claudian-sp-item-desc {
+.specorator-sp-item-desc {
   font-size: 13px;
   color: var(--text-muted);
   margin-top: 2px;
 }
 
-.claudian-sp-item-actions {
+.specorator-sp-item-actions {
   display: flex;
   gap: 4px;
   margin-left: 16px;
   flex-shrink: 0;
 }
 
-.claudian-sp-advanced-section {
+.specorator-sp-advanced-section {
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
   padding: 0 12px;
   margin: 8px 0;
 }
 
-.claudian-sp-advanced-summary {
+.specorator-sp-advanced-summary {
   cursor: pointer;
   padding: 8px 0;
   font-size: var(--font-ui-small);
@@ -401,11 +401,11 @@
   font-weight: var(--font-medium);
 }
 
-.claudian-sp-advanced-section[open] .claudian-sp-advanced-summary {
+.specorator-sp-advanced-section[open] .specorator-sp-advanced-summary {
   margin-bottom: 4px;
 }
 
-.claudian-sp-content-area {
+.specorator-sp-content-area {
   width: 100%;
   font-family: var(--font-monospace);
   font-size: 13px;
@@ -418,12 +418,12 @@
   margin-top: 8px;
 }
 
-.claudian-sp-content-area:focus {
+.specorator-sp-content-area:focus {
   outline: none;
   border-color: var(--interactive-accent);
 }
 
-.claudian-sp-modal-buttons {
+.specorator-sp-modal-buttons {
   display: flex;
   gap: 8px;
   margin-top: 16px;

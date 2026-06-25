@@ -15,7 +15,7 @@ export interface HiddenProviderCommandsCopy {
 
 /**
  * Hidden provider commands editor (one command name per line, leading `/`/`$`
- * stripped). Mirrors `ClaudianSettings.renderHiddenProviderCommandSetting` so
+ * stripped). Mirrors `SpecoratorSettings.renderHiddenProviderCommandSetting` so
  * provider settings widgets can mount the same control through the registry
  * without reaching back into the settings shell.
  */

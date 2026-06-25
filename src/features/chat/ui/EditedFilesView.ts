@@ -25,7 +25,7 @@ export class EditedFilesView {
   constructor(rowEl: HTMLElement, callbacks: EditedFilesViewCallbacks) {
     this.rowEl = rowEl;
     this.callbacks = callbacks;
-    this.rowEl.addClass('claudian-hidden');
+    this.rowEl.addClass('specorator-hidden');
   }
 
   destroy(): void {
@@ -36,15 +36,15 @@ export class EditedFilesView {
     this.rowEl.empty();
 
     if (entries.length === 0) {
-      this.rowEl.removeClass('claudian-visible-flex');
-      this.rowEl.addClass('claudian-hidden');
+      this.rowEl.removeClass('specorator-visible-flex');
+      this.rowEl.addClass('specorator-hidden');
       return;
     }
 
-    this.rowEl.addClass('claudian-visible-flex');
-    this.rowEl.removeClass('claudian-hidden');
+    this.rowEl.addClass('specorator-visible-flex');
+    this.rowEl.removeClass('specorator-hidden');
 
-    const labelEl = this.rowEl.createSpan({ cls: 'claudian-edited-files-label' });
+    const labelEl = this.rowEl.createSpan({ cls: 'specorator-edited-files-label' });
     labelEl.setText(t('chat.editedFiles.label'));
 
     for (const entry of entries) {
@@ -54,13 +54,13 @@ export class EditedFilesView {
 
   private renderChip(entry: EditedFileEntry): void {
     const chipEl = this.rowEl.createDiv({
-      cls: `claudian-edited-file-chip claudian-edited-file-chip--${entry.changeKind}`,
+      cls: `specorator-edited-file-chip specorator-edited-file-chip--${entry.changeKind}`,
     });
 
-    const iconEl = chipEl.createSpan({ cls: 'claudian-edited-file-chip-icon' });
+    const iconEl = chipEl.createSpan({ cls: 'specorator-edited-file-chip-icon' });
     setIcon(iconEl, entry.changeKind === 'created' ? 'file-plus' : 'file-pen');
 
-    const nameEl = chipEl.createSpan({ cls: 'claudian-edited-file-chip-name' });
+    const nameEl = chipEl.createSpan({ cls: 'specorator-edited-file-chip-name' });
     nameEl.setText(basename(entry.path));
     nameEl.setAttribute('title', entry.path);
 

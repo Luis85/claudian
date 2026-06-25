@@ -1,12 +1,12 @@
 import { ChatTabExecutionSurface } from '@/features/tasks/execution/ChatTabExecutionSurface';
 import type { TaskSpec } from '@/features/tasks/model/taskTypes';
-import type ClaudianPlugin from '@/main';
+import type SpecoratorPlugin from '@/main';
 
 function makeTask(overrides: Partial<TaskSpec['frontmatter']> = {}): TaskSpec {
   return {
     path: 'Agent Board/tasks/wo-1.md',
     frontmatter: {
-      type: 'claudian-work-order',
+      type: 'specorator-work-order',
       schema_version: 1,
       id: 'wo-1',
       title: 'Some task',
@@ -27,12 +27,12 @@ function makeTask(overrides: Partial<TaskSpec['frontmatter']> = {}): TaskSpec {
 }
 
 describe('ChatTabExecutionSurface.requestCommitTurn', () => {
-  it('delegates to ClaudianView.injectCommitTurnForConversation with the work-order conversation', async () => {
+  it('delegates to SpecoratorView.injectCommitTurnForConversation with the work-order conversation', async () => {
     const injectSpy = jest.fn(async () => undefined);
     const plugin = {
       getView: () => ({ injectCommitTurnForConversation: injectSpy }),
       activateView: jest.fn(async () => undefined),
-    } as unknown as ClaudianPlugin;
+    } as unknown as SpecoratorPlugin;
     const surface = new ChatTabExecutionSurface(plugin);
 
     await surface.requestCommitTurn(makeTask(), 'PROMPT');
@@ -53,7 +53,7 @@ describe('ChatTabExecutionSurface.requestCommitTurn', () => {
       activateView: jest.fn(async () => {
         view = { injectCommitTurnForConversation: injectSpy };
       }),
-    } as unknown as ClaudianPlugin;
+    } as unknown as SpecoratorPlugin;
     const surface = new ChatTabExecutionSurface(plugin);
 
     await surface.requestCommitTurn(makeTask(), 'PROMPT');
@@ -67,7 +67,7 @@ describe('ChatTabExecutionSurface.requestCommitTurn', () => {
     const plugin = {
       getView: () => ({ injectCommitTurnForConversation: injectSpy }),
       activateView: jest.fn(async () => undefined),
-    } as unknown as ClaudianPlugin;
+    } as unknown as SpecoratorPlugin;
     const surface = new ChatTabExecutionSurface(plugin);
 
     await surface.requestCommitTurn(makeTask({ conversation_id: null }), 'PROMPT');
@@ -78,7 +78,7 @@ describe('ChatTabExecutionSurface.requestCommitTurn', () => {
   });
 
   it('rejects when work-order has no provider', async () => {
-    const plugin = {} as ClaudianPlugin;
+    const plugin = {} as SpecoratorPlugin;
     const surface = new ChatTabExecutionSurface(plugin);
     await expect(surface.requestCommitTurn(makeTask({ provider: undefined }), 'PROMPT')).rejects.toThrow(
       /provider/i,
@@ -86,7 +86,7 @@ describe('ChatTabExecutionSurface.requestCommitTurn', () => {
   });
 
   it('rejects when work-order has no model', async () => {
-    const plugin = {} as ClaudianPlugin;
+    const plugin = {} as SpecoratorPlugin;
     const surface = new ChatTabExecutionSurface(plugin);
     await expect(surface.requestCommitTurn(makeTask({ model: undefined }), 'PROMPT')).rejects.toThrow(
       /model/i,
@@ -97,7 +97,7 @@ describe('ChatTabExecutionSurface.requestCommitTurn', () => {
     const plugin = {
       getView: () => null,
       activateView: jest.fn(async () => undefined),
-    } as unknown as ClaudianPlugin;
+    } as unknown as SpecoratorPlugin;
     const surface = new ChatTabExecutionSurface(plugin);
     await expect(surface.requestCommitTurn(makeTask(), 'PROMPT')).rejects.toThrow(/chat view/i);
   });

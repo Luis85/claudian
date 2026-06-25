@@ -1,5 +1,5 @@
 /* Clickable file links that open files in Obsidian */
-.claudian-file-link {
+.specorator-file-link {
   color: var(--text-accent);
   text-decoration: none;
   cursor: pointer;
@@ -7,30 +7,30 @@
   transition: color 0.15s ease;
 }
 
-.claudian-file-link:hover {
+.specorator-file-link:hover {
   color: var(--text-accent-hover);
   text-decoration: underline;
 }
 
 /* File link inside inline code */
-code .claudian-file-link {
+code .specorator-file-link {
   color: var(--text-accent);
 }
 
-code .claudian-file-link:hover {
+code .specorator-file-link:hover {
   color: var(--text-accent-hover);
 }
 
 /* Tool summaries and search result lines (non-anchor file links) */
-.claudian-tool-summary .claudian-file-link,
-.claudian-write-edit-summary .claudian-file-link,
-.claudian-tool-line .claudian-file-link {
+.specorator-tool-summary .specorator-file-link,
+.specorator-write-edit-summary .specorator-file-link,
+.specorator-tool-line .specorator-file-link {
   text-decoration: underline;
   text-decoration-color: color-mix(in srgb, var(--text-accent) 35%, transparent);
 }
 
-.claudian-tool-summary .claudian-file-link:hover,
-.claudian-write-edit-summary .claudian-file-link:hover,
-.claudian-tool-line .claudian-file-link:hover {
+.specorator-tool-summary .specorator-file-link:hover,
+.specorator-write-edit-summary .specorator-file-link:hover,
+.specorator-tool-line .specorator-file-link:hover {
   text-decoration-color: var(--text-accent);
 }

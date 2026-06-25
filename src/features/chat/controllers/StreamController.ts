@@ -17,7 +17,7 @@ import {
 import { extractToolResultContent } from '../../../core/tools/toolResultContent';
 import type { ChatMessage, StreamChunk, SubagentInfo, ToolCallInfo } from '../../../core/types';
 import type { SDKToolUseResult } from '../../../core/types/diff';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import {
   cancelScheduledAnimationFrame,
   scheduleAnimationFrame,
@@ -27,7 +27,7 @@ import {
 import { extractDiffData } from '../../../utils/diff';
 import { toVaultRelativeOpenPath } from '../../../utils/fileLink';
 import { hasStreamingMathDelimiters } from '../../../utils/markdownMath';
-import { openClaudianProviderSettings } from '../../../utils/obsidianPrivateApi';
+import { openSpecoratorProviderSettings } from '../../../utils/obsidianPrivateApi';
 import { renderInlineRuntimeError } from '../rendering/InlineRuntimeError';
 import type { MessageRenderer, RenderContentOptions } from '../rendering/MessageRenderer';
 import { scrollMessagesToBottom } from '../rendering/scrollToBottom';
@@ -71,7 +71,7 @@ import { ToolCallIndex } from './toolCallIndex';
 import { notifyVaultForToolResult } from './vaultFileNotifier';
 
 export interface StreamControllerDeps {
-  plugin: ClaudianPlugin;
+  plugin: SpecoratorPlugin;
   state: ChatState;
   renderer: MessageRenderer;
   subagentManager: SubagentManager;
@@ -707,7 +707,7 @@ export class StreamController {
     // mid-block would let a toggle race the append/render/finalize steps; instead
     // a block keeps the mode it started in and a toggle applies to the next block.
     if (!state.currentTextEl) {
-      state.currentTextEl = state.currentContentEl.createDiv({ cls: 'claudian-text-block' });
+      state.currentTextEl = state.currentContentEl.createDiv({ cls: 'specorator-text-block' });
       state.currentTextContent = '';
       this.currentTextBlockCollapsed = this.shouldCollapseStreamingResponse();
     }
@@ -1126,7 +1126,7 @@ export class StreamController {
     const onOpenSettings =
       kind === 'cli-not-found' || kind === 'unauthenticated'
         ? () => {
-            openClaudianProviderSettings(plugin.app, plugin.manifest.id, providerId);
+            openSpecoratorProviderSettings(plugin.app, plugin.manifest.id, providerId);
           }
         : undefined;
 
@@ -1151,8 +1151,8 @@ export class StreamController {
     const { state } = this.deps;
     if (!state.currentContentEl) return;
     this.hideThinkingIndicator();
-    const el = state.currentContentEl.createDiv({ cls: 'claudian-compact-boundary' });
-    el.createSpan({ cls: 'claudian-compact-boundary-label', text: 'Conversation compacted' });
+    const el = state.currentContentEl.createDiv({ cls: 'specorator-compact-boundary' });
+    el.createSpan({ cls: 'specorator-compact-boundary-label', text: 'Conversation compacted' });
   }
 
   // ============================================

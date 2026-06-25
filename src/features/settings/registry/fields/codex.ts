@@ -51,7 +51,7 @@ function registerSetupAndSafetyFields(r: Registry): void {
     sectionId: 'setup',
     label: 'Installation method',
     description:
-      'How Claudian should launch Codex on Windows. Native Windows uses a Windows executable path. WSL launches the Linux CLI inside a selected distro.',
+      'How Specorator should launch Codex on Windows. Native Windows uses a Windows executable path. WSL launches the Linux CLI inside a selected distro.',
     type: {
       kind: 'custom',
       render: (ctx, host) => renderProviderSettingsWidget(ctx, host, 'codex', 'installationMethod'),
@@ -79,7 +79,7 @@ function registerSetupAndSafetyFields(r: Registry): void {
 
   // Legacy guard: rendered on Windows only; the widget itself hides/disables
   // the control unless the installation method is WSL (same as the legacy
-  // tab's `claudian-hidden` toggle).
+  // tab's `specorator-hidden` toggle).
   r.registerField({
     id: 'providerConfigs.codex.wslDistroOverridesByHost',
     tabId: 'codex',

@@ -5,9 +5,9 @@ scope: user-manual
 parent: "[[Multi Provider Support]]"
 type: user-install-guide
 ---
-# Claudian — Install Codex (Windows)
+# Specorator — Install Codex (Windows)
 
-This manual walks Windows users through installing the **OpenAI Codex CLI**, the runtime Claudian drives when the Codex provider is enabled. Two flavours are supported: **Native Windows** (`codex.exe`) and **WSL** (Linux `codex` inside a WSL distro). Pick one method per machine and configure Claudian accordingly under **Settings → Claudian → Codex**.
+This manual walks Windows users through installing the **OpenAI Codex CLI**, the runtime Specorator drives when the Codex provider is enabled. Two flavours are supported: **Native Windows** (`codex.exe`) and **WSL** (Linux `codex` inside a WSL distro). Pick one method per machine and configure Specorator accordingly under **Settings → Specorator → Codex**.
 
 See [[settings]] for the Codex tab layout, including the **Installation method** toggle and the optional WSL distro override.
 
@@ -67,10 +67,10 @@ codex
 
 The TUI launches with a sign-in prompt. Pick **Sign in with ChatGPT** for plan-backed access, or **API key** to paste an `OPENAI_API_KEY`. Credentials cache under `%USERPROFILE%\.codex\auth.json`.
 
-### Point Claudian at the CLI
+### Point Specorator at the CLI
 
 1. Run `(Get-Command codex).Source` in PowerShell.
-2. Open **Settings → Claudian → Codex**.
+2. Open **Settings → Specorator → Codex**.
 3. Set **Installation method** to **Native Windows**.
 4. Paste the path into **Codex CLI path** (or leave empty for auto-detect).
 
@@ -133,9 +133,9 @@ codex
 
 Same sign-in flow as native. Credentials cache under `~/.codex/auth.json` inside the distro — separate from any native Windows install.
 
-### Point Claudian at the CLI
+### Point Specorator at the CLI
 
-1. Open **Settings → Claudian → Codex**.
+1. Open **Settings → Specorator → Codex**.
 2. Set **Installation method** to **WSL**.
 3. **Codex CLI path** accepts either a bare command (`codex`) or a Linux absolute path (`/home/<you>/.local/bin/codex`). A Windows-style path like `C:\...` is rejected in WSL mode.
 4. Optionally fill **WSL distro override** with the exact distro name (e.g. `Ubuntu-22.04`). Leave empty to infer from the workspace path or fall back to the WSL default distro. List distros with `wsl -l -v`.
@@ -158,7 +158,7 @@ Same sign-in flow as native. Credentials cache under `~/.codex/auth.json` inside
 | Symptom | Fix |
 |---------|-----|
 | `codex` not recognized after install | Open a fresh terminal so `PATH` reloads. |
-| Claudian rejects the CLI path | In WSL mode, paths must be Linux-style. In Native mode, paths must end in `.exe` or `.cmd`. |
+| Specorator rejects the CLI path | In WSL mode, paths must be Linux-style. In Native mode, paths must end in `.exe` or `.cmd`. |
 | WSL distro picked is wrong | Set **WSL distro override** to the exact `wsl -l -v` name. |
 | Auth loop | Delete `~/.codex/auth.json` (or `%USERPROFILE%\.codex\auth.json`) and re-run `codex`. |
 | `EACCES` on npm global install | Do not use `sudo`. Fix the npm prefix with `npm config set prefix "$env:USERPROFILE\npm-global"` and re-add to `PATH`. |
@@ -168,7 +168,7 @@ Same sign-in flow as native. Credentials cache under `~/.codex/auth.json` inside
 
 ## Next steps
 
-- Toggle **Enable Codex** under **Settings → Claudian → General → Providers**.
+- Toggle **Enable Codex** under **Settings → Specorator → General → Providers**.
 - Configure safety mode, custom models, skills, and subagents in the Codex tab — see [[settings]].
-- Note that Codex MCP servers are managed via the `codex mcp` CLI, not in Claudian.
+- Note that Codex MCP servers are managed via the `codex mcp` CLI, not in Specorator.
 - Start a chat tab and pick a Codex model from the provider picker.

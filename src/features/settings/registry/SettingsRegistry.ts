@@ -1,4 +1,4 @@
-import type { ClaudianSettings } from '../../../core/types/settings';
+import type { SpecoratorSettings } from '../../../core/types/settings';
 import type { SettingsField, SettingsSection, SettingsTab } from './SettingsField';
 
 function subsequenceScore(query: string, target: string): number {
@@ -46,20 +46,20 @@ export class SettingsRegistry {
     this.fields.set(field.id, field);
   }
 
-  getTabs(settings: ClaudianSettings): SettingsTab[] {
+  getTabs(settings: SpecoratorSettings): SettingsTab[] {
     return Array.from(this.tabs.values())
       .filter((tab) => tab.visible(settings))
       .sort((a, b) => a.order - b.order);
   }
 
-  getSections(tabId: string, settings: ClaudianSettings): SettingsSection[] {
+  getSections(tabId: string, settings: SpecoratorSettings): SettingsSection[] {
     return Array.from(this.sections.values())
       .filter((s) => s.tabId === tabId)
       .filter((s) => (s.visible ? s.visible(settings) : true))
       .sort((a, b) => a.order - b.order);
   }
 
-  getFields(tabId: string, sectionId: string, settings: ClaudianSettings): SettingsField[] {
+  getFields(tabId: string, sectionId: string, settings: SpecoratorSettings): SettingsField[] {
     return Array.from(this.fields.values())
       .filter((f) => f.tabId === tabId && f.sectionId === sectionId)
       .filter((f) => (f.visible ? f.visible(settings) : true));
@@ -69,7 +69,7 @@ export class SettingsRegistry {
     return Array.from(this.fields.values());
   }
 
-  search(query: string, settings: ClaudianSettings): SettingsField[] {
+  search(query: string, settings: SpecoratorSettings): SettingsField[] {
     const trimmed = query.trim();
     if (!trimmed) return [];
     const matches: Array<{ field: SettingsField; score: number }> = [];

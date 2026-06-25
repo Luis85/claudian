@@ -19,7 +19,7 @@ export interface RunSidecarHeartbeat {
 
 export class RunSidecarStore {
   // Memoize the parent-dir walk so two concurrent first-writes don't both try to
-  // mkdir `.claudian` (Obsidian's adapter.mkdir is non-recursive and may throw
+  // mkdir `.specorator` (Obsidian's adapter.mkdir is non-recursive and may throw
   // EEXIST on the second call).
   private baseDirReady: Promise<void> | null = null;
   // Per-run dir creation, memoized so two concurrent first-writes for the same
@@ -129,7 +129,7 @@ export class RunSidecarStore {
     if (this.baseDirReady) return this.baseDirReady;
     this.baseDirReady = (async () => {
       // Walk the base path one segment at a time. Obsidian's DataAdapter.mkdir
-      // is non-recursive, so on a fresh vault `.claudian` itself doesn't exist
+      // is non-recursive, so on a fresh vault `.specorator` itself doesn't exist
       // and the leaf mkdir silently no-ops while subsequent writes fail.
       const segments = this.baseDir.split('/').filter((s) => s.length > 0);
       let current = '';

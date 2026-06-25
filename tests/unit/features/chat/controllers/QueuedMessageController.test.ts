@@ -169,7 +169,7 @@ describe('QueuedMessageController', () => {
       state.queuedMessage = makeQueuedMessage('queued text');
       controller.updateQueueIndicator();
       const el = state.queueIndicatorEl as any;
-      expect(el.querySelector('.claudian-queue-indicator-text')?.textContent)
+      expect(el.querySelector('.specorator-queue-indicator-text')?.textContent)
         .toBe('⌙ Queued: queued text');
       expect(el.style.display).toBe('flex');
     });

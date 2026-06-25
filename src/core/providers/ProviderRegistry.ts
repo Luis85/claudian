@@ -107,7 +107,7 @@ export class ProviderRegistry {
   }
 
   /**
-   * Canonical (Claudian-vocabulary) tool names the provider can emit after
+   * Canonical (Specorator-vocabulary) tool names the provider can emit after
    * normalization. Backed by `ProviderRegistration.canonicalToolNames`,
    * lifted as flat data per ADR-0001 Phase 1 / Move 4. Use this to enumerate
    * provider tools without a `providerId === 'x'` branch.

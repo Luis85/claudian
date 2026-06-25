@@ -46,8 +46,8 @@ describe('mcpSecrets — extractMcpServerSecrets', () => {
     expect(changed).toBe(true);
     const config = server.config as McpHttpServerConfig;
     expect(config.headers).toEqual({ Accept: 'application/json' }); // secret stripped, non-secret kept
-    expect(server.secretHeaders).toEqual({ Authorization: 'claudian-mcp-remote-header-authorization' });
-    expect(store.stored.get('claudian-mcp-remote-header-authorization')).toBe('Bearer secret');
+    expect(server.secretHeaders).toEqual({ Authorization: 'specorator-mcp-remote-header-authorization' });
+    expect(store.stored.get('specorator-mcp-remote-header-authorization')).toBe('Bearer secret');
   });
 
   it('moves a secret-shaped stdio env var into the store and strips plaintext', () => {
@@ -58,8 +58,8 @@ describe('mcpSecrets — extractMcpServerSecrets', () => {
 
     const config = server.config as McpStdioServerConfig;
     expect(config.env).toEqual({ LOG_LEVEL: 'debug' });
-    expect(server.secretEnv).toEqual({ API_KEY: 'claudian-mcp-local-env-api-key' });
-    expect(store.stored.get('claudian-mcp-local-env-api-key')).toBe('dummy-x');
+    expect(server.secretEnv).toEqual({ API_KEY: 'specorator-mcp-local-env-api-key' });
+    expect(store.stored.get('specorator-mcp-local-env-api-key')).toBe('dummy-x');
   });
 
   it('is idempotent and a cheap no-op once migrated', () => {
@@ -71,27 +71,27 @@ describe('mcpSecrets — extractMcpServerSecrets', () => {
   });
 
   it('reuses an existing ref id when a key is re-entered (rotation updates in place)', () => {
-    const store = makeStore({ 'claudian-mcp-remote-header-authorization': 'old' });
+    const store = makeStore({ 'specorator-mcp-remote-header-authorization': 'old' });
     const server = urlServer({
       config: { type: 'http', url: 'https://x', headers: { Authorization: 'new-value' } },
-      secretHeaders: { Authorization: 'claudian-mcp-remote-header-authorization' },
+      secretHeaders: { Authorization: 'specorator-mcp-remote-header-authorization' },
     });
 
     extractMcpServerSecrets([server], store);
 
-    expect(server.secretHeaders).toEqual({ Authorization: 'claudian-mcp-remote-header-authorization' });
-    expect(store.stored.get('claudian-mcp-remote-header-authorization')).toBe('new-value');
+    expect(server.secretHeaders).toEqual({ Authorization: 'specorator-mcp-remote-header-authorization' });
+    expect(store.stored.get('specorator-mcp-remote-header-authorization')).toBe('new-value');
   });
 
   it('uniquifies against unrelated stored ids so it never clobbers another secret', () => {
-    const store = makeStore({ 'claudian-mcp-remote-header-authorization': 'someone-elses' });
+    const store = makeStore({ 'specorator-mcp-remote-header-authorization': 'someone-elses' });
     const server = urlServer({ secretHeaders: undefined });
 
     extractMcpServerSecrets([server], store);
 
-    expect(server.secretHeaders).toEqual({ Authorization: 'claudian-mcp-remote-header-authorization-2' });
-    expect(store.stored.get('claudian-mcp-remote-header-authorization')).toBe('someone-elses');
-    expect(store.stored.get('claudian-mcp-remote-header-authorization-2')).toBe('Bearer secret');
+    expect(server.secretHeaders).toEqual({ Authorization: 'specorator-mcp-remote-header-authorization-2' });
+    expect(store.stored.get('specorator-mcp-remote-header-authorization')).toBe('someone-elses');
+    expect(store.stored.get('specorator-mcp-remote-header-authorization-2')).toBe('Bearer secret');
   });
 
   it('leaves a non-secret-only config untouched', () => {

@@ -3,7 +3,7 @@ import { TFile } from 'obsidian';
 import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
 import type { ProviderChatUIConfig, ProviderRegistration } from '@/core/providers/types';
 import { createWorkOrderFromSeed } from '@/features/tasks/commands/taskCommands';
-import type ClaudianPlugin from '@/main';
+import type SpecoratorPlugin from '@/main';
 
 /**
  * F5b contract: createWorkOrderFromSeed must read the Agent Board default
@@ -74,7 +74,7 @@ describe('createWorkOrderFromSeed default-model resolution (integration)', () =>
           }),
         },
       },
-    } as unknown as ClaudianPlugin;
+    } as unknown as SpecoratorPlugin;
 
     const file = await createWorkOrderFromSeed(plugin, { title: 'Invalid model falls back' });
     expect(file).not.toBeNull();
@@ -116,7 +116,7 @@ describe('createWorkOrderFromSeed default-model resolution (integration)', () =>
           }),
         },
       },
-    } as unknown as ClaudianPlugin;
+    } as unknown as SpecoratorPlugin;
 
     const file = await createWorkOrderFromSeed(plugin, { title: 'Stored model kept' });
     expect(file).not.toBeNull();

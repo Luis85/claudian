@@ -1,6 +1,6 @@
 /* Custom models table — editable per-provider model overrides */
 
-.claudian-customModels-table {
+.specorator-customModels-table {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -10,7 +10,7 @@
   overflow: hidden;
 }
 
-.claudian-customModels-row {
+.specorator-customModels-row {
   display: grid;
   grid-template-columns: 1.5fr 1fr 0.8fr 0.6fr auto;
   align-items: center;
@@ -20,20 +20,20 @@
   border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.claudian-customModels-row:last-child {
+.specorator-customModels-row:last-child {
   border-bottom: none;
 }
 
-.claudian-customModels-row:hover {
+.specorator-customModels-row:hover {
   background: var(--background-modifier-hover);
 }
 
-.claudian-customModels-row[data-source="env"] {
+.specorator-customModels-row[data-source="env"] {
   background: var(--background-secondary);
   opacity: 0.85;
 }
 
-.claudian-customModels-id {
+.specorator-customModels-id {
   font-family: var(--font-monospace);
   font-size: var(--font-ui-small);
   color: var(--text-normal);
@@ -42,7 +42,7 @@
   white-space: nowrap;
 }
 
-.claudian-customModels-label {
+.specorator-customModels-label {
   font-size: var(--font-ui-small);
   color: var(--text-muted);
   overflow: hidden;
@@ -50,14 +50,14 @@
   white-space: nowrap;
 }
 
-.claudian-customModels-ctxWindow {
+.specorator-customModels-ctxWindow {
   font-family: var(--font-monospace);
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);
   text-align: right;
 }
 
-.claudian-customModels-source {
+.specorator-customModels-source {
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);
   text-transform: uppercase;
@@ -68,12 +68,12 @@
   text-align: center;
 }
 
-.claudian-customModels-row[data-source="env"] .claudian-customModels-source {
+.specorator-customModels-row[data-source="env"] .specorator-customModels-source {
   background: var(--text-accent);
   color: var(--text-on-accent);
 }
 
-.claudian-customModels-row button {
+.specorator-customModels-row button {
   padding: 4px 10px;
   font-size: var(--font-ui-smaller);
   border: 1px solid var(--background-modifier-border);
@@ -84,11 +84,11 @@
   transition: background 0.15s ease;
 }
 
-.claudian-customModels-row button:hover {
+.specorator-customModels-row button:hover {
   background: var(--background-modifier-hover);
 }
 
-.claudian-customModels-editor {
+.specorator-customModels-editor {
   display: grid;
   grid-template-columns: 1.5fr 1fr 0.8fr auto auto;
   align-items: center;
@@ -100,7 +100,7 @@
   border-radius: 6px;
 }
 
-.claudian-customModels-editor input {
+.specorator-customModels-editor input {
   width: 100%;
   padding: 6px 10px;
   font-size: var(--font-ui-small);
@@ -110,12 +110,12 @@
   color: var(--text-normal);
 }
 
-.claudian-customModels-editor input:focus {
+.specorator-customModels-editor input:focus {
   outline: none;
   border-color: var(--interactive-accent);
 }
 
-.claudian-customModels-editor button {
+.specorator-customModels-editor button {
   padding: 6px 14px;
   font-size: var(--font-ui-small);
   border: 1px solid var(--background-modifier-border);
@@ -124,27 +124,27 @@
   transition: background 0.15s ease;
 }
 
-.claudian-customModels-editor button[data-action="save"] {
+.specorator-customModels-editor button[data-action="save"] {
   background: var(--interactive-accent);
   color: var(--text-on-accent);
   border-color: var(--interactive-accent);
 }
 
-.claudian-customModels-editor button[data-action="save"]:hover {
+.specorator-customModels-editor button[data-action="save"]:hover {
   background: var(--interactive-accent-hover);
 }
 
-.claudian-customModels-editor button[data-action="cancel"] {
+.specorator-customModels-editor button[data-action="cancel"] {
   background: var(--background-primary);
   color: var(--text-muted);
 }
 
-.claudian-customModels-editor button[data-action="cancel"]:hover {
+.specorator-customModels-editor button[data-action="cancel"]:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }
 
-.claudian-customModels-error {
+.specorator-customModels-error {
   margin: 8px 0 0;
   padding: 6px 10px;
   font-size: var(--font-ui-smaller);

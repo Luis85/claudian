@@ -1,5 +1,5 @@
 import type { ProviderId } from '../../../core/providers/types';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import type { TaskSpec } from '../model/taskTypes';
 import { ChatTabStreamAdapter } from './ChatTabStreamAdapter';
 import type { ProviderStreamAdapter, StreamHandlers } from './ProviderStreamAdapter';
@@ -19,7 +19,7 @@ class NoopStreamAdapter implements ProviderStreamAdapter {
 }
 
 export class ChatTabExecutionSurface implements TaskExecutionSurface {
-  constructor(private readonly plugin: ClaudianPlugin) {}
+  constructor(private readonly plugin: SpecoratorPlugin) {}
 
   async startTaskRun(task: TaskSpec, options: TaskRunOptions): Promise<TaskRunHandle> {
     // Prefer the coordinator's resolved provider/model (frontmatter, else the
@@ -36,7 +36,7 @@ export class ChatTabExecutionSurface implements TaskExecutionSurface {
       await this.plugin.activateView();
       view = this.plugin.getView();
     }
-    if (!view) return this.failed('Could not open the Claudian chat view.');
+    if (!view) return this.failed('Could not open the Specorator chat view.');
 
     const runId = `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const handle = await view.startTaskRunInFreshTab({
@@ -74,7 +74,7 @@ export class ChatTabExecutionSurface implements TaskExecutionSurface {
       await this.plugin.activateView();
       view = this.plugin.getView();
     }
-    if (!view) throw new Error('Could not open the Claudian chat view.');
+    if (!view) throw new Error('Could not open the Specorator chat view.');
 
     await view.injectCommitTurnForConversation({
       conversationId: task.frontmatter.conversation_id ?? null,

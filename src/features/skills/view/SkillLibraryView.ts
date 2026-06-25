@@ -1,7 +1,7 @@
 import { ItemView, Notice, type WorkspaceLeaf } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { renderLibraryNav } from '../../../shared/libraryNav';
 import { promptReason } from '../../../shared/modals/PromptModal';
 import { withErrorNotice } from '../../../shared/uiAction';
@@ -9,7 +9,7 @@ import { createLibraryCard, librarySlug, renderLibraryEmptyState, renderLibraryL
 import { type SkillLibraryRow, toSkillLibraryRows } from '../skillLibraryRows';
 import { SkillEditorModal } from './SkillEditorModal';
 
-export const VIEW_TYPE_SKILL_LIBRARY = 'claudian-skill-library';
+export const VIEW_TYPE_SKILL_LIBRARY = 'specorator-skill-library';
 
 // Canonical vault skill location (Claude-compatible). Kept local so the view
 // stays in the features layer rather than importing provider storage.
@@ -27,7 +27,7 @@ Write the skill instructions here.
 }
 
 export class SkillLibraryView extends ItemView {
-  constructor(leaf: WorkspaceLeaf, private plugin: ClaudianPlugin) {
+  constructor(leaf: WorkspaceLeaf, private plugin: SpecoratorPlugin) {
     super(leaf);
   }
 
@@ -61,13 +61,13 @@ export class SkillLibraryView extends ItemView {
 
     for (const row of rows) {
       const { nameRow, body, actions } = createLibraryCard(list, row.name);
-      nameRow.createSpan({ cls: 'claudian-library-chip claudian-library-chip-muted', text: row.providerDisplayName });
+      nameRow.createSpan({ cls: 'specorator-library-chip specorator-library-chip-muted', text: row.providerDisplayName });
       if (!row.editable) {
         // Outline (not filled) so the read-only marker reads as distinct from
         // the adjacent filled provider chip rather than merging into one gray pair.
-        nameRow.createSpan({ cls: 'claudian-library-chip claudian-library-chip-outline', text: t('skillLibrary.readOnlyNote') });
+        nameRow.createSpan({ cls: 'specorator-library-chip specorator-library-chip-outline', text: t('skillLibrary.readOnlyNote') });
       }
-      body.createDiv({ cls: 'claudian-library-card-desc', text: row.description });
+      body.createDiv({ cls: 'specorator-library-card-desc', text: row.description });
 
       const openBtn = actions.createEl('button', { text: t('skillLibrary.open') });
       openBtn.onclick = () => this.openEditor(row);

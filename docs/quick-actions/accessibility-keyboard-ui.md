@@ -1,7 +1,7 @@
 ---
 type: quick-action
 name: Accessibility + Keyboard UI
-description: Audit or improve Claudian UI for keyboard access, focus visibility, labels, target size, and reduced-motion safety.
+description: Audit or improve Specorator UI for keyboard access, focus visibility, labels, target size, and reduced-motion safety.
 icon: keyboard
 tags:
   - frontend
@@ -10,7 +10,7 @@ tags:
   - ui
 ---
 
-Use this action to review or improve accessibility for any Claudian UI surface: chat, tool calls, modals, settings, dropdowns, tabs, inline edit, Agent Board, and approval/revision controls.
+Use this action to review or improve accessibility for any Specorator UI surface: chat, tool calls, modals, settings, dropdowns, tabs, inline edit, Agent Board, and approval/revision controls.
 
 ## 1. Identify the interactive surface
 

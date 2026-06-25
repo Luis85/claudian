@@ -1,10 +1,10 @@
 {
-  "id": "claudian-cursor",
-  "name": "Claudian (Cursor fork)",
-  "version": "4.0.0",
+  "id": "specorator",
+  "name": "Specorator",
+  "version": "1.0.0",
   "minAppVersion": "1.11.5",
-  "description": "Embeds Claude Code, Codex, and other coding agents as AI collaborators in your vault. Your vault becomes their working directory, giving them capabilities for file reads and writes, search, bash commands, and multi-step workflows.",
-  "author": "Luis85",
+  "description": "Spec-driven agent workspace for Obsidian. Plan, run, review, keep the record.",
+  "author": "Luis Mendez",
   "authorUrl": "https://github.com/Luis85",
   "isDesktopOnly": true
 }

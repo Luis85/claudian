@@ -3,10 +3,10 @@ import { ItemView, Notice, TFile } from 'obsidian';
 
 import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../core/providers/types';
-import { VIEW_TYPE_CLAUDIAN_AGENT_BOARD } from '../../../core/types/chat';
+import { VIEW_TYPE_SPECORATOR_AGENT_BOARD } from '../../../core/types/chat';
 import { asSettingsBag } from '../../../core/types/settings';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import { promptReason } from '../../../shared/modals/PromptModal';
 import { buildPersonaResolverFromAgents, type PersonaResolver } from '../../agents/personaRegistry';
@@ -99,7 +99,7 @@ export class AgentBoardView extends ItemView {
 
   constructor(
     leaf: WorkspaceLeaf,
-    private readonly plugin: ClaudianPlugin,
+    private readonly plugin: SpecoratorPlugin,
     private readonly executionSurface: TaskExecutionSurface,
   ) {
     super(leaf);
@@ -154,7 +154,7 @@ export class AgentBoardView extends ItemView {
   }
 
   getViewType(): string {
-    return VIEW_TYPE_CLAUDIAN_AGENT_BOARD;
+    return VIEW_TYPE_SPECORATOR_AGENT_BOARD;
   }
 
   getDisplayText(): string {
@@ -323,13 +323,13 @@ export class AgentBoardView extends ItemView {
   private render(): void {
     // Preserve lane scroll position across full re-renders so interacting with a
     // card (which triggers refresh) doesn't jump the board back to the left.
-    const lanesSelector = '.claudian-agent-board-lanes';
+    const lanesSelector = '.specorator-agent-board-lanes';
     const previousLanes = this.contentEl.querySelector(lanesSelector) as HTMLElement | null;
     const scrollLeft = previousLanes?.scrollLeft ?? 0;
     const scrollTop = previousLanes?.scrollTop ?? 0;
 
     this.contentEl.empty();
-    const boardHost = this.contentEl.createDiv({ cls: 'claudian-agent-board-host' });
+    const boardHost = this.contentEl.createDiv({ cls: 'specorator-agent-board-host' });
 
     this.renderer.render(
       boardHost,
@@ -672,8 +672,8 @@ export class AgentBoardView extends ItemView {
    * Replace the work-order note's run-ledger region with the sidecar snapshot
    * at terminal, then GC the sidecar. Failure is surfaced (event) and the
    * sidecar is intentionally KEPT so the ledger isn't lost — a hand-edited
-   * note missing the `<!-- claudian:run-ledger-* -->` markers can be recovered
-   * by reading `.claudian/runs/<runId>/ledger.jsonl` directly. Called from the
+   * note missing the `<!-- specorator:run-ledger-* -->` markers can be recovered
+   * by reading `.specorator/runs/<runId>/ledger.jsonl` directly. Called from the
    * coordinator wiring; extracted as a method so tests can pin the
    * snapshot/emit/cleanup contract without driving a full RunSession.
    */
@@ -707,7 +707,7 @@ export class AgentBoardView extends ItemView {
   }
 
   /**
-   * Deletes sidecar dirs under `.claudian/runs/` whose owning work order is
+   * Deletes sidecar dirs under `.specorator/runs/` whose owning work order is
    * gone or no longer in a live status. Runs at board open after `refresh()`
    * so `this.model.tasks` reflects the on-disk truth. A sidecar dir whose
    * run_id matches an active (running/needs_input/needs_approval) task is

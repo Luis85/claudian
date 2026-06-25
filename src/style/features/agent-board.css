@@ -1,5 +1,5 @@
 /* Board owns its own layout; the native view titlebar adds nothing here. */
-.workspace-leaf-content[data-type="claudian-agent-board-view"] .view-header {
+.workspace-leaf-content[data-type="specorator-agent-board-view"] .view-header {
   display: none;
 }
 
@@ -7,7 +7,7 @@
    inside the viewport. The view-content → host → board chain must be an
    unbroken flex column with min-height:0 at every level; otherwise a tall lane
    grows the whole view and the horizontal scrollbar is pushed off-screen. */
-.workspace-leaf-content[data-type="claudian-agent-board-view"] .view-content {
+.workspace-leaf-content[data-type="specorator-agent-board-view"] .view-content {
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -18,14 +18,14 @@
   background: var(--background-primary);
 }
 
-.claudian-agent-board-host {
+.specorator-agent-board-host {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
 }
 
-.claudian-agent-board {
+.specorator-agent-board {
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
@@ -41,7 +41,7 @@
   background: var(--background-primary);
 }
 
-.claudian-agent-board-lanes {
+.specorator-agent-board-lanes {
   display: flex;
   gap: 14px;
   align-items: flex-start;
@@ -63,33 +63,33 @@
   scrollbar-color: var(--background-modifier-border) transparent;
 }
 
-.claudian-agent-board-lanes::-webkit-scrollbar {
+.specorator-agent-board-lanes::-webkit-scrollbar {
   width: 9px;
   height: 9px;
 }
 
-.claudian-agent-board-lanes::-webkit-scrollbar-track {
+.specorator-agent-board-lanes::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.claudian-agent-board-lanes::-webkit-scrollbar-thumb {
+.specorator-agent-board-lanes::-webkit-scrollbar-thumb {
   background: var(--background-modifier-border);
   border-radius: var(--radius-m);
 }
 
-.claudian-agent-board-lanes::-webkit-scrollbar-thumb:hover {
+.specorator-agent-board-lanes::-webkit-scrollbar-thumb:hover {
   background: var(--background-modifier-border-hover);
 }
 
 /* Hide the dead corner where the two scrollbars meet so it doesn't paint a
    solid native square against the board surface. */
-.claudian-agent-board-lanes::-webkit-scrollbar-corner {
+.specorator-agent-board-lanes::-webkit-scrollbar-corner {
   background: transparent;
 }
 
 /* Borderless lane: just a header + a vertical stack of floating cards. No
    frame, background, or border — the cards carry all the visual weight. */
-.claudian-agent-board-lane {
+.specorator-agent-board-lane {
   display: flex;
   flex-direction: column;
   gap: 9px;
@@ -100,14 +100,14 @@
   min-height: 0;
 }
 
-.claudian-agent-board-lane-header {
+.specorator-agent-board-lane-header {
   display: flex;
   align-items: center;
   gap: 6px;
   min-height: 24px;
 }
 
-.claudian-agent-board-lane-title {
+.specorator-agent-board-lane-title {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -120,7 +120,7 @@
   text-transform: uppercase;
 }
 
-.claudian-agent-board-lane-header-meta {
+.specorator-agent-board-lane-header-meta {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -128,7 +128,7 @@
   margin-left: auto;
 }
 
-.claudian-agent-board-lane-count {
+.specorator-agent-board-lane-count {
   font-size: var(--font-ui-smaller);
   color: var(--text-faint);
   font-variant-numeric: tabular-nums;
@@ -143,7 +143,7 @@
 
 /* Dashed add-work-order affordance, Inbox lane only. Subtle by default; the
    text lifts to --text-muted on hover/focus to signal interactivity. */
-.claudian-agent-board-lane-add {
+.specorator-agent-board-lane-add {
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -163,8 +163,8 @@
   box-shadow: none;
 }
 
-.claudian-agent-board-lane-add:hover,
-.claudian-agent-board-lane-add:focus-visible {
+.specorator-agent-board-lane-add:hover,
+.specorator-agent-board-lane-add:focus-visible {
   color: var(--text-muted);
   border-color: var(--background-modifier-border-hover);
   background: var(--background-modifier-hover);
@@ -177,14 +177,14 @@
    explicitly; the only defaults that still leak are box-shadow and native
    appearance chrome — neutralize just those (0-1-0 beats `button` 0-0-1, and
    these props are unset by the component rules so there's no conflict). */
-.claudian-agent-board-toolbar-btn,
-.claudian-agent-board-toolbar-autorun,
-.claudian-agent-board-card-action-primary,
-.claudian-agent-board-card-action-more,
-.claudian-agent-board-lane-add,
-.claudian-agent-board-lane-collapse-toggle,
-.claudian-agent-board-card-menu-item,
-.claudian-agent-board-card-reply--actions button {
+.specorator-agent-board-toolbar-btn,
+.specorator-agent-board-toolbar-autorun,
+.specorator-agent-board-card-action-primary,
+.specorator-agent-board-card-action-more,
+.specorator-agent-board-lane-add,
+.specorator-agent-board-lane-collapse-toggle,
+.specorator-agent-board-card-menu-item,
+.specorator-agent-board-card-reply--actions button {
   box-shadow: none;
   appearance: none;
   -webkit-appearance: none;
@@ -192,7 +192,7 @@
 }
 
 /* ===== Linear-style minimal work-order card ===== */
-.claudian-agent-board-card {
+.specorator-agent-board-card {
   /* Anchor for the absolutely-positioned hover action cluster (top-right). */
   position: relative;
   display: flex;
@@ -213,7 +213,7 @@
   cursor: pointer;
 }
 
-.claudian-agent-board-card:hover {
+.specorator-agent-board-card:hover {
   /* Lift, not recede: lighten the surface a touch more, brighten the edge, and
      raise the card with a clear shadow (the visible hover cue). */
   border-color: color-mix(in srgb, var(--text-normal) 20%, transparent);
@@ -221,19 +221,19 @@
   box-shadow: var(--shadow-l);
 }
 
-.claudian-agent-board-card:active {
+.specorator-agent-board-card:active {
   transform: translateY(1px);
 }
 
 /* ---------- Title row: status dot + title ---------- */
-.claudian-agent-board-card-title-row {
+.specorator-agent-board-card-title-row {
   display: flex;
   align-items: flex-start;
   gap: 8px;
   min-width: 0;
 }
 
-.claudian-agent-board-card-title {
+.specorator-agent-board-card-title {
   min-width: 0;
   font-size: var(--font-ui-medium);
   font-weight: var(--font-medium);
@@ -247,7 +247,7 @@
    their full width). Hidden until card hover/focus; the left fade shadow lets it
    read over the title. The cluster background + fade use --color-base-30 (alpha
    via color-mix so no rgba literal). */
-.claudian-agent-board-card-actions {
+.specorator-agent-board-card-actions {
   position: absolute;
   top: 8px;
   right: 9px;
@@ -265,15 +265,15 @@
 
 /* Reveal on card hover/focus. Motion-gated transition; the reveal itself still
    works (opacity flip) when reduced motion is requested. */
-.claudian-agent-board-card:hover .claudian-agent-board-card-actions,
-.claudian-agent-board-card:focus-within .claudian-agent-board-card-actions,
-.claudian-agent-board-card.is-menu-open .claudian-agent-board-card-actions {
+.specorator-agent-board-card:hover .specorator-agent-board-card-actions,
+.specorator-agent-board-card:focus-within .specorator-agent-board-card-actions,
+.specorator-agent-board-card.is-menu-open .specorator-agent-board-card-actions {
   opacity: 1;
   pointer-events: auto;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .claudian-agent-board-card-actions {
+  .specorator-agent-board-card-actions {
     transition: opacity 0.12s ease;
   }
 }
@@ -281,7 +281,7 @@
 /* Live cards (running / needs_input / needs_approval): the cluster is always
    visible (no hover affordance otherwise), and sheds its plate background so the
    persistent ⋯ reads as part of the card rather than a hovering chip. */
-.claudian-agent-board-card-actions--persistent {
+.specorator-agent-board-card-actions--persistent {
   opacity: 1;
   pointer-events: auto;
   background: transparent;
@@ -290,21 +290,21 @@
 
 /* Reserve right padding on the title of live cards so the persistent buttons
    never overlap the title text. */
-.claudian-agent-board-card--live-actions .claudian-agent-board-card-title {
+.specorator-agent-board-card--live-actions .specorator-agent-board-card-title {
   padding-right: 64px;
 }
 
 /* Running cards carry an extra labeled "Go to conversation" secondary button, so
    reserve more right padding than the base live-card cluster (Stop + ⋯). */
-.claudian-agent-board-card--running .claudian-agent-board-card-title {
+.specorator-agent-board-card--running .specorator-agent-board-card-title {
   padding-right: 176px;
 }
 
 /* Primary action button — small; per-status variant (cta / danger / ghost).
    The secondary button ("Go to conversation" on running cards) shares this base
    look; only the primary carries the variant modifiers below. */
-.claudian-agent-board-card-action-primary,
-.claudian-agent-board-card-action-secondary {
+.specorator-agent-board-card-action-primary,
+.specorator-agent-board-card-action-secondary {
   display: inline-flex;
   align-items: center;
   gap: 5px;
@@ -320,55 +320,55 @@
   color: var(--text-normal);
 }
 
-.claudian-agent-board-card-action-primary:hover,
-.claudian-agent-board-card-action-secondary:hover {
+.specorator-agent-board-card-action-primary:hover,
+.specorator-agent-board-card-action-secondary:hover {
   background: var(--interactive-hover);
   border-color: var(--border-color-hover);
 }
 
-.claudian-agent-board-card-action-primary--cta {
+.specorator-agent-board-card-action-primary--cta {
   background: var(--color-green);
   border-color: var(--color-green);
   color: var(--text-on-accent);
 }
 
-.claudian-agent-board-card-action-primary--cta:hover {
+.specorator-agent-board-card-action-primary--cta:hover {
   background: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
   border-color: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
 }
 
-.claudian-agent-board-card-action-primary--ghost {
+.specorator-agent-board-card-action-primary--ghost {
   background: transparent;
 }
 
-.claudian-agent-board-card-action-primary--ghost:hover {
+.specorator-agent-board-card-action-primary--ghost:hover {
   background: var(--background-modifier-hover);
 }
 
-.claudian-agent-board-card-action-primary--danger {
+.specorator-agent-board-card-action-primary--danger {
   background: var(--background-modifier-error);
   border-color: color-mix(in srgb, var(--color-red) 40%, transparent);
   color: var(--color-red);
 }
 
-.claudian-agent-board-card-action-primary--danger:hover {
+.specorator-agent-board-card-action-primary--danger:hover {
   background: var(--color-red);
   border-color: var(--color-red);
   color: var(--text-on-accent);
 }
 
-.claudian-agent-board-card-action-primary .claudian-agent-board-card-action-icon,
-.claudian-agent-board-card-action-secondary .claudian-agent-board-card-action-icon {
+.specorator-agent-board-card-action-primary .specorator-agent-board-card-action-icon,
+.specorator-agent-board-card-action-secondary .specorator-agent-board-card-action-icon {
   display: inline-flex;
 }
 
-.claudian-agent-board-card-action-icon svg {
+.specorator-agent-board-card-action-icon svg {
   width: 13px;
   height: 13px;
 }
 
 /* ⋯ overflow-menu trigger — borderless icon button. */
-.claudian-agent-board-card-action-more {
+.specorator-agent-board-card-action-more {
   display: grid;
   place-items: center;
   width: 26px;
@@ -381,12 +381,12 @@
   color: var(--text-muted);
 }
 
-.claudian-agent-board-card-action-more:hover {
+.specorator-agent-board-card-action-more:hover {
   background: var(--background-modifier-hover);
   color: var(--text-normal);
 }
 
-.claudian-agent-board-card-action-more svg {
+.specorator-agent-board-card-action-more svg {
   width: 17px;
   height: 17px;
 }
@@ -395,7 +395,7 @@
    position:fixed is set inline from the trigger rect; only the chrome lives in
    CSS. Mounting on the body (a portal) keeps a tall menu from adding a scrollbar
    to the overflow:auto lane card list. */
-.claudian-agent-board-card-menu {
+.specorator-agent-board-card-menu {
   /* Portaled onto document.body; the dynamic top/left are set inline.
      min-width matches the JS MENU_MIN_WIDTH so the flip/clamp math agrees. */
   position: fixed;
@@ -411,7 +411,7 @@
   gap: 2px;
 }
 
-.claudian-agent-board-card-menu-item {
+.specorator-agent-board-card-menu-item {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -426,77 +426,77 @@
   font-size: var(--font-ui-small);
 }
 
-.claudian-agent-board-card-menu-item:hover {
+.specorator-agent-board-card-menu-item:hover {
   background: var(--background-modifier-hover);
 }
 
-.claudian-agent-board-card-menu-item-icon {
+.specorator-agent-board-card-menu-item-icon {
   display: inline-flex;
   color: var(--text-faint);
 }
 
-.claudian-agent-board-card-menu-item-icon svg {
+.specorator-agent-board-card-menu-item-icon svg {
   width: 14px;
   height: 14px;
 }
 
 /* Destructive menu items (Stop / Mark failed / Archive) read in red. */
-.claudian-agent-board-card-menu-item--danger,
-.claudian-agent-board-card-menu-item--danger .claudian-agent-board-card-menu-item-icon {
+.specorator-agent-board-card-menu-item--danger,
+.specorator-agent-board-card-menu-item--danger .specorator-agent-board-card-menu-item-icon {
   color: var(--color-red);
 }
 
-.claudian-agent-board-card-menu-item--danger:hover {
+.specorator-agent-board-card-menu-item--danger:hover {
   background: var(--background-modifier-error);
 }
 
 /* Status dot — color read from the status → color contract via the modifier
    classes below. Sits flush with the first title line. */
-.claudian-agent-board-card-status-dot {
+.specorator-agent-board-card-status-dot {
   flex: 0 0 auto;
   width: 8px;
   height: 8px;
   margin-top: 5px;
   border-radius: 50%;
-  background: var(--claudian-board-dot-color, var(--text-muted));
+  background: var(--specorator-board-dot-color, var(--text-muted));
 }
 
 /* Status → dot color contract (mirrors the work-order modal header). */
-.claudian-agent-board-card-status-dot--inbox { --claudian-board-dot-color: var(--color-base-60); }
-.claudian-agent-board-card-status-dot--ready { --claudian-board-dot-color: var(--color-blue); }
-.claudian-agent-board-card-status-dot--running { --claudian-board-dot-color: var(--color-yellow); }
-.claudian-agent-board-card-status-dot--needs_input { --claudian-board-dot-color: var(--color-blue); }
-.claudian-agent-board-card-status-dot--needs_approval { --claudian-board-dot-color: var(--color-purple); }
-.claudian-agent-board-card-status-dot--review { --claudian-board-dot-color: var(--color-blue); }
-.claudian-agent-board-card-status-dot--needs_handoff { --claudian-board-dot-color: var(--color-orange); }
-.claudian-agent-board-card-status-dot--needs_fix { --claudian-board-dot-color: var(--color-orange); }
-.claudian-agent-board-card-status-dot--done { --claudian-board-dot-color: var(--color-green); }
-.claudian-agent-board-card-status-dot--failed { --claudian-board-dot-color: var(--color-red); }
-.claudian-agent-board-card-status-dot--canceled { --claudian-board-dot-color: var(--color-base-60); }
+.specorator-agent-board-card-status-dot--inbox { --specorator-board-dot-color: var(--color-base-60); }
+.specorator-agent-board-card-status-dot--ready { --specorator-board-dot-color: var(--color-blue); }
+.specorator-agent-board-card-status-dot--running { --specorator-board-dot-color: var(--color-yellow); }
+.specorator-agent-board-card-status-dot--needs_input { --specorator-board-dot-color: var(--color-blue); }
+.specorator-agent-board-card-status-dot--needs_approval { --specorator-board-dot-color: var(--color-purple); }
+.specorator-agent-board-card-status-dot--review { --specorator-board-dot-color: var(--color-blue); }
+.specorator-agent-board-card-status-dot--needs_handoff { --specorator-board-dot-color: var(--color-orange); }
+.specorator-agent-board-card-status-dot--needs_fix { --specorator-board-dot-color: var(--color-orange); }
+.specorator-agent-board-card-status-dot--done { --specorator-board-dot-color: var(--color-green); }
+.specorator-agent-board-card-status-dot--failed { --specorator-board-dot-color: var(--color-red); }
+.specorator-agent-board-card-status-dot--canceled { --specorator-board-dot-color: var(--color-base-60); }
 
 /* Live statuses pulse the dot. Motion-gated: the pulse only runs when the user
    has not requested reduced motion. */
 @media (prefers-reduced-motion: no-preference) {
-  .claudian-agent-board-card-status-dot--live {
-    color: var(--claudian-board-dot-color, var(--text-muted));
-    animation: claudian-board-card-dot-pulse 1.6s ease-in-out infinite;
+  .specorator-agent-board-card-status-dot--live {
+    color: var(--specorator-board-dot-color, var(--text-muted));
+    animation: specorator-board-card-dot-pulse 1.6s ease-in-out infinite;
   }
 }
 
-@keyframes claudian-board-card-dot-pulse {
+@keyframes specorator-board-card-dot-pulse {
   0% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--claudian-board-dot-color, var(--text-muted)) 50%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--specorator-board-dot-color, var(--text-muted)) 50%, transparent);
   }
   70% {
-    box-shadow: 0 0 0 5px color-mix(in srgb, var(--claudian-board-dot-color, var(--text-muted)) 0%, transparent);
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--specorator-board-dot-color, var(--text-muted)) 0%, transparent);
   }
   100% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--claudian-board-dot-color, var(--text-muted)) 0%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--specorator-board-dot-color, var(--text-muted)) 0%, transparent);
   }
 }
 
 /* ---------- Meta row: provider/model + priority ---------- */
-.claudian-agent-board-card-meta {
+.specorator-agent-board-card-meta {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
@@ -509,7 +509,7 @@
 
 /* The 1fr cell — give it the full track and truncate so it doesn't over-shrink
    the priority cell. */
-.claudian-agent-board-card-meta-engine {
+.specorator-agent-board-card-meta-engine {
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
@@ -519,7 +519,7 @@
   color: var(--text-muted);
 }
 
-.claudian-agent-board-card-priority {
+.specorator-agent-board-card-priority {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -528,55 +528,55 @@
   color: var(--text-muted);
 }
 
-.claudian-agent-board-card-priority-bars {
+.specorator-agent-board-card-priority-bars {
   display: inline-flex;
   align-items: flex-end;
   gap: 2px;
   height: 10px;
 }
 
-.claudian-agent-board-card-priority-bar {
+.specorator-agent-board-card-priority-bar {
   width: 3px;
   border-radius: 1px;
   background: var(--background-modifier-border);
 }
 
-.claudian-agent-board-card-priority-bar:nth-child(1) { height: 4px; }
-.claudian-agent-board-card-priority-bar:nth-child(2) { height: 7px; }
-.claudian-agent-board-card-priority-bar:nth-child(3) { height: 10px; }
+.specorator-agent-board-card-priority-bar:nth-child(1) { height: 4px; }
+.specorator-agent-board-card-priority-bar:nth-child(2) { height: 7px; }
+.specorator-agent-board-card-priority-bar:nth-child(3) { height: 10px; }
 
 /* Priority → color contract: filled bars + label take the priority color. */
-.claudian-agent-board-card-priority--urgent { --claudian-board-prio-color: var(--color-red); }
-.claudian-agent-board-card-priority--high { --claudian-board-prio-color: var(--color-orange); }
-.claudian-agent-board-card-priority--normal { --claudian-board-prio-color: var(--color-yellow); }
-.claudian-agent-board-card-priority--low { --claudian-board-prio-color: var(--color-base-60); }
+.specorator-agent-board-card-priority--urgent { --specorator-board-prio-color: var(--color-red); }
+.specorator-agent-board-card-priority--high { --specorator-board-prio-color: var(--color-orange); }
+.specorator-agent-board-card-priority--normal { --specorator-board-prio-color: var(--color-yellow); }
+.specorator-agent-board-card-priority--low { --specorator-board-prio-color: var(--color-base-60); }
 
-.claudian-agent-board-card-priority-bar.is-filled {
-  background: var(--claudian-board-prio-color, var(--text-muted));
+.specorator-agent-board-card-priority-bar.is-filled {
+  background: var(--specorator-board-prio-color, var(--text-muted));
 }
 
-.claudian-agent-board-card-priority-label {
-  color: var(--claudian-board-prio-color, var(--text-muted));
+.specorator-agent-board-card-priority-label {
+  color: var(--specorator-board-prio-color, var(--text-muted));
 }
 
 /* ---------- Footer row: acceptance progress + reserved assignee slot ---------- */
-.claudian-agent-board-card-footer {
+.specorator-agent-board-card-footer {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
 /* Hidden (not destroyed) while the reply surface is shown on live cards. */
-.claudian-agent-board-card-footer.is-hidden {
+.specorator-agent-board-card-footer.is-hidden {
   display: none;
 }
 
 /* Spacer keeps the assignee slot right-aligned when progress is absent. */
-.claudian-agent-board-card-footer-spacer {
+.specorator-agent-board-card-footer-spacer {
   flex: 1;
 }
 
-.claudian-agent-board-card-progress {
+.specorator-agent-board-card-progress {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -584,7 +584,7 @@
   min-width: 0;
 }
 
-.claudian-agent-board-card-progress-track {
+.specorator-agent-board-card-progress-track {
   flex: 1;
   height: 4px;
   min-width: 0;
@@ -593,7 +593,7 @@
   overflow: hidden;
 }
 
-.claudian-agent-board-card-progress-fill {
+.specorator-agent-board-card-progress-fill {
   display: block;
   height: 100%;
   border-radius: var(--radius-full, 999px);
@@ -601,30 +601,30 @@
 }
 
 /* Green at 100%. */
-.claudian-agent-board-card-progress.is-complete .claudian-agent-board-card-progress-fill {
+.specorator-agent-board-card-progress.is-complete .specorator-agent-board-card-progress-fill {
   background: var(--color-green);
 }
 
-.claudian-agent-board-card-progress-count {
+.specorator-agent-board-card-progress-count {
   flex-shrink: 0;
   font-size: var(--font-ui-smaller);
   color: var(--text-faint);
   font-variant-numeric: tabular-nums;
 }
 
-.claudian-agent-board-card-progress.is-complete .claudian-agent-board-card-progress-count {
+.specorator-agent-board-card-progress.is-complete .specorator-agent-board-card-progress-count {
   color: var(--color-green);
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .claudian-agent-board-card-progress-fill {
+  .specorator-agent-board-card-progress-fill {
     transition: width 0.4s ease;
   }
 }
 
 /* 20px assignee avatar surface (far right). The persona avatar (rendered by
    renderAgentAvatar) fills it; sizing comes from the avatar's own custom prop. */
-.claudian-agent-board-card-assignee {
+.specorator-agent-board-card-assignee {
   flex: 0 0 auto;
   display: inline-flex;
 }
@@ -634,7 +634,7 @@
    property (an Obsidian var(--color-…) token, set via setCssProps), and the
    diameter as --agent-avatar-size — so background / text / border all derive
    from one token via color-mix (no hardcoded hex or rgba literal). */
-.claudian-agent-avatar {
+.specorator-agent-avatar {
   flex: 0 0 auto;
   display: inline-grid;
   place-items: center;
@@ -651,22 +651,22 @@
 
 /* The built-in renders a Lucide glyph; size it to the icon custom property
    (~58% of the avatar) so the bot icon sits centered without overflowing. */
-.claudian-agent-avatar > svg {
+.specorator-agent-avatar > svg {
   width: var(--agent-avatar-icon-size, 12px);
   height: var(--agent-avatar-icon-size, 12px);
 }
 
 /* Custom personas show their initials (slightly smaller than the icon ratio so
    two glyphs fit the circle). */
-.claudian-agent-avatar--initials {
+.specorator-agent-avatar--initials {
   font-size: calc(var(--agent-avatar-size, 20px) * 0.42);
 }
 
-.claudian-agent-board-card--failed {
+.specorator-agent-board-card--failed {
   border-color: var(--color-red);
 }
 
-.claudian-agent-board-card--canceled {
+.specorator-agent-board-card--canceled {
   opacity: 0.65;
 }
 
@@ -675,7 +675,7 @@
    line 1 is a freshness dot + elapsed/attempt caption, line 2 is the last
    run-ledger line (ellipsis-truncated). */
 
-.claudian-agent-board-card-live-strip {
+.specorator-agent-board-card-live-strip {
   display: flex;
   flex-direction: column;
   gap: 3px;
@@ -685,7 +685,7 @@
 }
 
 /* Line 1: freshness dot + caption, aligned on a single baseline. */
-.claudian-agent-board-card-live-strip--meta {
+.specorator-agent-board-card-live-strip--meta {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -695,18 +695,18 @@
 
 /* Freshness dot — the glyph (●/◐/◯) is the non-color cue; the tier class adds
    the color. line-height:1 keeps the glyph centered against the caption. */
-.claudian-agent-board-card-live-strip--dot {
+.specorator-agent-board-card-live-strip--dot {
   flex: 0 0 auto;
   line-height: 1;
   color: var(--text-muted);
 }
 
-.claudian-agent-board-card-live-strip--caption {
+.specorator-agent-board-card-live-strip--caption {
   min-width: 0;
 }
 
 /* Line 2: last ledger line, ellipsis-truncated to one line. */
-.claudian-agent-board-card-live-strip--ledger {
+.specorator-agent-board-card-live-strip--ledger {
   color: var(--text-faint);
   white-space: nowrap;
   overflow: hidden;
@@ -715,11 +715,11 @@
 
 /* Heartbeat freshness tier → dot color (green fresh / amber stale / red very
    stale), per the redesign freshness contract. */
-.claudian-agent-board-card-live-strip--dot.claudian-stale-green { color: var(--color-green); }
-.claudian-agent-board-card-live-strip--dot.claudian-stale-amber { color: var(--color-yellow); }
-.claudian-agent-board-card-live-strip--dot.claudian-stale-red { color: var(--color-red); }
+.specorator-agent-board-card-live-strip--dot.specorator-stale-green { color: var(--color-green); }
+.specorator-agent-board-card-live-strip--dot.specorator-stale-amber { color: var(--color-yellow); }
+.specorator-agent-board-card-live-strip--dot.specorator-stale-red { color: var(--color-red); }
 
-@keyframes claudian-pulse-dot {
+@keyframes specorator-pulse-dot {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.4; }
 }
@@ -728,15 +728,15 @@
    requested reduced motion. Scoped to the live card-status classes so a strip
    left behind by a patchCard transition to a non-live status stops pulsing. */
 @media (prefers-reduced-motion: no-preference) {
-  .claudian-agent-board-card--running .claudian-agent-board-card-live-strip--dot,
-  .claudian-agent-board-card--needs_input .claudian-agent-board-card-live-strip--dot,
-  .claudian-agent-board-card--needs_approval .claudian-agent-board-card-live-strip--dot {
-    animation: claudian-pulse-dot 1.2s ease-in-out infinite;
+  .specorator-agent-board-card--running .specorator-agent-board-card-live-strip--dot,
+  .specorator-agent-board-card--needs_input .specorator-agent-board-card-live-strip--dot,
+  .specorator-agent-board-card--needs_approval .specorator-agent-board-card-live-strip--dot {
+    animation: specorator-pulse-dot 1.2s ease-in-out infinite;
   }
 }
 
 /* ---------- Reply surface (needs_input / needs_approval) ---------- */
-.claudian-agent-board-card-reply {
+.specorator-agent-board-card-reply {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -745,7 +745,7 @@
   cursor: default;
 }
 
-.claudian-agent-board-card-reply-prompt {
+.specorator-agent-board-card-reply-prompt {
   font-size: var(--font-ui-smaller);
   line-height: 1.5;
   color: var(--text-normal);
@@ -753,16 +753,16 @@
 
 /* Single-paragraph prompts: respect inline newlines so a question with line
    breaks doesn't collapse to one wall of text. */
-.claudian-agent-board-card-reply-prompt--prewrap {
+.specorator-agent-board-card-reply-prompt--prewrap {
   white-space: pre-wrap;
 }
 
 /* Multi-paragraph prompts: separate paragraphs with a small vertical gap. */
-.claudian-agent-board-card-reply-prompt-paragraph + .claudian-agent-board-card-reply-prompt-paragraph {
+.specorator-agent-board-card-reply-prompt-paragraph + .specorator-agent-board-card-reply-prompt-paragraph {
   margin-top: var(--size-2-2);
 }
 
-.claudian-agent-board-card-reply-risk {
+.specorator-agent-board-card-reply-risk {
   font-size: var(--font-ui-smaller);
   color: var(--text-warning);
 }
@@ -773,7 +773,7 @@
    read intentional on Minimal (where the native input chrome washes out).
    box-sizing:border-box keeps the 100% width inside the card padding; the
    resting box-shadow:none neutralizes the leaked --input-shadow. */
-.claudian-agent-board-card-reply--field {
+.specorator-agent-board-card-reply--field {
   width: 100%;
   box-sizing: border-box;
   padding: 6px 9px;
@@ -788,14 +788,14 @@
   box-shadow: none;
 }
 
-.claudian-agent-board-card-reply--field::placeholder {
+.specorator-agent-board-card-reply--field::placeholder {
   color: var(--text-faint);
 }
 
 /* Accent focus ring (matches the prototype's 2px --color-accent-3 halo). The
    class beats the bare `input:focus` for these props; a theme's `.view-content
    input:focus` (0-1-1) is matched at 0-2-0 via the scoped rule below. */
-.claudian-agent-board-card-reply--field:focus {
+.specorator-agent-board-card-reply--field:focus {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 25%, transparent);
 }
@@ -804,18 +804,18 @@
    out-specify the single field class for the unset-or-leaked border/background.
    Re-asserting under the board's view-type raises specificity to 0-2-0 so the
    field stays on-design regardless of the active theme. */
-.workspace-leaf-content[data-type="claudian-agent-board-view"] .claudian-agent-board-card-reply--field {
+.workspace-leaf-content[data-type="specorator-agent-board-view"] .specorator-agent-board-card-reply--field {
   background: var(--background-modifier-form-field, var(--input-bg, var(--background-primary)));
   border: 1px solid var(--background-modifier-border);
   box-shadow: none;
 }
 
-.workspace-leaf-content[data-type="claudian-agent-board-view"] .claudian-agent-board-card-reply--field:focus {
+.workspace-leaf-content[data-type="specorator-agent-board-view"] .specorator-agent-board-card-reply--field:focus {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 25%, transparent);
 }
 
-.claudian-agent-board-card-reply--actions {
+.specorator-agent-board-card-reply--actions {
   display: flex;
   gap: 6px;
 }
@@ -825,7 +825,7 @@
    0-0-1); the green Send override is 0-2-0 (beats a theme's `button.mod-cta`
    0-1-1). The secondary (non-CTA) reads as a ghost button — transparent with a
    quiet border — matching the prototype's `.ab-btn-ghost` next to the CTA. */
-.claudian-agent-board-card-reply--actions button {
+.specorator-agent-board-card-reply--actions button {
   padding: 6px 12px;
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--radius-m);
@@ -837,23 +837,23 @@
   color: var(--text-normal);
 }
 
-.claudian-agent-board-card-reply--actions button:hover {
+.specorator-agent-board-card-reply--actions button:hover {
   background: var(--background-modifier-hover);
   border-color: var(--border-color-hover);
 }
 
-.claudian-agent-board-card-reply--actions .mod-cta {
+.specorator-agent-board-card-reply--actions .mod-cta {
   background-color: var(--color-green);
   border-color: var(--color-green);
   color: var(--text-on-accent);
 }
 
-.claudian-agent-board-card-reply--actions .mod-cta:hover {
+.specorator-agent-board-card-reply--actions .mod-cta:hover {
   background-color: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
   border-color: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
 }
 
-.claudian-agent-board-errors {
+.specorator-agent-board-errors {
   flex: 0 0 auto;
   max-height: 25%;
   overflow: auto;
@@ -867,7 +867,7 @@
    bare `h4` (0-0-1) with --h4-size (~17px) and heading margins, which blow out
    the compact errors panel; the descendant rule (0-1-1) overrides them down to
    a section label. */
-.claudian-agent-board-errors h4 {
+.specorator-agent-board-errors h4 {
   margin: 0 0 4px;
   font-size: var(--font-ui-small);
   font-weight: var(--font-semibold);
@@ -875,21 +875,21 @@
   color: var(--text-error);
 }
 
-.claudian-agent-board-errors h4:not(:first-child) {
+.specorator-agent-board-errors h4:not(:first-child) {
   margin-top: 10px;
 }
 
-.claudian-agent-board-slots {
+.specorator-agent-board-slots {
   font-size: var(--font-ui-smaller);
   color: var(--text-faint);
 }
 
-.claudian-agent-board-slots--full {
+.specorator-agent-board-slots--full {
   color: var(--text-error);
   font-weight: var(--font-semibold);
 }
 
-.claudian-agent-board-hint {
+.specorator-agent-board-hint {
   flex: 0 0 auto;
   padding: 6px 8px;
   border: 1px solid var(--text-error);
@@ -898,52 +898,52 @@
   font-size: var(--font-ui-smaller);
 }
 
-.claudian-agent-board-lane-criteria {
+.specorator-agent-board-lane-criteria {
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);
   border-bottom: 1px solid var(--background-modifier-border);
   padding-bottom: 6px;
 }
 
-.claudian-agent-board-lane-criteria-label {
+.specorator-agent-board-lane-criteria-label {
   font-weight: var(--font-semibold);
   margin-top: 4px;
 }
 
-.claudian-agent-board-lane-criteria ul {
+.specorator-agent-board-lane-criteria ul {
   margin: 2px 0 0;
   padding-left: 16px;
 }
 
 /* Bare <li> picks up Obsidian's default list line-height/margins; pin them so
    the criteria read as a tight bullet list, not editor-spaced body copy. */
-.claudian-agent-board-lane-criteria li {
+.specorator-agent-board-lane-criteria li {
   margin: 0;
   line-height: 1.4;
 }
 
-.claudian-lane-editor-lane {
+.specorator-lane-editor-lane {
   border: 1px solid var(--background-modifier-border);
   border-radius: 6px;
   padding: 8px;
   margin-bottom: 8px;
 }
 
-.claudian-lane-editor-statuses {
+.specorator-lane-editor-statuses {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin: 6px 0;
 }
 
-.claudian-lane-editor-status {
+.specorator-lane-editor-status {
   display: flex;
   align-items: center;
   gap: 4px;
   font-size: var(--font-ui-smaller);
 }
 
-.claudian-lane-editor-status--duplicate {
+.specorator-lane-editor-status--duplicate {
   /* Outline + colour together so colour is not the only signal of a duplicate
      (accessibility: red/green colourblind users should still see the marker). */
   color: var(--text-warning);
@@ -952,7 +952,7 @@
   border-radius: 2px;
 }
 
-.claudian-lane-editor-status-hint {
+.specorator-lane-editor-status-hint {
   /* Per-lane combined hint — single block rather than one span per duplicate
      checkbox so a lane with many conflicts does not render as an unreadable
      wall of italics. `role="note"` set in code keeps it out of the label tree
@@ -966,7 +966,7 @@
 }
 
 /* Queue runner toolbar */
-.claudian-agent-board-toolbar {
+.specorator-agent-board-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -974,21 +974,21 @@
   padding: 6px 0 10px;
 }
 
-.claudian-agent-board-toolbar-actions,
-.claudian-agent-board-toolbar-info {
+.specorator-agent-board-toolbar-actions,
+.specorator-agent-board-toolbar-info {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
 
-.claudian-agent-board-toolbar-info {
+.specorator-agent-board-toolbar-info {
   justify-content: flex-end;
   margin-left: auto;
 }
 
 /* Equalized top-row toolbar buttons (Add work order CTA + Run next ready tool). */
-.claudian-agent-board-toolbar-btn {
+.specorator-agent-board-toolbar-btn {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1002,41 +1002,41 @@
 }
 
 /* Tool button: secondary surface (the CTA keeps its mod-cta accent fill). */
-.claudian-agent-board-toolbar-btn--tool {
+.specorator-agent-board-toolbar-btn--tool {
   background-color: var(--background-secondary);
   border: 1px solid var(--border-color);
   color: var(--text-normal);
 }
 
-.claudian-agent-board-toolbar-btn--tool:hover {
+.specorator-agent-board-toolbar-btn--tool:hover {
   border-color: var(--border-color-hover);
 }
 
 /* CTA button (Add work order): green primary positive action, not the theme
    accent, so it reads deliberately across themes (matches the modal CTA). */
-.claudian-agent-board-toolbar-btn.mod-cta {
+.specorator-agent-board-toolbar-btn.mod-cta {
   background-color: var(--color-green);
   /* The pale green fill has no edge on Minimal; a green border defines it. */
   border: 1px solid var(--color-green);
   color: var(--text-on-accent);
 }
 
-.claudian-agent-board-toolbar-btn.mod-cta:hover {
+.specorator-agent-board-toolbar-btn.mod-cta:hover {
   background-color: color-mix(in srgb, var(--color-green) 88%, var(--background-primary));
 }
 
-.claudian-agent-board-toolbar-btn-icon {
+.specorator-agent-board-toolbar-btn-icon {
   display: inline-flex;
   align-items: center;
 }
 
-.claudian-agent-board-toolbar-btn-icon svg {
+.specorator-agent-board-toolbar-btn-icon svg {
   width: 14px;
   height: 14px;
 }
 
 /* Vertical divider between the board actions and the Auto-run switch. */
-.claudian-agent-board-toolbar-divider {
+.specorator-agent-board-toolbar-divider {
   width: 1px;
   height: 22px;
   background-color: var(--border-color);
@@ -1046,7 +1046,7 @@
 
 /* Auto-run switch (renamed background-watcher toggle). Spec ships a pill: a
    quiet bordered chip around the switch + label (mock.css:36-41). */
-.claudian-agent-board-toolbar-autorun {
+.specorator-agent-board-toolbar-autorun {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -1060,15 +1060,15 @@
   user-select: none;
 }
 
-.claudian-agent-board-toolbar-autorun:hover {
+.specorator-agent-board-toolbar-autorun:hover {
   border-color: var(--background-modifier-border-hover);
 }
 
-.claudian-agent-board-toolbar-autorun:hover .claudian-agent-board-toolbar-autorun-label {
+.specorator-agent-board-toolbar-autorun:hover .specorator-agent-board-toolbar-autorun-label {
   color: var(--text-normal);
 }
 
-.claudian-agent-board-toolbar-autorun-track {
+.specorator-agent-board-toolbar-autorun-track {
   position: relative;
   width: 28px;
   height: 16px;
@@ -1076,7 +1076,7 @@
   flex-shrink: 0;
 }
 
-.claudian-agent-board-toolbar-autorun-thumb {
+.specorator-agent-board-toolbar-autorun-thumb {
   position: absolute;
   top: 2px;
   left: 2px;
@@ -1087,43 +1087,43 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .claudian-agent-board-toolbar-autorun-thumb {
+  .specorator-agent-board-toolbar-autorun-thumb {
     transition: transform 0.18s ease;
   }
 }
 
-.claudian-agent-board-toolbar-autorun-label {
+.specorator-agent-board-toolbar-autorun-label {
   white-space: nowrap;
 }
 
 /* OFF: muted label, neutral toggle track. --toggle-bg fallback keeps the track
    visible on Minimal where it washes out. */
-.claudian-agent-board-toolbar-autorun--off {
+.specorator-agent-board-toolbar-autorun--off {
   color: var(--text-muted);
 }
 
-.claudian-agent-board-toolbar-autorun--off .claudian-agent-board-toolbar-autorun-track {
+.specorator-agent-board-toolbar-autorun--off .specorator-agent-board-toolbar-autorun-track {
   background-color: var(--toggle-bg, color-mix(in srgb, var(--text-normal) 22%, transparent));
 }
 
 /* ON: green-tinted pill (border + wash) signals the active/positive state and
    the green track confirms it; the label lifts to normal. */
-.claudian-agent-board-toolbar-autorun--on {
+.specorator-agent-board-toolbar-autorun--on {
   border-color: color-mix(in srgb, var(--color-green) 40%, transparent);
   background: color-mix(in srgb, var(--color-green) 15%, transparent);
   color: var(--text-normal);
 }
 
-.claudian-agent-board-toolbar-autorun--on .claudian-agent-board-toolbar-autorun-track {
+.specorator-agent-board-toolbar-autorun--on .specorator-agent-board-toolbar-autorun-track {
   background-color: var(--color-green);
 }
 
-.claudian-agent-board-toolbar-autorun-thumb--on {
+.specorator-agent-board-toolbar-autorun-thumb--on {
   transform: translateX(12px);
 }
 
-.claudian-agent-board-toolbar--queue-active-count,
-.claudian-agent-board-toolbar--queue-failure-count {
+.specorator-agent-board-toolbar--queue-active-count,
+.specorator-agent-board-toolbar--queue-failure-count {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -1132,7 +1132,7 @@
 }
 
 /* "N/M active" dot: yellow with a soft ring (alpha via color-mix, no rgba). */
-.claudian-agent-board-toolbar-active-dot {
+.specorator-agent-board-toolbar-active-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
@@ -1141,12 +1141,12 @@
   flex-shrink: 0;
 }
 
-.claudian-agent-board-toolbar--queue-failure-count {
+.specorator-agent-board-toolbar--queue-failure-count {
   color: var(--text-error);
 }
 
 /* Per-card queue skip chip */
-.claudian-agent-board-card-skip-chip {
+.specorator-agent-board-card-skip-chip {
   display: inline-block;
   padding: 2px 6px;
   margin-top: 6px;
@@ -1160,7 +1160,7 @@
 /* Collapsed lane: a 44px vertical strip. The borderless expanded lane drops the
    frame, so the strip reinstates its own background + border to read as a
    clickable rail. */
-.claudian-agent-board-lane--collapsed {
+.specorator-agent-board-lane--collapsed {
   flex: 0 0 44px;
   width: 44px;
   align-self: stretch;
@@ -1174,11 +1174,11 @@
   border-radius: var(--radius-l, 8px);
 }
 
-.claudian-agent-board-lane--collapsed:hover {
+.specorator-agent-board-lane--collapsed:hover {
   background: var(--background-modifier-hover);
 }
 
-.claudian-agent-board-lane--collapsed .claudian-agent-board-lane-title-vertical {
+.specorator-agent-board-lane--collapsed .specorator-agent-board-lane-title-vertical {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   font-size: var(--font-ui-small);
@@ -1191,7 +1191,7 @@
 
 /* Borderless icon button — holds a real Lucide chevron (rendered in JS via
    setIcon), matching the icon language of every other card glyph. */
-.claudian-agent-board-lane-collapse-toggle {
+.specorator-agent-board-lane-collapse-toggle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1207,34 +1207,34 @@
   box-shadow: none;
 }
 
-.claudian-agent-board-lane-collapse-toggle svg {
+.specorator-agent-board-lane-collapse-toggle svg {
   width: 14px;
   height: 14px;
 }
 
 /* Smooth, borderless affordance: the glyph just brightens on hover — no button
    box. */
-.claudian-agent-board-lane-collapse-toggle:hover {
+.specorator-agent-board-lane-collapse-toggle:hover {
   color: var(--text-normal);
   background: transparent;
   box-shadow: none;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .claudian-agent-board-lane-collapse-toggle {
+  .specorator-agent-board-lane-collapse-toggle {
     transition: color 0.15s ease;
   }
 }
 
 /* Leading chevron at the top of the collapsed vertical strip (spec Board.jsx). */
-.claudian-agent-board-lane-collapsed-chevron {
+.specorator-agent-board-lane-collapsed-chevron {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
 }
 
-.claudian-agent-board-lane-collapsed-chevron svg {
+.specorator-agent-board-lane-collapsed-chevron svg {
   width: 14px;
   height: 14px;
 }

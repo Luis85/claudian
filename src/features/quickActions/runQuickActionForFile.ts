@@ -5,7 +5,7 @@ import { getTabProviderId } from '@/features/chat/tabs/providerResolution';
 import { resolveBlankTabModel } from '@/features/chat/tabs/tabShared';
 import type { TabData } from '@/features/chat/tabs/types';
 import { t } from '@/i18n/i18n';
-import type ClaudianPlugin from '@/main';
+import type SpecoratorPlugin from '@/main';
 
 import { quickActionStemFromPath } from './quickActionStem';
 import type { QuickAction } from './types';
@@ -34,7 +34,7 @@ export interface QuickActionRunOverride {
  */
 function resolveActiveBlankTabModel(
   tab: Pick<TabData, 'pinnedModel' | 'draftModel'>,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   providerId: ProviderId,
 ): string {
   if (typeof tab.pinnedModel === 'string' && tab.pinnedModel.trim()) {
@@ -49,7 +49,7 @@ function resolveActiveBlankTabModel(
 /**
  * Structural shape of the target tab passed to {@link dispatchQuickActionToTab}.
  * Kept narrow so the helper does not couple to the full `TabData` type from
- * the chat slice — callers (`runQuickActionForFile`, `ClaudianView` header
+ * the chat slice — callers (`runQuickActionForFile`, `SpecoratorView` header
  * onRun, future entry points) only need access to `inputController`.
  */
 export interface QuickActionDispatchTarget {
@@ -71,7 +71,7 @@ export interface QuickActionDispatchTarget {
  * - Skips emit if `sendMessage` rejects (no successful dispatch).
  */
 export async function dispatchQuickActionToTab(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   tab: QuickActionDispatchTarget,
   action: QuickAction,
 ): Promise<void> {
@@ -93,7 +93,7 @@ export async function dispatchQuickActionToTab(
  * the right-clicked file or folder as a pill and fires the action prompt.
  */
 export async function runQuickActionForFile(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   file: TAbstractFile,
   action: QuickAction,
   override?: QuickActionRunOverride,

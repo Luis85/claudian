@@ -1,7 +1,7 @@
 import { Platform } from 'obsidian';
 
-import type { ClaudianSettings } from '../../../core/types';
-import type ClaudianPlugin from '../../../main';
+import type { SpecoratorSettings } from '../../../core/types';
+import type SpecoratorPlugin from '../../../main';
 import { autoResizeTextarea } from '../ui/textareaResize';
 import { getTabCapabilities } from './tabShared';
 import type { TabData } from './types';
@@ -28,7 +28,7 @@ function shouldSendMessageFromExplicitEnterShortcut(e: KeyboardEvent): boolean {
 
 function shouldSendMessageFromEnterKey(
   e: KeyboardEvent,
-  settings: Pick<ClaudianSettings, 'requireCommandOrControlEnterToSend'>,
+  settings: Pick<SpecoratorSettings, 'requireCommandOrControlEnterToSend'>,
 ): boolean {
   if (!isEnterWithoutShiftOrComposition(e)) {
     return false;
@@ -78,7 +78,7 @@ export function sendTabInputMessageFromExplicitEnterShortcut(
 
 function sendTabInputMessageFromEnterKey(
   tab: TabData,
-  settings: Pick<ClaudianSettings, 'requireCommandOrControlEnterToSend'>,
+  settings: Pick<SpecoratorSettings, 'requireCommandOrControlEnterToSend'>,
   e: KeyboardEvent,
 ): boolean {
   if (!shouldSendMessageFromEnterKey(e, settings)) {
@@ -93,7 +93,7 @@ function sendTabInputMessageFromEnterKey(
  * Call this after controllers are initialized.
  * Stores cleanup functions in dom.eventCleanups for proper memory management.
  */
-export function wireTabInputEvents(tab: TabData, plugin: ClaudianPlugin): void {
+export function wireTabInputEvents(tab: TabData, plugin: SpecoratorPlugin): void {
   const { dom, ui, state, controllers } = tab;
 
   let wasBangBashActive = ui.bangBashModeManager?.isActive() ?? false;

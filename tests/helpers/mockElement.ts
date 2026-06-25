@@ -69,30 +69,30 @@ export interface MockElement {
 }
 
 const CLASS_DISPLAY: Record<string, string> = {
-  'claudian-browser-selection-indicator': 'block',
-  'claudian-canvas-indicator': 'block',
-  'claudian-context-meter': 'flex',
-  'claudian-file-indicator': 'none',
-  'claudian-image-preview': 'none',
-  'claudian-mcp-selector': 'flex',
-  'claudian-mode-selector': 'flex',
-  'claudian-permission-toggle': 'flex',
-  'claudian-selection-indicator': 'block',
-  'claudian-service-tier-toggle': 'flex',
-  'claudian-status-panel-bash': 'block',
-  'claudian-status-panel-bash-content': 'block',
-  'claudian-status-panel-bash-entry-content': 'block',
-  'claudian-status-panel-content': 'block',
-  'claudian-status-panel-todos': 'block',
-  'claudian-tab-content': 'flex',
-  'claudian-thinking-budget': 'flex',
-  'claudian-thinking-effort': 'flex',
+  'specorator-browser-selection-indicator': 'block',
+  'specorator-canvas-indicator': 'block',
+  'specorator-context-meter': 'flex',
+  'specorator-file-indicator': 'none',
+  'specorator-image-preview': 'none',
+  'specorator-mcp-selector': 'flex',
+  'specorator-mode-selector': 'flex',
+  'specorator-permission-toggle': 'flex',
+  'specorator-selection-indicator': 'block',
+  'specorator-service-tier-toggle': 'flex',
+  'specorator-status-panel-bash': 'block',
+  'specorator-status-panel-bash-content': 'block',
+  'specorator-status-panel-bash-entry-content': 'block',
+  'specorator-status-panel-content': 'block',
+  'specorator-status-panel-todos': 'block',
+  'specorator-tab-content': 'flex',
+  'specorator-thinking-budget': 'flex',
+  'specorator-thinking-effort': 'flex',
 };
 
 const DISPLAY_CLASSES = new Set([
-  'claudian-hidden',
-  'claudian-visible-block',
-  'claudian-visible-flex',
+  'specorator-hidden',
+  'specorator-visible-block',
+  'specorator-visible-flex',
   ...Object.keys(CLASS_DISPLAY),
 ]);
 
@@ -112,9 +112,9 @@ export function createMockEl(tag = 'div'): any {
   };
 
   const resolveDisplay = (): string | null => {
-    if (classes.has('claudian-hidden')) return 'none';
-    if (classes.has('claudian-visible-flex')) return 'flex';
-    if (classes.has('claudian-visible-block')) return 'block';
+    if (classes.has('specorator-hidden')) return 'none';
+    if (classes.has('specorator-visible-flex')) return 'flex';
+    if (classes.has('specorator-visible-block')) return 'block';
 
     for (const [cls, display] of Object.entries(CLASS_DISPLAY)) {
       if (classes.has(cls)) return display;

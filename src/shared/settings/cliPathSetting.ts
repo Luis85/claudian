@@ -58,20 +58,20 @@ export function addCliPathTextControl(options: CliPathTextControlOptions): void 
   const { setting, validationHost, placeholder, currentValue, validate, persist } = options;
 
   const validationEl = validationHost.createDiv({
-    cls: 'claudian-cli-path-validation claudian-setting-validation claudian-setting-validation-error claudian-hidden',
+    cls: 'specorator-cli-path-validation specorator-setting-validation specorator-setting-validation-error specorator-hidden',
   });
 
   const updateValidation = (value: string, inputEl: HTMLInputElement): boolean => {
     const error = validate(value);
     if (error) {
       validationEl.setText(error);
-      validationEl.toggleClass('claudian-hidden', false);
-      inputEl.toggleClass('claudian-input-error', true);
+      validationEl.toggleClass('specorator-hidden', false);
+      inputEl.toggleClass('specorator-input-error', true);
       return false;
     }
 
-    validationEl.toggleClass('claudian-hidden', true);
-    inputEl.toggleClass('claudian-input-error', false);
+    validationEl.toggleClass('specorator-hidden', true);
+    inputEl.toggleClass('specorator-input-error', false);
     return true;
   };
 
@@ -85,7 +85,7 @@ export function addCliPathTextControl(options: CliPathTextControlOptions): void 
         }
         await persist(value.trim());
       });
-    text.inputEl.addClass('claudian-settings-cli-path-input');
+    text.inputEl.addClass('specorator-settings-cli-path-input');
 
     updateValidation(currentValue, text.inputEl);
   });

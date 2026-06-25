@@ -4,11 +4,11 @@ status: shipped
 type: user-manual
 parent: "[[sidepanel-chat]]"
 ---
-# Claudian — Composer context pills
+# Specorator — Composer context pills
 
 This manual covers **composer context pills**: the small chips that appear in a row above the chat textarea to represent the vault context attached to your next message. Pills replace the older "raw `@path` text" style — the textarea now holds clean prose, and the pills are the composer's source of truth for which notes and folders go with your turn.
 
-A pill is just a UI handle around a vault path. At send, Claudian folds each pill into the message content as an `@path` (or `@path/` for folders) so the provider resolves it the same way it always has, and the in-thread "Attached context" card still renders.
+A pill is just a UI handle around a vault path. At send, Specorator folds each pill into the message content as an `@path` (or `@path/` for folders) so the provider resolves it the same way it always has, and the in-thread "Attached context" card still renders.
 
 ---
 
@@ -18,7 +18,7 @@ The composer renders three kinds of pill, all in the same tray above the textare
 
 | Kind | What it is | Icon | Click behaviour |
 |------|------------|------|-----------------|
-| **Current note** | The note Claudian considers active for this chat (your focused editor, or whatever a loaded conversation pinned). One per composer. Renders with the `--current` accent. | `file-text` | Opens the note in a new leaf. |
+| **Current note** | The note Specorator considers active for this chat (your focused editor, or whatever a loaded conversation pinned). One per composer. Renders with the `--current` accent. | `file-text` | Opens the note in a new leaf. |
 | **File** | A vault file you explicitly attached for this turn. | `file-text` | Opens the file in a new leaf. |
 | **Folder** | A vault folder you explicitly attached. The pill label ends in `/`. | `folder` | Display-only — no open action. |
 
@@ -39,7 +39,7 @@ Whatever note you open in your editor becomes the **current-note pill** automati
 
 Once you've sent the first turn of a conversation, the current-note pill stops auto-following your editor — the session has started, so switching notes won't silently rewrite the attached context mid-thread. To change the current note after that, either explicitly close the conversation and start a new one, or remove the pill with `×` and pick what you want manually.
 
-If your active note carries a tag you listed in **Settings → Claudian → Excluded tags**, Claudian skips auto-attaching it. The tray stays empty until you open a non-excluded note or attach something by hand.
+If your active note carries a tag you listed in **Settings → Specorator → Excluded tags**, Specorator skips auto-attaching it. The tray stays empty until you open a non-excluded note or attach something by hand.
 
 ### Type `@` in the composer
 Type `@` (then optionally a query) to open the **mention dropdown**. Pick a vault file or folder row, then press Enter or click:
@@ -50,16 +50,16 @@ Type `@` (then optionally a query) to open the **mention dropdown**. Pick a vaul
 > The `@` dropdown still handles **MCP servers**, **agents**, **agent folders**, and **external context** (`context-file` / `context-folder`) the way it always has — those insert `@text` into the prose and are not pills. Only vault `file` and `folder` rows convert to pills.
 
 ### Right-click a file or folder
-In the Obsidian file explorer, right-click any file → **Add file to Claudian chat**, or any folder → **Add folder to Claudian chat**. The chat panel opens (if it wasn't already), a pill appears, and the composer is focused. You get a notice confirming the path that was added.
+In the Obsidian file explorer, right-click any file → **Add file to Specorator chat**, or any folder → **Add folder to Specorator chat**. The chat panel opens (if it wasn't already), a pill appears, and the composer is focused. You get a notice confirming the path that was added.
 
-If no chat tab or no provider is open, you get a notice asking you to open Claudian chat and enable a provider first.
+If no chat tab or no provider is open, you get a notice asking you to open Specorator chat and enable a provider first.
 
 ---
 
 ## Inspecting a pill
 
 - **Hover** a pill to see its **full vault path** in a tooltip — useful when the basename alone is ambiguous (`index.ts` vs `Claude/index.ts`).
-- **Click** a file pill or the current-note pill to **open** the file in a new editor leaf. If the file no longer resolves (renamed away, deleted), Claudian shows a notice rather than opening anything.
+- **Click** a file pill or the current-note pill to **open** the file in a new editor leaf. If the file no longer resolves (renamed away, deleted), Specorator shows a notice rather than opening anything.
 - **Folder pills** don't open on click. They're a label only — use the Obsidian file explorer to browse the folder itself.
 
 The in-thread "Attached context" card (see [[agent-board-chat-interop-and-capture|Agent Board — Chat Interop & Capture]] for how cards relate to capture flows) shows the same set of paths after you send, derived from the folded `@mentions` in the message content.
@@ -115,7 +115,7 @@ The thread renders the prose line and a context card listing all three paths.
 ## Typical flow
 
 1. Open the note you want to discuss. It shows up as the **current-note pill** with the accent border.
-2. Right-click the folder of related providers in the file explorer → **Add folder to Claudian chat** → a folder pill joins the tray.
+2. Right-click the folder of related providers in the file explorer → **Add folder to Specorator chat** → a folder pill joins the tray.
 3. Type `@` in the composer, pick another file from the dropdown → it lands as a file pill; the `@query` you typed is wiped from the textarea so your prose stays clean.
 4. Hover any pill to confirm the full path. Click a file pill to open it; click `×` to drop one you didn't mean to attach.
 5. Write your question and **send**. The thread shows your prose plus an "Attached context" card with the three paths; the provider reads the current note, the file, and the folder before answering.

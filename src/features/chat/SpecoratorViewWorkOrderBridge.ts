@@ -8,14 +8,14 @@ import type { TabId, TaskRunTabHandle, TaskRunTabTerminal } from './tabs/types';
 /**
  * The chat view's integration surface with the Agent Board / tasks feature:
  * launching a work-order run in a fresh tab and routing a commit-and-push prompt
- * into a work-order's conversation. Extracted from `ClaudianView` so the view
+ * into a work-order's conversation. Extracted from `SpecoratorView` so the view
  * keeps lifecycle/assembly and this owns the work-order-tab wiring. The
- * cross-view conversation lookup (which is `ClaudianView`-specific) is hidden
+ * cross-view conversation lookup (which is `SpecoratorView`-specific) is hidden
  * behind the `findConversationTab` callback so this module never imports the
- * view (no cycle); `ClaudianView` keeps thin public delegators so the tasks
+ * view (no cycle); `SpecoratorView` keeps thin public delegators so the tasks
  * feature (`ChatTabExecutionSurface`) calls it unchanged.
  */
-export interface ClaudianViewWorkOrderBridgeDeps {
+export interface SpecoratorViewWorkOrderBridgeDeps {
   getTabManager: () => TabManager | null;
   /**
    * Resolves the tab hosting a conversation across all open chat views (this
@@ -28,10 +28,10 @@ export interface ClaudianViewWorkOrderBridgeDeps {
   openConversationInNewTab: (conversationId: string) => Promise<void>;
 }
 
-export class ClaudianViewWorkOrderBridge {
-  private deps: ClaudianViewWorkOrderBridgeDeps;
+export class SpecoratorViewWorkOrderBridge {
+  private deps: SpecoratorViewWorkOrderBridgeDeps;
 
-  constructor(deps: ClaudianViewWorkOrderBridgeDeps) {
+  constructor(deps: SpecoratorViewWorkOrderBridgeDeps) {
     this.deps = deps;
   }
 
@@ -42,7 +42,7 @@ export class ClaudianViewWorkOrderBridge {
     tabReservation?: ChatTabReservation;
     /**
      * Vault-relative work-order note path. Pinned onto the new tab so the chat
-     * display renders the run's `<claudian_handoff>` as a card. Optional: the
+     * display renders the run's `<specorator_handoff>` as a card. Optional: the
      * commit-turn fallback inside `injectCommitTurnForConversation` has no
      * work-order note path to pass, so a normal (non-work-order) tab is fine.
      */
@@ -164,7 +164,7 @@ export class ClaudianViewWorkOrderBridge {
 
   /**
    * Routes a commit-and-push prompt into a work-order's chat. Focuses the
-   * conversation tab when it's open in any ClaudianView, restores it from
+   * conversation tab when it's open in any SpecoratorView, restores it from
    * history into a fresh tab when no tab currently hosts it, and only falls
    * back to a brand-new task-run tab when the saved conversation is truly
    * unrecoverable (e.g. tab cap reached or no saved conversationId at all).

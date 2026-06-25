@@ -49,7 +49,7 @@ function makeTask(status: TaskStatus, conversationId?: string): TaskSpec {
   return {
     path: 'Agent Board/tasks/wo-1.md',
     frontmatter: {
-      type: 'claudian-work-order',
+      type: 'specorator-work-order',
       schema_version: 1,
       id: 'wo-1',
       title: 'WO 1',
@@ -76,7 +76,7 @@ function makeTask(status: TaskStatus, conversationId?: string): TaskSpec {
 type DepsArgs = Parameters<typeof showWorkOrderContextMenu>[2];
 type PluginStub = DepsArgs['plugin'];
 
-// `makePlugin` returns a hand-rolled stub satisfying the parts of `ClaudianPlugin`
+// `makePlugin` returns a hand-rolled stub satisfying the parts of `SpecoratorPlugin`
 // the helper actually reads (`app.vault.getAbstractFileByPath`,
 // `quickActionFavoritesCache?.getFavorites`). The single `as unknown as PluginStub`
 // cast at the seam keeps the call sites cast-free.

@@ -3,7 +3,7 @@
  *
  * `renderHandoffMarkdown` emits each field as a human-readable `## Heading`
  * followed by the body wrapped in collision-proof HTML-comment markers
- * (`<!-- claudian:handoff:<field>:start/end -->`). The markers are invisible in
+ * (`<!-- specorator:handoff:<field>:start/end -->`). The markers are invisible in
  * Obsidian reading view, so the region still reads as four plain sections, but
  * `parseHandoffSections` keys on the markers — a body that literally contains
  * `## Verification` (or any other section heading) round-trips verbatim instead
@@ -33,7 +33,7 @@ interface HandoffFieldSpec {
 }
 
 const fieldMarker = (token: string, edge: 'start' | 'end'): string =>
-  `<!-- claudian:handoff:${token}:${edge} -->`;
+  `<!-- specorator:handoff:${token}:${edge} -->`;
 
 const HANDOFF_FIELDS: readonly HandoffFieldSpec[] = (
   [
@@ -52,7 +52,7 @@ const HANDOFF_FIELDS: readonly HandoffFieldSpec[] = (
 /**
  * Every structural marker `renderHandoffMarkdown` can emit. `TaskNoteStore`
  * scrubs exactly these before its embedded-marker guard so the sanctioned field
- * markers pass while any other `<!-- claudian:` content is still rejected.
+ * markers pass while any other `<!-- specorator:` content is still rejected.
  */
 export const HANDOFF_FIELD_MARKER_STRINGS: readonly string[] = HANDOFF_FIELDS.flatMap(
   (field) => [field.start, field.end],

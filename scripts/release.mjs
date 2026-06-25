@@ -26,7 +26,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
-const RELEASE_REPO = 'Luis85/claudian';
+const RELEASE_REPO = 'Luis85/specorator';
 const ASSETS = ['main.js', 'manifest.json', 'styles.css'];
 
 const args = process.argv.slice(2);

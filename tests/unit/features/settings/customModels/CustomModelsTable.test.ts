@@ -129,7 +129,7 @@ describe('CustomModelsTable', () => {
     await Promise.resolve();
     await Promise.resolve();
 
-    const error = host.querySelector('.claudian-customModels-error');
+    const error = host.querySelector('.specorator-customModels-error');
     expect(error).not.toBeNull();
     expect(error?.textContent ?? '').toMatch(/already exists|duplicate/i);
     expect(ctx.saveSettings).not.toHaveBeenCalled();

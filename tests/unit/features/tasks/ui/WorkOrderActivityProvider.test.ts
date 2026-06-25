@@ -7,7 +7,7 @@ function makeTask(id: string, status: TaskStatus = 'running'): TaskSpec {
   return {
     path: `Agent Board/tasks/${id}.md`,
     frontmatter: {
-      type: 'claudian-work-order',
+      type: 'specorator-work-order',
       schema_version: 1,
       id,
       title: `Task ${id}`,
@@ -281,7 +281,7 @@ describe('WorkOrderActivityProvider', () => {
   it('persists field edits when the fallback detail modal saves', async () => {
     const noteContent = [
       '---',
-      'type: claudian-work-order',
+      'type: specorator-work-order',
       'schema_version: 1',
       'id: task-1',
       'title: Task task-1',

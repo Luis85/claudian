@@ -1,16 +1,16 @@
 import {
-  CLAUDIAN_TOOL_MCP_PREFIX,
   createRosterAgent,
   dedupeRosterId,
   rosterIdFromSlug,
   slugifyRosterName,
+  SPECORATOR_TOOL_MCP_PREFIX,
   toolCapabilityId,
 } from '@/features/agents/roster/rosterCapabilities';
 
 describe('rosterCapabilities', () => {
   it('builds the mcp capability id for a user tool', () => {
-    expect(toolCapabilityId('search_tasks')).toBe('mcp__claudian__search_tasks');
-    expect(CLAUDIAN_TOOL_MCP_PREFIX).toBe('mcp__claudian__');
+    expect(toolCapabilityId('search_tasks')).toBe('mcp__specorator__search_tasks');
+    expect(SPECORATOR_TOOL_MCP_PREFIX).toBe('mcp__specorator__');
   });
 
   it('slugifies a name and forms a roster id', () => {

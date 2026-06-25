@@ -4,7 +4,7 @@ import { TFile } from 'obsidian';
 import { TemplateNoteStore } from '../../../../../src/features/tasks/templates/TemplateNoteStore';
 
 const TEMPLATE = `---
-type: claudian-work-order-template
+type: specorator-work-order-template
 schema_version: 1
 name: Bug fix
 description: Fix a defect.
@@ -19,14 +19,14 @@ Fix it.
 `;
 
 const NO_NAME = `---
-type: claudian-work-order-template
+type: specorator-work-order-template
 schema_version: 1
 ---
 # {{title}}
 `;
 
 const WRONG_TYPE = `---
-type: claudian-work-order
+type: specorator-work-order
 schema_version: 1
 ---
 body
@@ -150,7 +150,7 @@ describe('TemplateNoteStore.save', () => {
     expect(path).toBe('Agent Board/templates/bug.md');
     expect(created).toHaveLength(1);
     expect(created[0].path).toBe('Agent Board/templates/bug.md');
-    expect(created[0].content).toContain('claudian-work-order-template');
+    expect(created[0].content).toContain('specorator-work-order-template');
     expect(folderCreated).toEqual(['Agent Board/templates']);
     expect(vault.modify).not.toHaveBeenCalled();
   });

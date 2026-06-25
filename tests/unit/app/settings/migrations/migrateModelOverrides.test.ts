@@ -1,12 +1,12 @@
 import '@/providers';
 
-import { DEFAULT_CLAUDIAN_SETTINGS } from '@/app/settings/defaultSettings';
+import { DEFAULT_SPECORATOR_SETTINGS } from '@/app/settings/defaultSettings';
 import { migrateModelOverrides } from '@/app/settings/migrations/migrateModelOverrides';
-import type { ClaudianSettings } from '@/core/types/settings';
+import type { SpecoratorSettings } from '@/core/types/settings';
 
-function makeSettings(overrides: Partial<ClaudianSettings>): ClaudianSettings {
+function makeSettings(overrides: Partial<SpecoratorSettings>): SpecoratorSettings {
   return {
-    ...DEFAULT_CLAUDIAN_SETTINGS,
+    ...DEFAULT_SPECORATOR_SETTINGS,
     providerConfigs: {},
     customContextLimits: {},
     customModelAliases: {},

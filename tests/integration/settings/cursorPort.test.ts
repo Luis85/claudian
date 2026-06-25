@@ -101,7 +101,7 @@ function pickerRow(host: HTMLElement): Element | null {
 
 function pickerRows(host: HTMLElement): HTMLElement[] {
   return Array.from(
-    pickerRow(host)?.querySelectorAll<HTMLElement>('.claudian-cursor-model-picker-row') ?? [],
+    pickerRow(host)?.querySelectorAll<HTMLElement>('.specorator-cursor-model-picker-row') ?? [],
   );
 }
 
@@ -166,7 +166,7 @@ describe('cursor tab registry port', () => {
     expect(rows[0]?.title).toBe('claude-sonnet-4-5');
     expect(rows[1]?.title).toBe('gpt-5.5');
     expect(
-      rows[1]?.querySelector('.claudian-cursor-model-picker-row-id')?.textContent,
+      rows[1]?.querySelector('.specorator-cursor-model-picker-row-id')?.textContent,
     ).toContain('2 modes');
 
     // gpt-5.5 is enabled through its `gpt-5.5-high` member.
@@ -176,12 +176,12 @@ describe('cursor tab registry port', () => {
 
     // Count badge reflects family-level selection.
     expect(
-      pickerRow(host)?.querySelector('.claudian-cursor-model-picker-count')?.textContent,
+      pickerRow(host)?.querySelector('.specorator-cursor-model-picker-count')?.textContent,
     ).toBe('1 of 2 families selected');
 
     // Search filters the family list.
     const searchInput = pickerRow(host)?.querySelector<HTMLInputElement>(
-      '.claudian-cursor-model-picker-search',
+      '.specorator-cursor-model-picker-search',
     );
     expect(searchInput).not.toBeNull();
     searchInput!.value = 'claude';
@@ -219,7 +219,7 @@ describe('cursor tab registry port', () => {
     const { host, plugin } = mounted;
 
     const cliRow = fieldRow(host, 'providerConfigs.cursor.cliPathsByHost');
-    expect(cliRow?.querySelector('.claudian-cli-path-validation')).not.toBeNull();
+    expect(cliRow?.querySelector('.specorator-cli-path-validation')).not.toBeNull();
 
     const text = componentFor(host, 'providerConfigs.cursor.cliPathsByHost', 'text');
     expect(text).toBeDefined();
@@ -240,7 +240,7 @@ describe('cursor tab registry port', () => {
     const { host } = mounted;
 
     const envRow = fieldRow(host, 'providerConfigs.cursor.environmentVariables');
-    expect(envRow?.querySelector('.claudian-env-snippets-container')).not.toBeNull();
-    expect(envRow?.querySelector('.claudian-secret-env-vars')).not.toBeNull();
+    expect(envRow?.querySelector('.specorator-env-snippets-container')).not.toBeNull();
+    expect(envRow?.querySelector('.specorator-secret-env-vars')).not.toBeNull();
   });
 });

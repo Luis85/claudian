@@ -92,7 +92,7 @@ async function handleExitPlanMode(
 
 /**
  * The SDK's JSDoc says "Other will be provided automatically" but the SDK
- * doesn't inject isOther into the canUseTool input. Claudian intercepts at
+ * doesn't inject isOther into the canUseTool input. Specorator intercepts at
  * canUseTool and renders its own UI, so we must inject isOther here to match
  * the Claude Code CLI's built-in behavior.
  */

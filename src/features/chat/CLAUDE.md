@@ -1,6 +1,6 @@
 # Chat Feature
 
-Main sidebar chat interface. `ClaudianView` assembles tabs, controllers, renderers, and provider-backed services around the shared `ChatRuntime` boundary.
+Main sidebar chat interface. `SpecoratorView` assembles tabs, controllers, renderers, and provider-backed services around the shared `ChatRuntime` boundary.
 
 ## Provider Boundary Status
 
@@ -18,8 +18,8 @@ Main sidebar chat interface. `ClaudianView` assembles tabs, controllers, rendere
 ## Architecture
 
 ```text
-ClaudianView (lifecycle + assembly)
-├── ClaudianViewWorkOrderBridge (Agent Board integration: task-run tab launch + commit-turn routing)
+SpecoratorView (lifecycle + assembly)
+├── SpecoratorViewWorkOrderBridge (Agent Board integration: task-run tab launch + commit-turn routing)
 ├── ChatState
 ├── Controllers
 │   ├── ConversationController
@@ -139,8 +139,8 @@ for await (const chunk of runtime.query(preparedTurn, history)) {
 ## Gotchas
 
 - Work-order run tabs are real `TabManager` tabs but hidden from the visible tab badge row. The chat header Work Orders dropdown is the navigation affordance for active work-order tabs; ordinary tab badges render chat tabs only.
-- `ClaudianView.startTaskRunInFreshTab` / `injectCommitTurnForConversation` are thin delegators to `ClaudianViewWorkOrderBridge` (the Agent Board integration surface `ChatTabExecutionSurface` calls). The bridge never imports `ClaudianView` — the cross-view conversation lookup is supplied as a `findConversationTab` callback — so there's no view↔bridge cycle. The view builds the bridge lazily so prototype-only test instances resolve it through the same callbacks.
-- `ClaudianView.onClose()` must abort active tabs and dispose runtimes
+- `SpecoratorView.startTaskRunInFreshTab` / `injectCommitTurnForConversation` are thin delegators to `SpecoratorViewWorkOrderBridge` (the Agent Board integration surface `ChatTabExecutionSurface` calls). The bridge never imports `SpecoratorView` — the cross-view conversation lookup is supplied as a `findConversationTab` callback — so there's no view↔bridge cycle. The view builds the bridge lazily so prototype-only test instances resolve it through the same callbacks.
+- `SpecoratorView.onClose()` must abort active tabs and dispose runtimes
 - `ChatState` is per-tab; `TabManager` coordinates tab-level operations such as fork targets, and delegates provider-aware command-catalog + runtime-warmup coordination (the per-tab command cache, in-flight warmup dedup, warmup-mode resolution, and cache-key construction) to `TabProviderCommandCoordinator`. The manager builds it via a lazy getter and feeds it live tab-set accessors (`getTabs`/`getActiveTab(Id)`/`filterTabsByProvider`) as callbacks, so there is no manager↔coordinator import cycle and prototype-only test instances still resolve it; the manager keeps thin delegators (`getSdkCommands`, `invalidateProviderCommandCaches`, `primeProviderRuntime`) so external callers stay green
 - Title generation runs concurrently per conversation and routes by the global title-generation model selection, not by the active chat tab provider
 - `/compact`
@@ -156,4 +156,4 @@ for await (const chunk of runtime.query(preparedTurn, history)) {
   - `ChatRuntime.resolveSessionIdForFork()` and provider history services own the provider-specific fork/session mapping
 - Mod+Enter composer send fires from two places by design
   - Textarea-level handler in `tabInputWiring.ts` runs first and short-circuits via `sendTabInputMessageFromExplicitEnterShortcut` before the slash dropdown / resume / mention handlers, so the dropdown can't swallow the shortcut
-  - Vault-level `ClaudianView.scope.register(['Mod'], 'Enter', ...)` is the safety net; gated by `requireInputFocus: true` so it only sends when the composer textarea is `document.activeElement`, and guards `e.isComposing` (IME) and `e.defaultPrevented`. Returns `false` on send (Obsidian "stop bubbling") and `undefined` on miss
+  - Vault-level `SpecoratorView.scope.register(['Mod'], 'Enter', ...)` is the safety net; gated by `requireInputFocus: true` so it only sends when the composer textarea is `document.activeElement`, and guards `e.isComposing` (IME) and `e.defaultPrevented`. Returns `false` on send (Obsidian "stop bubbling") and `undefined` on miss

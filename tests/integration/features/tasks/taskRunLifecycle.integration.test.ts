@@ -11,18 +11,18 @@ import {
 } from '../../../../src/features/tasks/storage/TaskNoteStore';
 import { SyntheticStreamAdapter } from '../../../helpers/SyntheticStreamAdapter';
 
-const VALID_HANDOFF = `<claudian_handoff>
+const VALID_HANDOFF = `<specorator_handoff>
 summary: Did the work.
 verification: Tests pass.
 risks: None.
 next_action: Review.
-</claudian_handoff>`;
+</specorator_handoff>`;
 
 const PATH = 'Agent Board/tasks/t1.md';
 
 function makeNote(overrides: { status?: string; ledger?: string } = {}): string {
   return `---
-type: claudian-work-order
+type: specorator-work-order
 schema_version: 1
 id: t1
 title: Integration task
@@ -122,7 +122,7 @@ describe('work-order run lifecycle (integration)', () => {
     const terminal = h.session.run();
     h.adapter.emitText('Working… ');
     h.adapter.emitToolUse({ name: 'Edit', primaryArg: 'src/foo.ts' });
-    h.adapter.emitText('<claudian_progress>\nstep: editing files\ndone: 1/2\n</claudian_progress>');
+    h.adapter.emitText('<specorator_progress>\nstep: editing files\ndone: 1/2\n</specorator_progress>');
     h.adapter.emitText(VALID_HANDOFF);
     h.adapter.emitEnd({ status: 'completed', finalAssistantContent: `Working… ${VALID_HANDOFF}` });
 
@@ -146,7 +146,7 @@ describe('work-order run lifecycle (integration)', () => {
     const inputs: TaskEventMap['task:needs-input'][] = [];
     h.events.on('task:needs-input', (p) => inputs.push(p));
     const terminal = h.session.run();
-    h.adapter.emitText('<claudian_needs_input>\nquestion: which env file?\nwhy: ambiguous\n</claudian_needs_input>');
+    h.adapter.emitText('<specorator_needs_input>\nquestion: which env file?\nwhy: ambiguous\n</specorator_needs_input>');
     await Promise.resolve();
     h.adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked' }); // pause-turn end
     await Promise.resolve();
@@ -169,7 +169,7 @@ describe('work-order run lifecycle (integration)', () => {
   it('needs_approval: approve resumes the run to review', async () => {
     const h = makeHarness();
     const terminal = h.session.run();
-    h.adapter.emitText('<claudian_needs_approval>\naction: delete dist/\nrisk: high\n</claudian_needs_approval>');
+    h.adapter.emitText('<specorator_needs_approval>\naction: delete dist/\nrisk: high\n</specorator_needs_approval>');
     await Promise.resolve();
     h.adapter.emitEnd({ status: 'completed', finalAssistantContent: 'requesting' });
     await Promise.resolve();
@@ -187,7 +187,7 @@ describe('work-order run lifecycle (integration)', () => {
   it('needs_approval: reject cancels the run with the reason in the ledger', async () => {
     const h = makeHarness();
     const terminal = h.session.run();
-    h.adapter.emitText('<claudian_needs_approval>\naction: drop table\n</claudian_needs_approval>');
+    h.adapter.emitText('<specorator_needs_approval>\naction: drop table\n</specorator_needs_approval>');
     await Promise.resolve();
     await h.session.resume({ kind: 'reject', reason: 'too destructive' });
     const result = await terminal;
@@ -242,7 +242,7 @@ describe('work-order run lifecycle (integration)', () => {
   it('cancel during pause: cancels with the stopped-by-user reason', async () => {
     const h = makeHarness();
     const terminal = h.session.run();
-    h.adapter.emitText('<claudian_needs_input>\nquestion: which env?\n</claudian_needs_input>');
+    h.adapter.emitText('<specorator_needs_input>\nquestion: which env?\n</specorator_needs_input>');
     await Promise.resolve();
     h.session.cancel();
     const result = await terminal;
@@ -256,7 +256,7 @@ describe('work-order run lifecycle (integration)', () => {
     const warnings: TaskEventMap['task:parser-warning'][] = [];
     h.events.on('task:parser-warning', (p) => warnings.push(p));
     const terminal = h.session.run();
-    h.adapter.emitText('<claudian_needs_input>\nwhy: no question here\n</claudian_needs_input>');
+    h.adapter.emitText('<specorator_needs_input>\nwhy: no question here\n</specorator_needs_input>');
     h.adapter.emitText(VALID_HANDOFF);
     h.adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
     const result = await terminal;

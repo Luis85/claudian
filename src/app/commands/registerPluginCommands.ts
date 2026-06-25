@@ -17,11 +17,11 @@ import {
 } from '@/features/tasks/ui/createWorkOrderInteractive';
 import { VIEW_TYPE_LOOP_LIBRARY } from '@/features/tasks/ui/LoopLibraryView';
 import { t } from '@/i18n/i18n';
-import type ClaudianPlugin from '@/main';
+import type SpecoratorPlugin from '@/main';
 import { buildCursorContext } from '@/utils/editor';
 
 export interface PluginCommandDeps {
-  plugin: ClaudianPlugin;
+  plugin: SpecoratorPlugin;
   taskExecutionSurface: ChatTabExecutionSurface;
   chatWorkOrderLinker: ChatWorkOrderLinker;
 }
@@ -30,14 +30,14 @@ export interface PluginCommandDeps {
 // every command id appears in both registries in the same order.
 type RegisterCommand = (command: Command) => void;
 
-function createRegistrar(plugin: ClaudianPlugin): RegisterCommand {
+function createRegistrar(plugin: SpecoratorPlugin): RegisterCommand {
   return (command) => {
     plugin.addCommand(command);
     registerCommandHotkey({ commandId: command.id, label: command.name });
   };
 }
 
-function registerViewCommands(plugin: ClaudianPlugin, register: RegisterCommand): void {
+function registerViewCommands(plugin: SpecoratorPlugin, register: RegisterCommand): void {
   register({
     id: 'open-view',
     name: t('commands.openView'),
@@ -64,7 +64,7 @@ function registerViewCommands(plugin: ClaudianPlugin, register: RegisterCommand)
 }
 
 function registerWorkOrderCommands(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   chatWorkOrderLinker: ChatWorkOrderLinker,
   register: RegisterCommand,
 ): void {
@@ -131,7 +131,7 @@ function registerWorkOrderCommands(
   });
 }
 
-function registerDiagnosticCommands(plugin: ClaudianPlugin, register: RegisterCommand): void {
+function registerDiagnosticCommands(plugin: SpecoratorPlugin, register: RegisterCommand): void {
   register({
     id: 'copy-diagnostic-logs',
     name: t('commands.copyDiagnosticLogs'),
@@ -150,7 +150,7 @@ function registerDiagnosticCommands(plugin: ClaudianPlugin, register: RegisterCo
   });
 }
 
-function registerInlineEditCommand(plugin: ClaudianPlugin, register: RegisterCommand): void {
+function registerInlineEditCommand(plugin: SpecoratorPlugin, register: RegisterCommand): void {
   register({
     id: 'inline-edit',
     name: t('commands.inlineEdit'),
@@ -195,7 +195,7 @@ function registerInlineEditCommand(plugin: ClaudianPlugin, register: RegisterCom
   });
 }
 
-function registerTabCommands(plugin: ClaudianPlugin, register: RegisterCommand): void {
+function registerTabCommands(plugin: SpecoratorPlugin, register: RegisterCommand): void {
   register({
     id: 'new-tab',
     name: t('commands.newTab'),

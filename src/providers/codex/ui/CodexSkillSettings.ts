@@ -48,7 +48,7 @@ export class CodexSkillModal extends Modal {
 
   onOpen() {
     this.setTitle(this.existing ? 'Edit Codex Skill' : 'Add Codex Skill');
-    this.modalEl.addClass('claudian-sp-modal');
+    this.modalEl.addClass('specorator-sp-modal');
 
     const { contentEl } = this;
 
@@ -85,7 +85,7 @@ export class CodexSkillModal extends Modal {
       .setDesc('The skill instructions (SKILL.md content)');
 
     const contentArea = contentEl.createEl('textarea', {
-      cls: 'claudian-sp-content-area',
+      cls: 'specorator-sp-content-area',
       attr: { rows: '10', placeholder: 'Analyze the code for...' },
     });
     contentArea.value = this.existing?.content || '';
@@ -213,7 +213,7 @@ export class CodexSkillSettings extends CodexVaultListSettings<ProviderCommandEn
       actions,
     });
 
-    headerRow.createSpan({ text: 'skill', cls: 'claudian-slash-item-badge' });
+    headerRow.createSpan({ text: 'skill', cls: 'specorator-slash-item-badge' });
   }
 
   protected openModal(existing: ProviderCommandEntry | null): void {

@@ -1,10 +1,10 @@
-// src/features/tools/ClaudianToolRegistry.ts
+// src/features/tools/SpecoratorToolRegistry.ts
 import { z } from 'zod';
 
 import type { VaultFileAdapter } from '../../core/storage/VaultFileAdapter';
-import type { ClaudianToolModule, LoadedTool } from './toolTypes';
+import type { LoadedTool,SpecoratorToolModule } from './toolTypes';
 
-export const TOOLS_DIR = '.claudian/tools';
+export const TOOLS_DIR = '.specorator/tools';
 
 export interface ToolRegistryDeps {
   transpile: (source: string) => string;
@@ -14,9 +14,9 @@ export interface ToolRegistryDeps {
 
 function evaluateModule(js: string, requireResolve: (id: string) => unknown): unknown {
   const requireShim = (id: string): unknown => {
-    // `claudian/tools` is the plugin's bundled re-export of zod: authored tools
-    // write `import { z } from 'claudian/tools'`. Both ids resolve to zod.
-    if (id === 'claudian/tools' || id === 'zod') {
+    // `specorator/tools` is the plugin's bundled re-export of zod: authored tools
+    // write `import { z } from 'specorator/tools'`. Both ids resolve to zod.
+    if (id === 'specorator/tools' || id === 'zod') {
       return requireResolve(id) ?? requireResolve('zod') ?? { z };
     }
     const resolved = requireResolve(id);
@@ -26,7 +26,7 @@ function evaluateModule(js: string, requireResolve: (id: string) => unknown): un
     throw new Error(`Cannot resolve module '${id}'`);
   };
   const module = { exports: {} as Record<string, unknown> };
-  const fn = new Function('module', 'exports', 'require', 'Z', `${js}\n//# sourceURL=claudian-tool`);
+  const fn = new Function('module', 'exports', 'require', 'Z', `${js}\n//# sourceURL=specorator-tool`);
   const zodModule = requireResolve('zod') ?? { z };
   // Expose zod as `Z` global: if the resolved module has a `z` property (named export shape),
   // use that; otherwise assume the resolved value is the zod namespace directly.
@@ -35,14 +35,14 @@ function evaluateModule(js: string, requireResolve: (id: string) => unknown): un
   return (module.exports as { default?: unknown }).default ?? module.exports;
 }
 
-// Tool names are spliced into the MCP id `mcp__claudian__<name>`, where `__`
+// Tool names are spliced into the MCP id `mcp__specorator__<name>`, where `__`
 // separates the segments. Restrict to a conservative identifier set so a name
 // can't introduce a separator, whitespace, or path-like character that would
 // reshape the exposed tool id the provider matches against.
 const TOOL_NAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9_-]*$/;
 const MAX_TOOL_NAME_LENGTH = 64;
 
-function assertManifestValid(m: Partial<ClaudianToolModule['manifest']>): void {
+function assertManifestValid(m: Partial<SpecoratorToolModule['manifest']>): void {
   if (typeof m.name !== 'string' || !m.name) throw new Error('manifest.name is required.');
   if (m.name.length > MAX_TOOL_NAME_LENGTH) {
     throw new Error(`manifest.name must be ${MAX_TOOL_NAME_LENGTH} characters or fewer.`);
@@ -56,17 +56,17 @@ function assertManifestValid(m: Partial<ClaudianToolModule['manifest']>): void {
   }
 }
 
-function validateModule(value: unknown): ClaudianToolModule {
-  const mod = value as Partial<ClaudianToolModule>;
+function validateModule(value: unknown): SpecoratorToolModule {
+  const mod = value as Partial<SpecoratorToolModule>;
   if (!mod || typeof mod !== 'object' || !mod.manifest) {
     throw new Error('Tool module is missing a `manifest` export.');
   }
   assertManifestValid(mod.manifest);
   if (typeof mod.handler !== 'function') throw new Error('handler must be a function.');
-  return mod as ClaudianToolModule;
+  return mod as SpecoratorToolModule;
 }
 
-export class ClaudianToolRegistry {
+export class SpecoratorToolRegistry {
   private tools = new Map<string, LoadedTool>();
   // The vault `modify` watcher fires `load()` several times per save. Chain
   // overlapping calls so they run sequentially — never interleaved.
@@ -93,7 +93,7 @@ export class ClaudianToolRegistry {
     }
     const dirs = await this.adapter.listFolders(TOOLS_DIR);
     // Two tools declaring the same `manifest.name` would collide as one
-    // `mcp__claudian__<name>` id — the provider would see only one and silently
+    // `mcp__specorator__<name>` id — the provider would see only one and silently
     // route every call to whichever registered last. Flag the later one instead.
     const claimedNames = new Map<string, string>();
     for (const dir of dirs) {

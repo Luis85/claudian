@@ -1,5 +1,5 @@
 /**
- * Parses the `key: value` keyed body used by claudian work-order protocol
+ * Parses the `key: value` keyed body used by specorator work-order protocol
  * blocks (progress/handoff). Continuation lines append to the current key's
  * value; lines before the first key are dropped. Values are trimmed.
  */

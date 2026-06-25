@@ -75,9 +75,9 @@ export class CanvasSelectionController extends SelectionPollingController {
       this.indicatorEl.textContent = nodeIds.length === 1
         ? `node "${nodeIds[0]}" selected`
         : `${nodeIds.length} nodes selected`;
-      this.indicatorEl.removeClass('claudian-hidden');
+      this.indicatorEl.removeClass('specorator-hidden');
     } else {
-      this.indicatorEl.addClass('claudian-hidden');
+      this.indicatorEl.addClass('specorator-hidden');
     }
     this.updateContextRowVisibility();
   }

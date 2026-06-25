@@ -35,7 +35,7 @@ function canonicalEnvProjection(envText: string, watchedKeys: readonly string[])
 /**
  * SEC-A: a DIGEST (not the raw values) of the watched env keys. The watched set
  * includes secrets (e.g. `OPENAI_API_KEY`, `CURSOR_API_KEY`) and this hash is
- * persisted to `providerConfigs.*.environmentHash` in `claudian-settings.json`, so
+ * persisted to `providerConfigs.*.environmentHash` in `specorator-settings.json`, so
  * it must never contain the resolved secret itself. An empty projection stays `''`
  * to preserve the "no env configured" sentinel (and parity with the default hash).
  */

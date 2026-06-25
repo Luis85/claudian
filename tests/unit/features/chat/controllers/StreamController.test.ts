@@ -347,7 +347,7 @@ describe('StreamController - Text Content', () => {
     });
 
     it('does not render the text block live while streaming, and shows a placeholder', async () => {
-      await controller.appendText('Partial <claudian_hand');
+      await controller.appendText('Partial <specorator_hand');
       await controller.appendText('off>more');
 
       jest.advanceTimersByTime(500);
@@ -608,7 +608,7 @@ describe('StreamController - Text Content', () => {
       );
 
       expect(
-        deps.state.currentContentEl!.querySelector('.claudian-runtime-error-card'),
+        deps.state.currentContentEl!.querySelector('.specorator-runtime-error-card'),
       ).not.toBeNull();
     });
 
@@ -652,7 +652,7 @@ describe('StreamController - Text Content', () => {
       );
 
       const retryBtn = retryDeps.state.currentContentEl!.querySelector(
-        '.claudian-runtime-error-button-primary',
+        '.specorator-runtime-error-button-primary',
       );
       expect(retryBtn).not.toBeNull();
       (retryBtn as unknown as { click: () => void }).click();
@@ -675,10 +675,10 @@ describe('StreamController - Text Content', () => {
       );
 
       expect(
-        autoDeps.state.currentContentEl!.querySelector('.claudian-runtime-error-card'),
+        autoDeps.state.currentContentEl!.querySelector('.specorator-runtime-error-card'),
       ).not.toBeNull();
       expect(
-        autoDeps.state.currentContentEl!.querySelector('.claudian-runtime-error-button-primary'),
+        autoDeps.state.currentContentEl!.querySelector('.specorator-runtime-error-button-primary'),
       ).toBeNull();
     });
 
@@ -1477,7 +1477,7 @@ describe('StreamController - Text Content', () => {
     it('should not scroll when enableAutoScroll setting is false', async () => {
       (deps.plugin.settings as any).enableAutoScroll = false;
       const messagesEl = deps.getMessagesEl();
-      const anchor = messagesEl.createDiv({ cls: 'claudian-message' });
+      const anchor = messagesEl.createDiv({ cls: 'specorator-message' });
       const scrollSpy = jest.spyOn(anchor, 'scrollIntoView');
 
       const msg = createTestMessage();
@@ -1492,7 +1492,7 @@ describe('StreamController - Text Content', () => {
     it('should not scroll when autoScrollEnabled state is false', async () => {
       deps.state.autoScrollEnabled = false;
       const messagesEl = deps.getMessagesEl();
-      const anchor = messagesEl.createDiv({ cls: 'claudian-message' });
+      const anchor = messagesEl.createDiv({ cls: 'specorator-message' });
       const scrollSpy = jest.spyOn(anchor, 'scrollIntoView');
 
       const msg = createTestMessage();
@@ -1507,7 +1507,7 @@ describe('StreamController - Text Content', () => {
     it('should scroll the bottom anchor into view when pinned to bottom', async () => {
       deps.state.autoScrollEnabled = true;
       const messagesEl = deps.getMessagesEl();
-      const anchor = messagesEl.createDiv({ cls: 'claudian-message' });
+      const anchor = messagesEl.createDiv({ cls: 'specorator-message' });
       const scrollSpy = jest.spyOn(anchor, 'scrollIntoView');
 
       const msg = createTestMessage();
@@ -1522,7 +1522,7 @@ describe('StreamController - Text Content', () => {
     it('should not read scrollHeight per chunk while streaming (no forced reflow)', async () => {
       deps.state.autoScrollEnabled = true;
       const messagesEl = deps.getMessagesEl();
-      messagesEl.createDiv({ cls: 'claudian-message' });
+      messagesEl.createDiv({ cls: 'specorator-message' });
       const tracker = trackScrollHeightReads(messagesEl);
 
       const msg = createTestMessage();
@@ -2401,9 +2401,9 @@ describe('StreamController - Text Content', () => {
       // Manually set up a rendered tool element with name + summary children
       // (the mock renderToolCall doesn't actually populate toolCallElements)
       const toolEl = createMockEl();
-      const nameChild = toolEl.createDiv({ cls: 'claudian-tool-name' });
+      const nameChild = toolEl.createDiv({ cls: 'specorator-tool-name' });
       nameChild.setText('Read');
-      const summaryChild = toolEl.createDiv({ cls: 'claudian-tool-summary' });
+      const summaryChild = toolEl.createDiv({ cls: 'specorator-tool-summary' });
       summaryChild.setText('test.md');
       deps.state.toolCallElements.set('read-1', toolEl);
 

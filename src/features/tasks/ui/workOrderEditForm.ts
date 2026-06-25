@@ -75,19 +75,19 @@ export function renderWorkOrderEditForm(
   task: TaskSpec,
   callbacks: WorkOrderEditFormCallbacks,
 ): void {
-  const form = parent.createDiv({ cls: 'claudian-work-order-modal-edit-form' });
+  const form = parent.createDiv({ cls: 'specorator-work-order-modal-edit-form' });
 
   const textareas = FIELD_SPECS.map((spec) => {
     const { section } = renderSectionHeader(form, { icon: spec.icon, label: t(spec.labelKey) });
     const textarea = section.createEl('textarea', {
-      cls: 'claudian-work-order-modal-edit-textarea',
+      cls: 'specorator-work-order-modal-edit-textarea',
       attr: { placeholder: t(spec.placeholderKey), spellcheck: 'false' },
     });
     textarea.value = task.sections[spec.key] ?? '';
     return { key: spec.key, textarea };
   });
 
-  const actions = form.createDiv({ cls: 'claudian-work-order-modal-edit-actions' });
+  const actions = form.createDiv({ cls: 'specorator-work-order-modal-edit-actions' });
   renderActionButton(actions, {
     variant: 'ghost',
     icon: 'x',
@@ -115,13 +115,13 @@ interface ActionButtonSpec {
 
 function renderActionButton(parent: HTMLElement, spec: ActionButtonSpec): void {
   const button = parent.createEl('button', {
-    cls: `claudian-work-order-modal-action claudian-work-order-modal-action--${spec.variant}`,
+    cls: `specorator-work-order-modal-action specorator-work-order-modal-action--${spec.variant}`,
     attr: { type: 'button' },
   });
-  const icon = button.createSpan({ cls: 'claudian-work-order-modal-action-icon' });
+  const icon = button.createSpan({ cls: 'specorator-work-order-modal-action-icon' });
   icon.setAttr('aria-hidden', 'true');
   icon.setAttr('data-icon', spec.icon);
   setIcon(icon, spec.icon);
-  button.createSpan({ cls: 'claudian-work-order-modal-action-label', text: t(spec.labelKey) });
+  button.createSpan({ cls: 'specorator-work-order-modal-action-label', text: t(spec.labelKey) });
   button.addEventListener('click', () => spec.onClick());
 }

@@ -7,7 +7,7 @@ import { ProviderRegistry } from '../../../core/providers/ProviderRegistry';
 import type { ProviderChatUIConfig, ProviderId } from '../../../core/providers/types';
 import { DEFAULT_CHAT_PROVIDER_ID } from '../../../core/providers/types';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { SlashCommandDropdown } from '../../../shared/components/SlashCommandDropdown';
 import { getEnhancedPath } from '../../../utils/env';
 import { resolveOpenableVaultPath } from '../../../utils/fileLink';
@@ -47,7 +47,7 @@ import {
 } from './tabShared';
 import type { TabData } from './types';
 
-function initializeContextManagers(tab: TabData, plugin: ClaudianPlugin): void {
+function initializeContextManagers(tab: TabData, plugin: SpecoratorPlugin): void {
   const { dom } = tab;
   const app = plugin.app;
 
@@ -126,7 +126,7 @@ function initializeSlashCommands(
 /**
  * Initializes instruction mode and todo panel for a tab.
  */
-function initializeInstructionAndTodo(tab: TabData, plugin: ClaudianPlugin): void {
+function initializeInstructionAndTodo(tab: TabData, plugin: SpecoratorPlugin): void {
   const { dom } = tab;
 
   syncTabProviderServices(tab, plugin);
@@ -184,13 +184,13 @@ function isBangBashEnabled(settings: Record<string, unknown>): boolean {
  */
 function initializeInputToolbar(
   tab: TabData,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   getProviderCatalogConfig?: () => ProviderCatalogInfo,
   onProviderChanged?: (providerId: ProviderId) => void | Promise<void>,
 ): void {
   const { dom } = tab;
 
-  const inputToolbar = dom.inputWrapper.createDiv({ cls: 'claudian-input-toolbar' });
+  const inputToolbar = dom.inputWrapper.createDiv({ cls: 'specorator-input-toolbar' });
 
   // Blank-tab UI config wrapper that returns mixed model options
   const blankTabUIConfigProxy = (): ProviderChatUIConfig => {
@@ -350,7 +350,7 @@ function initializeInputToolbar(
       tab.ui.permissionToggle?.updateDisplay();
       tab.ui.planModeToggle?.updateDisplay();
       dom.inputWrapper.toggleClass(
-        'claudian-input-plan-mode',
+        'specorator-input-plan-mode',
         mode === 'plan' && getTabCapabilities(tab, plugin).supportsPlanMode,
       );
     },
@@ -421,7 +421,7 @@ export interface InitializeTabUIOptions {
  */
 export function initializeTabUI(
   tab: TabData,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   options: InitializeTabUIOptions = {}
 ): void {
   const { dom, state } = tab;
@@ -430,11 +430,11 @@ export function initializeTabUI(
   initializeContextManagers(tab, plugin);
 
   // Selection indicator - add to contextRowEl
-  dom.selectionIndicatorEl = dom.contextRowEl.createDiv({ cls: 'claudian-selection-indicator claudian-hidden' });
+  dom.selectionIndicatorEl = dom.contextRowEl.createDiv({ cls: 'specorator-selection-indicator specorator-hidden' });
 
-  dom.browserIndicatorEl = dom.contextRowEl.createDiv({ cls: 'claudian-browser-selection-indicator claudian-hidden' });
+  dom.browserIndicatorEl = dom.contextRowEl.createDiv({ cls: 'specorator-browser-selection-indicator specorator-hidden' });
 
-  dom.canvasIndicatorEl = dom.contextRowEl.createDiv({ cls: 'claudian-canvas-indicator claudian-hidden' });
+  dom.canvasIndicatorEl = dom.contextRowEl.createDiv({ cls: 'specorator-canvas-indicator specorator-hidden' });
 
   const catalogInfo = options.getProviderCatalogConfig?.() ?? null;
   initializeSlashCommands(
@@ -494,7 +494,7 @@ function openEditedFile(app: App, rawPath: string): void {
 // SECURITY (SEC-1): 'yolo' maps to SDK bypassPermissions — tools run with no
 // approval UI. Warn the user the first time they opt in, then persist a flag so
 // the Notice shows only once.
-export async function maybeWarnYoloMode(plugin: ClaudianPlugin, mode: string): Promise<void> {
+export async function maybeWarnYoloMode(plugin: SpecoratorPlugin, mode: string): Promise<void> {
   if (mode !== 'yolo' || plugin.settings.yoloModeWarningShown) {
     return;
   }

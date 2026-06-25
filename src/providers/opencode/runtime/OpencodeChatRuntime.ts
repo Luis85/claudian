@@ -353,7 +353,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
     let shouldBootstrapHistory = previousMessages.length > 0
       && (!expectedSessionId || this.sessionInvalidated);
 
-    // Thread the bound agent's grant into the managed `mcp.claudian` config so
+    // Thread the bound agent's grant into the managed `mcp.specorator` config so
     // it carries the scoped (per-grant) bearer token; an empty/absent grant
     // yields today's all-tools default. Phase-1 limitation: Opencode's process +
     // config are written once at spawn (ensureReady), not per-turn, so this
@@ -620,7 +620,7 @@ export class OpencodeChatRuntime implements ChatRuntime {
 
     this.connection = new AcpClientConnection({
       clientInfo: {
-        name: 'claudian',
+        name: 'specorator',
         version: this.plugin.manifest?.version ?? '0.0.0',
       },
       delegate: {

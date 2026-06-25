@@ -4,7 +4,7 @@ status: shipped
 type: user-manual
 parent: "[[Multi Provider Support]]"
 ---
-# Claudian — Multi-provider setup
+# Specorator — Multi-provider setup
 
 This manual covers running more than one AI provider inside the same Specorator workspace. Each provider keeps its own settings, models, commands, and session storage. A chat tab belongs to the provider you opened it with until you close it.
 
@@ -102,7 +102,7 @@ Provider-native transcripts (`~/.claude/projects/`, `~/.codex/sessions/`, `~/.cu
 MCP is configured per provider, not globally. To make a server visible everywhere, register it in each provider's own config. See [[mcp-servers]] for the per-provider matrix:
 
 - **Claude** — managed in **Settings → Claude → MCP Servers** (writes `.claude/mcp.json`).
-- **Codex** — managed by the `codex mcp` CLI, surfaced read-only in Claudian.
+- **Codex** — managed by the `codex mcp` CLI, surfaced read-only in Specorator.
 - **Opencode** — managed by the Opencode CLI; Opencode announces its catalog over ACP.
 - **Cursor** — managed by the Cursor Agent CLI itself.
 
@@ -113,7 +113,7 @@ MCP is configured per provider, not globally. To make a server visible everywher
 | Path / location | Notes |
 |-----------------|-------|
 | `.specorator/sessions/*.meta.json` | Provider-neutral session metadata. |
-| `.claudian/claudian-settings.json` | All Specorator settings, including per-provider config bags. |
+| `.specorator/specorator-settings.json` | All Specorator settings, including per-provider config bags. |
 | **Settings → Specorator → General → Providers** | Master enable toggles. |
 | **Settings → Specorator → <Provider>** | Provider-specific CLI path, models, MCP, environment. |
 | [[install-claude]] / [[install-codex]] / [[install-cursor]] / [[install-opencode]] | CLI install steps per provider. |

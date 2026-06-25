@@ -19,16 +19,16 @@ describe('FileChipsView.renderPills', () => {
     const container = createMockEl();
     const view = new FileChipsView(container, { onRemove: jest.fn(), onOpenFile: jest.fn() });
     view.renderPills({ currentNote: 'note.md', files: ['note.md', 'a.ts'], folders: ['src'] });
-    expect(findAll(container, 'claudian-file-chip')).toHaveLength(3);
-    expect(findAll(container, 'claudian-file-chip--current')).toHaveLength(1);
-    expect(findAll(container, 'claudian-file-chip--folder')).toHaveLength(1);
+    expect(findAll(container, 'specorator-file-chip')).toHaveLength(3);
+    expect(findAll(container, 'specorator-file-chip--current')).toHaveLength(1);
+    expect(findAll(container, 'specorator-file-chip--folder')).toHaveLength(1);
   });
 
   it('hides the tray when empty', () => {
     const container = createMockEl();
     const view = new FileChipsView(container, { onRemove: jest.fn(), onOpenFile: jest.fn() });
     view.renderPills({ currentNote: null, files: [], folders: [] });
-    expect(findAll(container, 'claudian-file-chip')).toHaveLength(0);
+    expect(findAll(container, 'specorator-file-chip')).toHaveLength(0);
   });
 
   it('fires onRemove with the right kind and does not open folders', () => {
@@ -38,13 +38,13 @@ describe('FileChipsView.renderPills', () => {
     const view = new FileChipsView(container, { onRemove, onOpenFile });
     view.renderPills({ currentNote: null, files: ['a.ts'], folders: ['src'] });
 
-    const folderPill = findAll(container, 'claudian-file-chip--folder')[0];
+    const folderPill = findAll(container, 'specorator-file-chip--folder')[0];
     // Folders have no click-to-open listener; clicking the pill does not open anything.
     folderPill.click();
     expect(onOpenFile).not.toHaveBeenCalled();
 
     // Clicking the remove button fires onRemove with ('src', 'folder').
-    const removeBtn = findAll(folderPill, 'claudian-file-chip-remove')[0];
+    const removeBtn = findAll(folderPill, 'specorator-file-chip-remove')[0];
     removeBtn.click();
     expect(onRemove).toHaveBeenCalledWith('src', 'folder');
   });

@@ -2,7 +2,7 @@
  * SEC-A Phase 3: pure helpers for MCP auth-header / stdio-env secrets. No I/O.
  *
  * Steady state: the secret VALUE lives in Obsidian SecretStorage; the server's
- * `_claudian` metadata holds only `secretHeaders` / `secretEnv` (name → secret id).
+ * `_specorator` metadata holds only `secretHeaders` / `secretEnv` (name → secret id).
  * At launch (`McpServerManager.getActiveServers`) and in-app verification
  * (`McpTester`) the values are OVERLAID onto the config in-plugin — they never
  * persist in the committable/syncable `.claude/mcp.json`.

@@ -1,5 +1,5 @@
 /**
- * Claudian - Conversation-save assembly helpers.
+ * Specorator - Conversation-save assembly helpers.
  *
  * Extracted from ConversationController.save to keep it below the complexity
  * thresholds. Gathering the optional context selections and assembling the
@@ -8,7 +8,7 @@
 
 import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
 import type { Conversation } from '../../../core/types';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import type { ChatState } from '../state/ChatState';
 import type { FileContextManager } from '../ui/FileContext';
 import type { ExternalContextSelector, McpServerSelector } from '../ui/InputToolbar';
@@ -19,7 +19,7 @@ import type { ExternalContextSelector, McpServerSelector } from '../ui/InputTool
  * storage. No-op when a conversation already exists.
  */
 export async function ensureConversationForSave(
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   state: ChatState,
   agentService: ChatRuntime | null,
 ): Promise<void> {

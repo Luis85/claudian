@@ -1,4 +1,4 @@
-import type { ClaudianSettings } from '../../../../../src/core/types/settings';
+import type { SpecoratorSettings } from '../../../../../src/core/types/settings';
 import type {
   SettingsField,
   SettingsSection,
@@ -6,8 +6,8 @@ import type {
 } from '../../../../../src/features/settings/registry/SettingsField';
 import { SettingsRegistry } from '../../../../../src/features/settings/registry/SettingsRegistry';
 
-function makeSettings(): ClaudianSettings {
-  return { providerConfigs: {} } as unknown as ClaudianSettings;
+function makeSettings(): SpecoratorSettings {
+  return { providerConfigs: {} } as unknown as SpecoratorSettings;
 }
 
 describe('SettingsRegistry', () => {

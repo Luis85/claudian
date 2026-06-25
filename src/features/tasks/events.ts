@@ -3,7 +3,7 @@ import type { TaskLedgerEntry, TaskStatus } from './model/taskTypes';
 
 /**
  * Emit-only view of the event bus for task producers (RunSession, coordinator).
- * The app-level `EventBus<ClaudianEventMap>` (a superset map) satisfies this, so
+ * The app-level `EventBus<SpecoratorEventMap>` (a superset map) satisfies this, so
  * producers stay decoupled from chat/app event keys while still emitting task ones.
  */
 export type TaskEventEmitter = Pick<EventBus<TaskEventMap>, 'emit'>;
@@ -24,7 +24,7 @@ export interface TaskEventMap {
   'task:ledger-appended': { taskId: string; path: string; entry: TaskLedgerEntry };
   /** Emitted on each heartbeat tick. */
   'task:heartbeat': { taskId: string; path: string; at: string };
-  /** Emitted when the agent emits a <claudian_progress> block. */
+  /** Emitted when the agent emits a <specorator_progress> block. */
   'task:progress': { taskId: string; path: string; step: string; done?: { complete: number; total: number } };
   /** Emitted when the run pauses for user input. */
   'task:needs-input': { taskId: string; path: string; question: string; why?: string; default?: string; runId: string };
@@ -34,15 +34,15 @@ export interface TaskEventMap {
   'task:resumed': { taskId: string; path: string };
   /** Emitted when a run ends without a parseable handoff but with content. */
   'task:needs-handoff': { taskId: string; path: string; error: string };
-  /** Emitted when the parser drops a malformed claudian_* block. */
+  /** Emitted when the parser drops a malformed specorator_* block. */
   'task:parser-warning': { taskId: string; path: string; warning: string };
   /** Emitted when LedgerWriter has given up flushing after retries. */
   'task:ledger-flush-degraded': { taskId: string; path: string };
   /**
    * Emitted when the terminal ledger snapshot couldn't be written into the
    * work-order note (e.g. the note was hand-edited and is missing the
-   * `<!-- claudian:run-ledger-* -->` markers). The sidecar is left in place so
-   * the ledger isn't lost — a developer can read `.claudian/runs/<runId>/ledger.jsonl`
+   * `<!-- specorator:run-ledger-* -->` markers). The sidecar is left in place so
+   * the ledger isn't lost — a developer can read `.specorator/runs/<runId>/ledger.jsonl`
    * directly.
    */
   'task:ledger-finalize-failed': { taskId: string; path: string; runId: string; error: string };

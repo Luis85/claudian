@@ -62,7 +62,7 @@ describe('CursorConversationHistoryService.deleteConversationSession', () => {
   let homedirSpy: jest.SpyInstance;
 
   beforeEach(() => {
-    tmpHome = fs.mkdtempSync(path.join(realOs.tmpdir(), 'claudian-cursor-delete-'));
+    tmpHome = fs.mkdtempSync(path.join(realOs.tmpdir(), 'specorator-cursor-delete-'));
     homedirSpy = jest.spyOn(realOs, 'homedir').mockReturnValue(tmpHome);
   });
   afterEach(() => {

@@ -69,19 +69,19 @@ export function renderInlineRuntimeError(
 ): HTMLElement {
   const { kind, content, providerId, onOpenSettings, onRetry } = options;
 
-  const card = parentEl.createDiv({ cls: `claudian-runtime-error-card claudian-runtime-error-${kind}` });
+  const card = parentEl.createDiv({ cls: `specorator-runtime-error-card specorator-runtime-error-${kind}` });
 
-  const header = card.createDiv({ cls: 'claudian-runtime-error-header' });
-  const iconEl = header.createSpan({ cls: 'claudian-runtime-error-icon' });
+  const header = card.createDiv({ cls: 'specorator-runtime-error-header' });
+  const iconEl = header.createSpan({ cls: 'specorator-runtime-error-icon' });
   setIcon(iconEl, 'alert-triangle');
-  header.createSpan({ cls: 'claudian-runtime-error-title', text: t(titleKey(kind)) });
+  header.createSpan({ cls: 'specorator-runtime-error-title', text: t(titleKey(kind)) });
 
   const resolvedBodyKey = bodyKey(kind);
   if (resolvedBodyKey) {
-    card.createDiv({ cls: 'claudian-runtime-error-body', text: t(resolvedBodyKey) });
+    card.createDiv({ cls: 'specorator-runtime-error-body', text: t(resolvedBodyKey) });
   } else if (content) {
     // Generic: the raw provider message is the most useful body text.
-    card.createDiv({ cls: 'claudian-runtime-error-body', text: content });
+    card.createDiv({ cls: 'specorator-runtime-error-body', text: content });
   }
 
   if (kind === 'unauthenticated') {
@@ -91,15 +91,15 @@ export function renderInlineRuntimeError(
   // Raw provider message kept available behind a collapsible details row for the
   // classified kinds (the generic card already shows it as the body).
   if (resolvedBodyKey && content) {
-    const details = card.createEl('details', { cls: 'claudian-runtime-error-details' });
+    const details = card.createEl('details', { cls: 'specorator-runtime-error-details' });
     details.createEl('summary', {
-      cls: 'claudian-runtime-error-details-summary',
+      cls: 'specorator-runtime-error-details-summary',
       text: t('chat.runtimeError.detailsLabel'),
     });
-    details.createEl('pre', { cls: 'claudian-runtime-error-details-text', text: content });
+    details.createEl('pre', { cls: 'specorator-runtime-error-details-text', text: content });
   }
 
-  const actions = card.createDiv({ cls: 'claudian-runtime-error-actions' });
+  const actions = card.createDiv({ cls: 'specorator-runtime-error-actions' });
 
   if (onOpenSettings && (kind === 'cli-not-found' || kind === 'unauthenticated')) {
     const settingsKey: TranslationKey =
@@ -107,7 +107,7 @@ export function renderInlineRuntimeError(
         ? 'chat.runtimeError.cliNotFound.openSettings'
         : 'chat.runtimeError.unauthenticated.openSettings';
     const settingsBtn = actions.createEl('button', {
-      cls: 'claudian-runtime-error-button',
+      cls: 'specorator-runtime-error-button',
       text: t(settingsKey),
     });
     settingsBtn.addEventListener('click', () => onOpenSettings());
@@ -115,7 +115,7 @@ export function renderInlineRuntimeError(
 
   if (onRetry) {
     const retryBtn = actions.createEl('button', {
-      cls: 'claudian-runtime-error-button claudian-runtime-error-button-primary',
+      cls: 'specorator-runtime-error-button specorator-runtime-error-button-primary',
       text: t('chat.runtimeError.retry'),
     });
     retryBtn.addEventListener('click', () => onRetry());
@@ -128,17 +128,17 @@ function renderLoginHint(card: HTMLElement, providerId: string): void {
   const hintKey = LOGIN_HINT_KEYS[providerId] ?? 'chat.runtimeError.unauthenticated.genericHint';
   const command = t(hintKey);
 
-  const hint = card.createDiv({ cls: 'claudian-runtime-error-hint' });
+  const hint = card.createDiv({ cls: 'specorator-runtime-error-hint' });
   hint.createDiv({
-    cls: 'claudian-runtime-error-hint-label',
+    cls: 'specorator-runtime-error-hint-label',
     text: t('chat.runtimeError.unauthenticated.hintLabel'),
   });
 
-  const row = hint.createDiv({ cls: 'claudian-runtime-error-hint-row' });
-  row.createEl('code', { cls: 'claudian-runtime-error-hint-command', text: command });
+  const row = hint.createDiv({ cls: 'specorator-runtime-error-hint-row' });
+  row.createEl('code', { cls: 'specorator-runtime-error-hint-command', text: command });
 
   const copyBtn = row.createEl('button', {
-    cls: 'claudian-runtime-error-hint-copy',
+    cls: 'specorator-runtime-error-hint-copy',
     attr: { 'aria-label': t('chat.runtimeError.unauthenticated.copyHint') },
   });
   setIcon(copyBtn, 'copy');

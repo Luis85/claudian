@@ -9,7 +9,7 @@
  * env blob into the store and return the sanitized blob plus the new refs.
  */
 import { parseEnvironmentVariables, PLAINTEXT_OPT_OUT_MARKER } from '../../utils/env';
-import { isClaudianGeneratedSecretId, isSecretEnvKey, migratedEnvSecretId, SECRET_VALUE_PLACEHOLDER, uniquifySecretId } from '../security/secretIds';
+import { isSecretEnvKey, isSpecoratorGeneratedSecretId, migratedEnvSecretId, SECRET_VALUE_PLACEHOLDER, uniquifySecretId } from '../security/secretIds';
 import type { EnvironmentScope, SecretEnvVarRef } from '../types/settings';
 import {
   getProviderEnvironmentVariables,
@@ -54,7 +54,7 @@ export function overlaySecretEnvVars(
  * Build the effective env for a provider with correct precedence (most specific
  * wins): shared plaintext < shared secret < provider plaintext < provider secret.
  * Overlaying shared secrets BEFORE the provider blob is parsed ensures a provider
- * override (e.g. `OPENAI_API_KEY=... # claudian:plaintext`) wins over a shared
+ * override (e.g. `OPENAI_API_KEY=... # specorator:plaintext`) wins over a shared
  * secret of the same name. Reports refs whose secret value is absent on device.
  */
 export function resolveProviderEnvVars(
@@ -151,7 +151,7 @@ class ScopeRefTracker {
 /**
  * One-time migration for a single env blob: move secret-shaped `KEY=VALUE` lines
  * into the store and drop them from the blob. Non-secret lines, comments, blank
- * lines, opted-out lines (`# claudian:plaintext`), and empty values pass through.
+ * lines, opted-out lines (`# specorator:plaintext`), and empty values pass through.
  * Reuses the canonical `parseEnvironmentVariables` parser. Idempotent: a blob
  * with no plaintext secrets yields zero refs and an unchanged body.
  *
@@ -347,9 +347,9 @@ function applyMigratedRefChanges(ctx: EnvSecretMigration): void {
   for (const ref of ctx.clearedRefs) {
     // Mirror the settings UI's clearIfOrphaned guard: SecretStorage ids are
     // global across plugins and a ref may point at a user-selected external id
-    // (via SecretComponent), so only auto-erase Claudian-owned ids — never a
+    // (via SecretComponent), so only auto-erase Specorator-owned ids — never a
     // secret another plugin owns.
-    if (!isClaudianGeneratedSecretId(ref.secretId)) continue;
+    if (!isSpecoratorGeneratedSecretId(ref.secretId)) continue;
     if (!stillUsed.has(ref.secretId)) ctx.setSecret(ref.secretId, '');
   }
   ctx.changed = true;

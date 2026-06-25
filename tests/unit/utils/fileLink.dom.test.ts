@@ -13,9 +13,9 @@ jest.mock('@/utils/obsidianCompat', () => ({
 jest.mock('@/utils/path', () => {
   const path = jest.requireActual<typeof pathType>('path');
   // Host-absolute so absolute-path resolution exercises real semantics on the
-  // running OS (POSIX `/Projects/claudian` on Linux, `C:\Projects\claudian` on
+  // running OS (POSIX `/Projects/specorator` on Linux, `C:\Projects\specorator` on
   // win32) instead of hardcoding a single platform.
-  const vaultPath = path.resolve('/Projects/claudian');
+  const vaultPath = path.resolve('/Projects/specorator');
 
   function resolveInsideVault(candidate: string): string {
     const normalized = candidate.replace(/\\/g, '/');
@@ -56,7 +56,7 @@ function createMockApp(existingFiles: string[]) {
       }),
     },
     vault: {
-      adapter: { basePath: 'C:/Projects/claudian' },
+      adapter: { basePath: 'C:/Projects/specorator' },
       getAbstractFileByPath: jest.fn((filePath: string) => {
         if (fileSet.has(filePath.toLowerCase())) return { path: filePath, basename: filePath.replace(/\.md$/, '') };
         if (!filePath.endsWith('.md') && fileSet.has((filePath + '.md').toLowerCase())) {
@@ -108,7 +108,7 @@ describe('processFileLinks', () => {
 
       processFileLinks(app, container);
 
-      const link = container.querySelector('a.claudian-file-link');
+      const link = container.querySelector('a.specorator-file-link');
       expect(link).not.toBeNull();
       expect(link!.textContent).toBe('note.md');
       expect(link!.getAttribute('data-href')).toBe('note.md');
@@ -123,7 +123,7 @@ describe('processFileLinks', () => {
 
       processFileLinks(app, container);
 
-      const link = container.querySelector('a.claudian-file-link');
+      const link = container.querySelector('a.specorator-file-link');
       expect(link).toBeNull();
     });
 
@@ -148,7 +148,7 @@ describe('processFileLinks', () => {
 
       processFileLinks(app, container);
 
-      const links = container.querySelectorAll('a.claudian-file-link');
+      const links = container.querySelectorAll('a.specorator-file-link');
       expect(links.length).toBe(2);
     });
 
@@ -161,7 +161,7 @@ describe('processFileLinks', () => {
 
       processFileLinks(app, container);
 
-      const link = container.querySelector('a.claudian-file-link');
+      const link = container.querySelector('a.specorator-file-link');
       expect(link).not.toBeNull();
       expect(link!.textContent).toBe('My Note');
     });
@@ -175,7 +175,7 @@ describe('processFileLinks', () => {
 
       processFileLinks(app, container);
 
-      const link = container.querySelector('a.claudian-file-link');
+      const link = container.querySelector('a.specorator-file-link');
       expect(link).not.toBeNull();
     });
   });
@@ -192,7 +192,7 @@ describe('processFileLinks', () => {
       // absolute-inside-vault resolution runs on whatever OS executes the test.
       const pathMod = jest.requireActual<typeof pathType>('path');
       const absInput = pathMod.join(
-        pathMod.resolve('/Projects/claudian'),
+        pathMod.resolve('/Projects/specorator'),
         '.context',
         'cursor-async-smoke-summary.md',
       );
@@ -205,7 +205,7 @@ describe('processFileLinks', () => {
 
       processFileLinks(app, container);
 
-      const link = code.querySelector('a.claudian-file-link');
+      const link = code.querySelector('a.specorator-file-link');
       expect(link).not.toBeNull();
       expect(link!.getAttribute('data-href')).toBe('.context/cursor-async-smoke-summary.md');
       expect(link!.textContent).toBe(absInput);
@@ -224,7 +224,7 @@ describe('processFileLinks', () => {
 
       processFileLinks(app, container);
 
-      expect(container.querySelector('a.claudian-file-link')).toBeNull();
+      expect(container.querySelector('a.specorator-file-link')).toBeNull();
     });
   });
 
@@ -238,7 +238,7 @@ describe('processFileLinks', () => {
 
       processFileLinks(app, container);
 
-      const link = code.querySelector('a.claudian-file-link');
+      const link = code.querySelector('a.specorator-file-link');
       expect(link).not.toBeNull();
       expect(link!.textContent).toBe('note.md');
     });
@@ -254,7 +254,7 @@ describe('processFileLinks', () => {
 
       processFileLinks(app, container);
 
-      const link = container.querySelector('a.claudian-file-link');
+      const link = container.querySelector('a.specorator-file-link');
       expect(link).toBeNull();
       expect(code.textContent).toBe('[[note.md]]');
     });
@@ -270,7 +270,7 @@ describe('processFileLinks', () => {
 
       processFileLinks(app, container);
 
-      const link = container.querySelector('a.claudian-file-link');
+      const link = container.querySelector('a.specorator-file-link');
       expect(link).toBeNull();
     });
 
@@ -283,22 +283,22 @@ describe('processFileLinks', () => {
 
       processFileLinks(app, container);
 
-      const links = container.querySelectorAll('a.claudian-file-link');
+      const links = container.querySelectorAll('a.specorator-file-link');
       expect(links.length).toBe(0);
     });
 
-    it('skips text nodes inside elements with .claudian-file-link class', () => {
+    it('skips text nodes inside elements with .specorator-file-link class', () => {
       const app = createMockApp(['note.md']);
       const container = document.createElement('div');
       const span = document.createElement('span');
-      span.className = 'claudian-file-link';
+      span.className = 'specorator-file-link';
       span.textContent = '[[note.md]]';
       container.appendChild(span);
 
       processFileLinks(app, container);
 
       // Should not create nested links
-      const links = container.querySelectorAll('a.claudian-file-link');
+      const links = container.querySelectorAll('a.specorator-file-link');
       expect(links.length).toBe(0);
     });
 
@@ -312,7 +312,7 @@ describe('processFileLinks', () => {
 
       processFileLinks(app, container);
 
-      const links = container.querySelectorAll('a.claudian-file-link');
+      const links = container.querySelectorAll('a.specorator-file-link');
       expect(links.length).toBe(0);
     });
 
@@ -326,7 +326,7 @@ describe('processFileLinks', () => {
       const internalLink = container.querySelector('a.internal-link');
       expect(internalLink).not.toBeNull();
       expect(internalLink!.textContent).toBe('note.md');
-      expect(internalLink!.classList.contains('claudian-file-link')).toBe(true);
+      expect(internalLink!.classList.contains('specorator-file-link')).toBe(true);
       expect(container.textContent).toBe('note.md and [[missing.md]]');
     });
 
@@ -339,7 +339,7 @@ describe('processFileLinks', () => {
 
       processFileLinks(app, container);
 
-      const link = container.querySelector('a.claudian-file-link');
+      const link = container.querySelector('a.specorator-file-link');
       expect(link).not.toBeNull();
     });
   });
@@ -354,7 +354,7 @@ describe('processFileLinks', () => {
 
       processFileLinks(app, container);
 
-      const link = container.querySelector('a.claudian-file-link');
+      const link = container.querySelector('a.specorator-file-link');
       expect(link).toBeNull();
     });
 
@@ -367,7 +367,7 @@ describe('processFileLinks', () => {
 
       processFileLinks(app, container);
 
-      const links = container.querySelectorAll('a.claudian-file-link');
+      const links = container.querySelectorAll('a.specorator-file-link');
       expect(links.length).toBe(1);
       expect(links[0].textContent).toBe('note.md');
     });

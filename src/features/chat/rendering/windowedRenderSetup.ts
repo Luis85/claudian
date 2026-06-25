@@ -32,8 +32,8 @@ export function setupWindowedRender(params: {
 }): { welcomeEl: HTMLElement; start: number } {
   const { messagesEl, getGreeting, renderHydrationErrorBanner, renderLoadEarlierControl, total } = params;
 
-  const welcomeEl = messagesEl.createDiv({ cls: 'claudian-welcome' });
-  welcomeEl.createDiv({ cls: 'claudian-welcome-greeting', text: getGreeting() });
+  const welcomeEl = messagesEl.createDiv({ cls: 'specorator-welcome' });
+  welcomeEl.createDiv({ cls: 'specorator-welcome-greeting', text: getGreeting() });
 
   renderHydrationErrorBanner();
 

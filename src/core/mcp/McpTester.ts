@@ -355,7 +355,7 @@ async function listToolsBestEffort(client: Client, signal: AbortSignal): Promise
 }
 
 async function connectAndProbe(transport: Transport): Promise<McpTestResult> {
-  const client = new Client({ name: 'claudian-tester', version: '1.0.0' });
+  const client = new Client({ name: 'specorator-tester', version: '1.0.0' });
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), 10000);
 

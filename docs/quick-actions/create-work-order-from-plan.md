@@ -16,7 +16,7 @@ Steps:
 4. Create work-order markdown file in `Agent Board/tasks/` named `work-order-YYYYMMDD-<slug>.md` with:
    - Frontmatter (exact schema — do not invent field names or values):
      ```yaml
-     type: claudian-work-order
+     type: specorator-work-order
      schema_version: 1
      id: work-order-YYYYMMDD-<slug>
      title: "<title>"
@@ -41,17 +41,17 @@ Steps:
    - Execution Instructions: Subagent-Driven (recommended) on an isolated worktree — fresh subagent per task, review between tasks and keep the work-order updated between tasks, two-stage check with dedicated subagents; follow up with a dedicated review and polishing pass once done 
    - Important: Update docs during execution to keep underlying work-order and docs up-to-date;
    - Add wikilinks to the referenced plan to link WO and plan together for better visibility
-   - Run Ledger section (leave the marker region empty — the plugin writes a single terminal snapshot from `.claudian/runs/<runId>/ledger.jsonl`; pre-seeding the markers will be clobbered or race the plugin's `Edit`):
+   - Run Ledger section (leave the marker region empty — the plugin writes a single terminal snapshot from `.specorator/runs/<runId>/ledger.jsonl`; pre-seeding the markers will be clobbered or race the plugin's `Edit`):
      ```
      ## Run Ledger
-     <!-- claudian:run-ledger-start -->
-     <!-- claudian:run-ledger-end -->
+     <!-- specorator:run-ledger-start -->
+     <!-- specorator:run-ledger-end -->
      ```
    - Result / Handoff section:
      ```
      ## Result / Handoff
-     <!-- claudian:handoff-start -->
-     <!-- claudian:handoff-end -->
+     <!-- specorator:handoff-start -->
+     <!-- specorator:handoff-end -->
      ```
 5. Use Write tool directly — do NOT use TaskCreate. File body must be fully populated, not templated.
 6. Return the path to the created work-order file.

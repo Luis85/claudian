@@ -50,17 +50,17 @@ export class MessageImageRenderer {
    * Renders image attachments above a message.
    */
   renderMessageImages(containerEl: HTMLElement, images: ImageAttachment[]): void {
-    const imagesEl = containerEl.createDiv({ cls: 'claudian-message-images' });
+    const imagesEl = containerEl.createDiv({ cls: 'specorator-message-images' });
 
     for (const image of images) {
       const src = this.resolveImageSrc(image);
       if (!src) {
-        const fallback = imagesEl.createDiv({ cls: 'claudian-message-image-fallback' });
+        const fallback = imagesEl.createDiv({ cls: 'specorator-message-image-fallback' });
         fallback.setText(image.name || 'image');
         continue;
       }
 
-      const imageWrapper = imagesEl.createDiv({ cls: 'claudian-message-image' });
+      const imageWrapper = imagesEl.createDiv({ cls: 'specorator-message-image' });
       const imgEl = imageWrapper.createEl('img', {
         attr: {
           alt: image.name,

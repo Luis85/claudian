@@ -364,7 +364,7 @@ describe('InputController - Message Queue', () => {
       controller.updateQueueIndicator();
 
       const queueIndicatorEl = deps.state.queueIndicatorEl as any;
-      expect(queueIndicatorEl.querySelector('.claudian-queue-indicator-text')?.textContent).toBe('⌙ Queued: test message');
+      expect(queueIndicatorEl.querySelector('.specorator-queue-indicator-text')?.textContent).toBe('⌙ Queued: test message');
       expect(queueIndicatorEl.style.display).toBe('flex');
     });
 
@@ -394,7 +394,7 @@ describe('InputController - Message Queue', () => {
 
       const queueIndicatorEl = deps.state.queueIndicatorEl as any;
       const editButton = queueIndicatorEl
-        .querySelectorAll('.claudian-queue-indicator-icon-action')
+        .querySelectorAll('.specorator-queue-indicator-icon-action')
         .find((button: any) => button.getAttribute('aria-label') === 'Edit queued message');
       editButton?.click();
 
@@ -419,7 +419,7 @@ describe('InputController - Message Queue', () => {
 
       const queueIndicatorEl = deps.state.queueIndicatorEl as any;
       const discardButton = queueIndicatorEl
-        .querySelectorAll('.claudian-queue-indicator-icon-action')
+        .querySelectorAll('.specorator-queue-indicator-icon-action')
         .find((button: any) => button.getAttribute('aria-label') === 'Discard queued message');
       discardButton?.click();
 
@@ -435,7 +435,7 @@ describe('InputController - Message Queue', () => {
       controller.updateQueueIndicator();
 
       const queueIndicatorEl = deps.state.queueIndicatorEl as any;
-      const text = queueIndicatorEl.querySelector('.claudian-queue-indicator-text')?.textContent as string;
+      const text = queueIndicatorEl.querySelector('.specorator-queue-indicator-text')?.textContent as string;
       expect(text).toContain('...');
     });
 
@@ -446,7 +446,7 @@ describe('InputController - Message Queue', () => {
       controller.updateQueueIndicator();
 
       const queueIndicatorEl = deps.state.queueIndicatorEl as any;
-      const text = queueIndicatorEl.querySelector('.claudian-queue-indicator-text')?.textContent as string;
+      const text = queueIndicatorEl.querySelector('.specorator-queue-indicator-text')?.textContent as string;
       expect(text).toContain('queued content');
       expect(text).toContain('[images]');
     });
@@ -458,7 +458,7 @@ describe('InputController - Message Queue', () => {
       controller.updateQueueIndicator();
 
       const queueIndicatorEl = deps.state.queueIndicatorEl as any;
-      expect(queueIndicatorEl.querySelector('.claudian-queue-indicator-text')?.textContent).toBe('⌙ Queued: [images]');
+      expect(queueIndicatorEl.querySelector('.specorator-queue-indicator-text')?.textContent).toBe('⌙ Queued: [images]');
     });
 
     it('should show Codex steer action when queued message can be steered', () => {
@@ -481,7 +481,7 @@ describe('InputController - Message Queue', () => {
       controller.updateQueueIndicator();
 
       const queueIndicatorEl = deps.state.queueIndicatorEl as any;
-      expect(queueIndicatorEl.querySelector('.claudian-queue-indicator-action')?.textContent).toBe('Steer Now');
+      expect(queueIndicatorEl.querySelector('.specorator-queue-indicator-action')?.textContent).toBe('Steer Now');
     });
 
     it('should steer the queued Codex message when the action is clicked', async () => {
@@ -534,7 +534,7 @@ describe('InputController - Message Queue', () => {
       controller.updateQueueIndicator();
 
       const queueIndicatorEl = deps.state.queueIndicatorEl as any;
-      queueIndicatorEl.querySelector('.claudian-queue-indicator-action')?.click();
+      queueIndicatorEl.querySelector('.specorator-queue-indicator-action')?.click();
       await Promise.resolve();
       await Promise.resolve();
 
@@ -543,9 +543,9 @@ describe('InputController - Message Queue', () => {
       }));
       expect(mockAgentService.steer).toHaveBeenCalled();
       expect(deps.state.queuedMessage).toBeNull();
-      expect(queueIndicatorEl.querySelector('.claudian-queue-indicator-text')?.textContent)
+      expect(queueIndicatorEl.querySelector('.specorator-queue-indicator-text')?.textContent)
         .toBe('⌙ Steering: queued follow-up');
-      expect(queueIndicatorEl.querySelector('.claudian-queue-indicator-action')).toBeNull();
+      expect(queueIndicatorEl.querySelector('.specorator-queue-indicator-action')).toBeNull();
       expect(queueIndicatorEl.style.display).toBe('flex');
       expect(deps.state.messages).toHaveLength(2);
       expect(deps.state.messages[0]).toMatchObject({
@@ -593,7 +593,7 @@ describe('InputController - Message Queue', () => {
       controller.updateQueueIndicator();
 
       const queueIndicatorEl = deps.state.queueIndicatorEl as any;
-      queueIndicatorEl.querySelector('.claudian-queue-indicator-action')?.click();
+      queueIndicatorEl.querySelector('.specorator-queue-indicator-action')?.click();
       await Promise.resolve();
       await Promise.resolve();
 
@@ -651,7 +651,7 @@ describe('InputController - Message Queue', () => {
       controller.updateQueueIndicator();
 
       const queueIndicatorEl = deps.state.queueIndicatorEl as any;
-      queueIndicatorEl.querySelector('.claudian-queue-indicator-action')?.click();
+      queueIndicatorEl.querySelector('.specorator-queue-indicator-action')?.click();
       await Promise.resolve();
       await Promise.resolve();
 
@@ -739,7 +739,7 @@ describe('InputController - Message Queue', () => {
       controller.updateQueueIndicator();
 
       const queueIndicatorEl = deps.state.queueIndicatorEl as any;
-      queueIndicatorEl.querySelector('.claudian-queue-indicator-action')?.click();
+      queueIndicatorEl.querySelector('.specorator-queue-indicator-action')?.click();
       await Promise.resolve();
       await Promise.resolve();
 
@@ -855,7 +855,7 @@ describe('InputController - Message Queue', () => {
       controller.updateQueueIndicator();
 
       const queueIndicatorEl = deps.state.queueIndicatorEl as any;
-      queueIndicatorEl.querySelector('.claudian-queue-indicator-action')?.click();
+      queueIndicatorEl.querySelector('.specorator-queue-indicator-action')?.click();
       await Promise.resolve();
       await Promise.resolve();
 
@@ -1291,7 +1291,7 @@ describe('InputController - Message Queue', () => {
       });
       (localDeps.plugin as any).resolveBoundAgent = jest.fn().mockResolvedValue({
         prompt: 'You are a Rust expert.',
-        tools: ['mcp__claudian__search_tasks'],
+        tools: ['mcp__specorator__search_tasks'],
       });
       (localDeps as any).mockAgentService.query = jest
         .fn()
@@ -1302,7 +1302,7 @@ describe('InputController - Message Queue', () => {
       await localController.sendMessage();
 
       const [, , queryOptions] = ((localDeps as any).mockAgentService.query as jest.Mock).mock.calls[0];
-      expect(queryOptions.boundAgentTools).toEqual(['mcp__claudian__search_tasks']);
+      expect(queryOptions.boundAgentTools).toEqual(['mcp__specorator__search_tasks']);
     });
 
     it('omits boundAgentTools when the agent grants no tools (empty grant = all)', async () => {
@@ -2666,9 +2666,9 @@ describe('InputController - Message Queue', () => {
         'Run shell command',
       );
 
-      const items = parentEl.querySelectorAll('claudian-ask-item');
+      const items = parentEl.querySelectorAll('specorator-ask-item');
       const target = items.find((item: any) => {
-        const label = item.querySelector('claudian-ask-item-label');
+        const label = item.querySelector('specorator-ask-item-label');
         return label?.textContent === optionLabel;
       });
       expect(target).toBeDefined();
@@ -2697,13 +2697,13 @@ describe('InputController - Message Queue', () => {
         },
       );
 
-      const reasonEl = parentEl.querySelector('claudian-ask-approval-reason');
+      const reasonEl = parentEl.querySelector('specorator-ask-approval-reason');
       expect(reasonEl?.textContent).toBe('Command is destructive');
 
-      const pathEl = parentEl.querySelector('claudian-ask-approval-blocked-path');
+      const pathEl = parentEl.querySelector('specorator-ask-approval-blocked-path');
       expect(pathEl?.textContent).toBe('/usr/bin/rm');
 
-      const agentEl = parentEl.querySelector('claudian-ask-approval-agent');
+      const agentEl = parentEl.querySelector('specorator-ask-approval-agent');
       expect(agentEl?.textContent).toBe('Agent: agent-42');
 
       controller.dismissPendingApproval();
@@ -2739,12 +2739,12 @@ describe('InputController - Message Queue', () => {
         } as any,
       );
 
-      const descEl = parentEl.querySelector('claudian-ask-approval-desc');
+      const descEl = parentEl.querySelector('specorator-ask-approval-desc');
       expect(descEl?.textContent).toContain('api.openai.com');
 
-      const items = parentEl.querySelectorAll('claudian-ask-item');
+      const items = parentEl.querySelectorAll('specorator-ask-item');
       const labels = items
-        .map((item: any) => item.querySelector('claudian-ask-item-label')?.textContent)
+        .map((item: any) => item.querySelector('specorator-ask-item-label')?.textContent)
         .filter(Boolean);
       expect(labels).toEqual(expect.arrayContaining([
         'Allow once',
@@ -2783,9 +2783,9 @@ describe('InputController - Message Queue', () => {
           },
         );
 
-        const items = parentEl.querySelectorAll('claudian-ask-item');
+        const items = parentEl.querySelectorAll('specorator-ask-item');
         const target = items.find((item: any) => {
-          const label = item.querySelector('claudian-ask-item-label');
+          const label = item.querySelector('specorator-ask-item-label');
           return label?.textContent === optionLabel;
         });
         expect(target).toBeDefined();
@@ -2821,9 +2821,9 @@ describe('InputController - Message Queue', () => {
         } as any,
       );
 
-      const items = parentEl.querySelectorAll('claudian-ask-item');
+      const items = parentEl.querySelectorAll('specorator-ask-item');
       const target = items.find((item: any) => {
-        const label = item.querySelector('claudian-ask-item-label');
+        const label = item.querySelector('specorator-ask-item-label');
         return label?.textContent === 'Allow similar commands';
       });
       expect(target).toBeDefined();
@@ -2883,9 +2883,9 @@ describe('InputController - Message Queue', () => {
 
       expect(inputContainerEl.style.display).toBe('none');
 
-      const items = parentEl.querySelectorAll('claudian-ask-item');
+      const items = parentEl.querySelectorAll('specorator-ask-item');
       const allowOnceItem = items.find((item: any) => {
-        const label = item.querySelector('claudian-ask-item-label');
+        const label = item.querySelector('specorator-ask-item-label');
         return label?.textContent === 'Allow once';
       });
       expect(allowOnceItem).toBeDefined();
@@ -3856,7 +3856,7 @@ describe('InputController - Message Queue', () => {
       localController.updateQueueIndicator();
 
       const queueIndicatorEl = localDeps.state.queueIndicatorEl as any;
-      queueIndicatorEl.querySelector('.claudian-queue-indicator-action')?.click();
+      queueIndicatorEl.querySelector('.specorator-queue-indicator-action')?.click();
       // Allow the async steer to settle
       await Promise.resolve();
       await Promise.resolve();

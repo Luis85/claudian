@@ -14,7 +14,7 @@ import { asSettingsBag } from '@/core/types';
 import type { EnvironmentScope, SecretEnvVarRef } from '@/core/types/settings';
 import type { TabData } from '@/features/chat/tabs/types';
 import { t } from '@/i18n/i18n';
-import type ClaudianPlugin from '@/main';
+import type SpecoratorPlugin from '@/main';
 
 /** The slice of a chat tab the env-apply runtime sync touches. */
 type SyncableTab = Pick<
@@ -23,7 +23,7 @@ type SyncableTab = Pick<
 >;
 
 export class EnvironmentApplyService {
-  constructor(private readonly plugin: ClaudianPlugin) {}
+  constructor(private readonly plugin: SpecoratorPlugin) {}
 
   apply(scope: EnvironmentScope, envText: string): Promise<void> {
     return this.applyBatch([{ scope, envText }]);

@@ -9,10 +9,10 @@ import {
 import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
 import { ProviderWorkspaceRegistry } from '../../core/providers/ProviderWorkspaceRegistry';
 import type { ProviderId } from '../../core/providers/types';
-import { asSettingsBag, type ChatViewPlacement, type ClaudianSettings } from '../../core/types/settings';
+import { asSettingsBag, type ChatViewPlacement, type SpecoratorSettings } from '../../core/types/settings';
 import { getAvailableLocales, getLocaleDisplayName, setLocale, t } from '../../i18n/i18n';
 import type { Locale, TranslationKey } from '../../i18n/types';
-import type ClaudianPlugin from '../../main';
+import type SpecoratorPlugin from '../../main';
 import { openHotkeySettingsWithFilter } from '../../utils/obsidianPrivateApi';
 // setEnabled is provided by the registered ProviderSettingsReconciler.
 import { formatBoundHotkeys } from './hotkeyFormat';
@@ -57,21 +57,21 @@ function addHotkeySettingRow(
   translationPrefix: string,
 ): void {
   const hotkey = formatBoundHotkeys(app, commandId);
-  const item = containerEl.createDiv({ cls: 'claudian-hotkey-item' });
+  const item = containerEl.createDiv({ cls: 'specorator-hotkey-item' });
   item.createSpan({
-    cls: 'claudian-hotkey-name',
+    cls: 'specorator-hotkey-name',
     text: t(`${translationPrefix}.name` as TranslationKey),
   });
   if (hotkey) {
-    item.createSpan({ cls: 'claudian-hotkey-badge', text: hotkey });
+    item.createSpan({ cls: 'specorator-hotkey-badge', text: hotkey });
   }
   item.addEventListener('click', () => {
-    openHotkeySettingsWithFilter(app, 'Claudian');
+    openHotkeySettingsWithFilter(app, 'Specorator');
   });
 }
 
-export class ClaudianSettingTab extends PluginSettingTab {
-  plugin: ClaudianPlugin;
+export class SpecoratorSettingTab extends PluginSettingTab {
+  plugin: SpecoratorPlugin;
   private activeTab: SettingsTabId = 'general';
   // Locale the registry's t()-captured labels were registered under; null
   // until first registry render.
@@ -96,7 +96,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
   // replace the DOM anyway.
   private displaying = false;
 
-  constructor(app: App, plugin: ClaudianPlugin) {
+  constructor(app: App, plugin: SpecoratorPlugin) {
     super(app, plugin);
     this.plugin = plugin;
   }
@@ -136,7 +136,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
   private renderTabs(): void {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.addClass('claudian-settings');
+    containerEl.addClass('specorator-settings');
 
     setLocale(this.plugin.settings.locale as Locale);
 
@@ -154,10 +154,10 @@ export class ClaudianSettingTab extends PluginSettingTab {
     );
 
     const ctx: SettingsCtx = {
-      // Cast: `ClaudianPlugin.settings` carries provider-typed extensions
-      // beyond the core `ClaudianSettings` shape. Registry fields only read
+      // Cast: `SpecoratorPlugin.settings` carries provider-typed extensions
+      // beyond the core `SpecoratorSettings` shape. Registry fields only read
       // through `readPath`/`writePath`, so the wider object is safe.
-      settings: this.plugin.settings as unknown as ClaudianSettings,
+      settings: this.plugin.settings as unknown as SpecoratorSettings,
       saveSettings: () => this.plugin.saveSettings(),
       refresh: () => this.display(),
       plugin: this.plugin,
@@ -165,9 +165,9 @@ export class ClaudianSettingTab extends PluginSettingTab {
 
     this.mountSearchBar(containerEl, ctx);
 
-    const tabBar = containerEl.createDiv({ cls: 'claudian-settings-tabs' });
+    const tabBar = containerEl.createDiv({ cls: 'specorator-settings-tabs' });
     containerEl.createDiv({
-      cls: 'claudian-settings-search-results claudian-hidden',
+      cls: 'specorator-settings-search-results specorator-hidden',
     });
     const tabButtons = new Map<SettingsTabId, HTMLButtonElement>();
     const tabContents = new Map<SettingsTabId, HTMLDivElement>();
@@ -191,7 +191,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
   // current render context.
   private mountSearchBar(containerEl: HTMLElement, ctx: SettingsCtx): void {
     const searchBarHost = containerEl.createDiv({
-      cls: 'claudian-settings-search-bar',
+      cls: 'specorator-settings-search-bar',
     });
     if (this.searchBar) {
       this.searchBar.dispose();
@@ -461,12 +461,12 @@ export class ClaudianSettingTab extends PluginSettingTab {
 
     new Setting(container).setName(t('settings.hotkeys')).setHeading();
 
-    const hotkeyGrid = container.createDiv({ cls: 'claudian-hotkey-grid' });
-    addHotkeySettingRow(hotkeyGrid, this.app, 'claudian:inline-edit', 'settings.inlineEditHotkey');
-    addHotkeySettingRow(hotkeyGrid, this.app, 'claudian:open-view', 'settings.openChatHotkey');
-    addHotkeySettingRow(hotkeyGrid, this.app, 'claudian:new-session', 'settings.newSessionHotkey');
-    addHotkeySettingRow(hotkeyGrid, this.app, 'claudian:new-tab', 'settings.newTabHotkey');
-    addHotkeySettingRow(hotkeyGrid, this.app, 'claudian:close-current-tab', 'settings.closeTabHotkey');
+    const hotkeyGrid = container.createDiv({ cls: 'specorator-hotkey-grid' });
+    addHotkeySettingRow(hotkeyGrid, this.app, 'specorator:inline-edit', 'settings.inlineEditHotkey');
+    addHotkeySettingRow(hotkeyGrid, this.app, 'specorator:open-view', 'settings.openChatHotkey');
+    addHotkeySettingRow(hotkeyGrid, this.app, 'specorator:new-session', 'settings.newSessionHotkey');
+    addHotkeySettingRow(hotkeyGrid, this.app, 'specorator:new-tab', 'settings.newTabHotkey');
+    addHotkeySettingRow(hotkeyGrid, this.app, 'specorator:close-current-tab', 'settings.closeTabHotkey');
 
     // --- Environment ---
 
@@ -521,15 +521,15 @@ export class ClaudianSettingTab extends PluginSettingTab {
     containerEl: HTMLElement,
     ctx: SettingsCtx,
   ): void {
-    const tabBar = containerEl.querySelector('.claudian-settings-tabs') as HTMLElement;
+    const tabBar = containerEl.querySelector('.specorator-settings-tabs') as HTMLElement;
     const resultsHost = containerEl.querySelector(
-      '.claudian-settings-search-results',
+      '.specorator-settings-search-results',
     ) as HTMLElement;
 
     if (!query.trim()) {
       // Empty query: hide results, show tabs
-      tabBar.toggleClass('claudian-hidden', false);
-      resultsHost.toggleClass('claudian-hidden', true);
+      tabBar.toggleClass('specorator-hidden', false);
+      resultsHost.toggleClass('specorator-hidden', true);
       return;
     }
 
@@ -540,8 +540,8 @@ export class ClaudianSettingTab extends PluginSettingTab {
     const results = searchFields(allFields, query, ctx.settings);
 
     // Show results, hide tabs
-    tabBar.toggleClass('claudian-hidden', true);
-    resultsHost.toggleClass('claudian-hidden', false);
+    tabBar.toggleClass('specorator-hidden', true);
+    resultsHost.toggleClass('specorator-hidden', false);
 
     // Render results view
     if (this.searchResultsView) {
@@ -568,15 +568,15 @@ export class ClaudianSettingTab extends PluginSettingTab {
 
     // Switch to target tab
     this.activeTab = tabId as SettingsTabId;
-    const tabButtons = containerEl.querySelectorAll('.claudian-settings-tab');
-    const tabContents = containerEl.querySelectorAll('.claudian-settings-tab-content');
+    const tabButtons = containerEl.querySelectorAll('.specorator-settings-tab');
+    const tabContents = containerEl.querySelectorAll('.specorator-settings-tab-content');
 
     for (let i = 0; i < tabButtons.length; i++) {
       const button = tabButtons[i] as HTMLElement;
       const content = tabContents[i] as HTMLElement;
       const isActive = (button.getAttribute('data-tab-id') || '') === tabId;
-      button.toggleClass('claudian-settings-tab--active', isActive);
-      content.toggleClass('claudian-settings-tab-content--active', isActive);
+      button.toggleClass('specorator-settings-tab--active', isActive);
+      content.toggleClass('specorator-settings-tab-content--active', isActive);
     }
 
     // Scroll target field into view
@@ -586,7 +586,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
         fieldRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
         // Add highlight class
-        fieldRow.classList.add('claudian-settings-field--highlight');
+        fieldRow.classList.add('specorator-settings-field--highlight');
         fieldRow.setAttribute('aria-highlighted', 'true');
 
         // Clear any existing timeout for this element
@@ -598,7 +598,7 @@ export class ClaudianSettingTab extends PluginSettingTab {
         }
 
         const timeout = window.setTimeout(() => {
-          fieldRow.classList.remove('claudian-settings-field--highlight');
+          fieldRow.classList.remove('specorator-settings-field--highlight');
           fieldRow.removeAttribute('aria-highlighted');
           this.highlightTimeouts.delete(fieldRow);
         }, SETTINGS_FIELD_HIGHLIGHT_MS);

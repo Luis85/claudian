@@ -50,7 +50,7 @@ async function flushAsync(): Promise<void> {
 }
 
 // Retrieve the listEl DOM node from the modal's contentEl chain.
-// The modal renders: contentEl → .claudian-loops-body → .claudian-loops-list
+// The modal renders: contentEl → .specorator-loops-body → .specorator-loops-list
 // The Obsidian mock contentEl is a stub — createDiv/createEl return stubs.
 // To test real DOM, we need the actual recorded structure from modalEl/contentEl.
 // Since the mock uses jest.fn() stubs, we test behavior via the resolve callback
@@ -189,14 +189,14 @@ describe('LoopPickerModal — rendering', () => {
     await flushAsync();
 
     // listEl should be populated: none row + alpha-loop row
-    const listEl = find(contentEl, 'claudian-loops-list');
+    const listEl = find(contentEl, 'specorator-loops-list');
     expect(listEl).toBeDefined();
 
-    const rows = findAll(listEl!, (el) => el.classes.has('claudian-loops-row'));
+    const rows = findAll(listEl!, (el) => el.classes.has('specorator-loops-row'));
     // At least 2 rows: none + 1 loop
     expect(rows.length).toBeGreaterThanOrEqual(2);
 
-    const noneRow = rows.find((r) => r.classes.has('claudian-loops-row--none'));
+    const noneRow = rows.find((r) => r.classes.has('specorator-loops-row--none'));
     expect(noneRow).toBeDefined();
   });
 
@@ -216,13 +216,13 @@ describe('LoopPickerModal — rendering', () => {
     modal.onOpen();
     await flushAsync();
 
-    const listEl = find(contentEl, 'claudian-loops-list');
+    const listEl = find(contentEl, 'specorator-loops-list');
     expect(listEl).toBeDefined();
 
-    const rows = findAll(listEl!, (el) => el.classes.has('claudian-loops-row'));
+    const rows = findAll(listEl!, (el) => el.classes.has('specorator-loops-row'));
     // The alpha-loop row should be marked active; the none row should not be
-    const noneRow = rows.find((r) => r.classes.has('claudian-loops-row--none'))!;
-    const loopRow = rows.find((r) => !r.classes.has('claudian-loops-row--none'))!;
+    const noneRow = rows.find((r) => r.classes.has('specorator-loops-row--none'))!;
+    const loopRow = rows.find((r) => !r.classes.has('specorator-loops-row--none'))!;
 
     expect(loopRow.classes.has('is-active')).toBe(true);
     expect(noneRow.classes.has('is-active')).toBe(false);
@@ -244,9 +244,9 @@ describe('LoopPickerModal — rendering', () => {
     modal.onOpen();
     await flushAsync();
 
-    const listEl = find(contentEl, 'claudian-loops-list');
-    const rows = findAll(listEl!, (el) => el.classes.has('claudian-loops-row'));
-    const noneRow = rows.find((r) => r.classes.has('claudian-loops-row--none'))!;
+    const listEl = find(contentEl, 'specorator-loops-list');
+    const rows = findAll(listEl!, (el) => el.classes.has('specorator-loops-row'));
+    const noneRow = rows.find((r) => r.classes.has('specorator-loops-row--none'))!;
     expect(noneRow.classes.has('is-active')).toBe(true);
   });
 
@@ -262,8 +262,8 @@ describe('LoopPickerModal — rendering', () => {
     modal.onOpen();
     await flushAsync();
 
-    const listEl = find(contentEl, 'claudian-loops-list');
-    const rows = findAll(listEl!, (el) => el.classes.has('claudian-loops-row'));
+    const listEl = find(contentEl, 'specorator-loops-list');
+    const rows = findAll(listEl!, (el) => el.classes.has('specorator-loops-row'));
     // 1 none row + 2 loop rows
     expect(rows.length).toBe(3);
   });
@@ -277,7 +277,7 @@ describe('LoopPickerModal — rendering', () => {
     modal.onOpen();
     await flushAsync();
 
-    const footerEl = find(contentEl, 'claudian-loops-footer');
+    const footerEl = find(contentEl, 'specorator-loops-footer');
     expect(footerEl).toBeDefined();
 
     const buttons = findAll(footerEl!, (el) => el.tag === 'button');
@@ -295,8 +295,8 @@ describe('LoopPickerModal — rendering', () => {
     modal.onOpen();
     await flushAsync();
 
-    const listEl = find(contentEl, 'claudian-loops-list');
-    const rows = findAll(listEl!, (el) => el.classes.has('claudian-loops-row'));
+    const listEl = find(contentEl, 'specorator-loops-list');
+    const rows = findAll(listEl!, (el) => el.classes.has('specorator-loops-row'));
     expect(rows.length).toBe(2); // none + alpha-loop
   });
 });
@@ -319,9 +319,9 @@ describe('LoopPickerModal — choosing a loop', () => {
     modal.onOpen();
     await flushAsync();
 
-    const listEl = find(contentEl, 'claudian-loops-list')!;
-    const noneRow = findAll(listEl, (el) => el.classes.has('claudian-loops-row--none'))[0];
-    const noneMain = find(noneRow, 'claudian-loops-main')!;
+    const listEl = find(contentEl, 'specorator-loops-list')!;
+    const noneRow = findAll(listEl, (el) => el.classes.has('specorator-loops-row--none'))[0];
+    const noneMain = find(noneRow, 'specorator-loops-main')!;
     noneMain.emit('click');
 
     expect(resolveResult).toEqual({ cancelled: false, loopId: '' });
@@ -345,11 +345,11 @@ describe('LoopPickerModal — choosing a loop', () => {
     modal.onOpen();
     await flushAsync();
 
-    const listEl = find(contentEl, 'claudian-loops-list')!;
+    const listEl = find(contentEl, 'specorator-loops-list')!;
     const loopRow = findAll(listEl, (el) =>
-      el.classes.has('claudian-loops-row') && !el.classes.has('claudian-loops-row--none'),
+      el.classes.has('specorator-loops-row') && !el.classes.has('specorator-loops-row--none'),
     )[0];
-    const loopMain = find(loopRow, 'claudian-loops-main')!;
+    const loopMain = find(loopRow, 'specorator-loops-main')!;
     loopMain.emit('click');
 
     expect(resolveResult).toEqual({ cancelled: false, loopId: 'alpha-loop' });
@@ -373,12 +373,12 @@ describe('LoopPickerModal — choosing a loop', () => {
     modal.onOpen();
     await flushAsync();
 
-    const listEl = find(contentEl, 'claudian-loops-list')!;
+    const listEl = find(contentEl, 'specorator-loops-list')!;
     const loopMain = find(
       findAll(listEl, (el) =>
-        el.classes.has('claudian-loops-row') && !el.classes.has('claudian-loops-row--none'),
+        el.classes.has('specorator-loops-row') && !el.classes.has('specorator-loops-row--none'),
       )[0],
-      'claudian-loops-main',
+      'specorator-loops-main',
     )!;
 
     loopMain.emit('click');
@@ -425,10 +425,10 @@ describe('LoopPickerModal — closing without choosing', () => {
     await flushAsync();
 
     // Choose a loop first
-    const listEl = find(contentEl, 'claudian-loops-list')!;
+    const listEl = find(contentEl, 'specorator-loops-list')!;
     const noneMain = find(
-      findAll(listEl, (el) => el.classes.has('claudian-loops-row--none'))[0],
-      'claudian-loops-main',
+      findAll(listEl, (el) => el.classes.has('specorator-loops-row--none'))[0],
+      'specorator-loops-main',
     )!;
     noneMain.emit('click');
 
@@ -499,12 +499,12 @@ describe('LoopPickerModal — attach-mode editor row', () => {
     modal.onOpen();
     await flushAsync();
 
-    const listEl = find(contentEl, 'claudian-loops-list')!;
+    const listEl = find(contentEl, 'specorator-loops-list')!;
     const loopRow = findAll(
       listEl,
-      (el) => el.classes.has('claudian-loops-row') && !el.classes.has('claudian-loops-row--none'),
+      (el) => el.classes.has('specorator-loops-row') && !el.classes.has('specorator-loops-row--none'),
     )[0];
-    const loopMain = find(loopRow, 'claudian-loops-main')!;
+    const loopMain = find(loopRow, 'specorator-loops-main')!;
     loopMain.emit('click');
 
     expect(resolve).toHaveBeenCalledWith({ cancelled: false, loopId: 'alpha-loop' });

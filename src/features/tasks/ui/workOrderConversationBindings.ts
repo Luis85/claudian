@@ -1,4 +1,4 @@
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import type { TaskSpec } from '../model/taskTypes';
 
 /**
@@ -12,7 +12,7 @@ import type { TaskSpec } from '../model/taskTypes';
  * Extracting this here means both call sites share one source of truth — when
  * the conversation lookup or gating semantics change, neither surface drifts.
  */
-export function buildWorkOrderConversationBindings(plugin: ClaudianPlugin): {
+export function buildWorkOrderConversationBindings(plugin: SpecoratorPlugin): {
   onOpenConversation: (task: TaskSpec) => void;
   canOpenConversation: (task: TaskSpec) => boolean;
 } {

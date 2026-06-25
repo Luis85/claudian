@@ -1,11 +1,11 @@
 import { Setting } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 
 export function renderQuickActionsSettingsTab(
   container: HTMLElement,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
 ): void {
   new Setting(container)
     .setName(t('settings.quickActions.folder.name'))

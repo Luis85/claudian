@@ -24,7 +24,7 @@ function createMockPlugin(overrides: Record<string, unknown> = {}): any {
     app: {
       vault: {
         adapter: {
-          basePath: '/tmp/claudian-test-vault',
+          basePath: '/tmp/specorator-test-vault',
         },
       },
     },
@@ -108,11 +108,11 @@ describe('OpencodeChatRuntime', () => {
     jest.spyOn(launchArtifacts, 'prepareOpencodeLaunchArtifacts').mockImplementation(async (params) => {
       expect(params.runtimeEnv.OPENCODE_DB).toBe('/persisted/opencode.db');
       return {
-        configPath: '/tmp/claudian-opencode-config.json',
+        configPath: '/tmp/specorator-opencode-config.json',
         configContent: '{}\n',
         databasePath: '/persisted/opencode.db',
         launchKey: 'launch-key',
-        systemPromptPath: '/tmp/claudian-opencode-system.md',
+        systemPromptPath: '/tmp/specorator-opencode-system.md',
       };
     });
     (runtime as any).startProcess = jest.fn().mockImplementation(async () => {
@@ -152,11 +152,11 @@ describe('OpencodeChatRuntime', () => {
     jest.spyOn(launchArtifacts, 'prepareOpencodeLaunchArtifacts').mockImplementation(async (params) => {
       expect(params.runtimeEnv.OPENCODE_DB).toBeUndefined();
       return {
-        configPath: '/tmp/claudian-opencode-config.json',
+        configPath: '/tmp/specorator-opencode-config.json',
         configContent: '{}\n',
         databasePath: '/default/opencode.db',
         launchKey: 'launch-key',
-        systemPromptPath: '/tmp/claudian-opencode-system.md',
+        systemPromptPath: '/tmp/specorator-opencode-system.md',
       };
     });
     (runtime as any).startProcess = jest.fn().mockImplementation(async () => {
@@ -186,11 +186,11 @@ describe('OpencodeChatRuntime', () => {
     jest.spyOn(launchArtifacts, 'prepareOpencodeLaunchArtifacts').mockImplementation(async (params) => {
       expect(params.runtimeEnv.OPENCODE_DB).toBe(':memory:');
       return {
-        configPath: '/tmp/claudian-opencode-config.json',
+        configPath: '/tmp/specorator-opencode-config.json',
         configContent: '{}\n',
         databasePath: ':memory:',
         launchKey: 'launch-key',
-        systemPromptPath: '/tmp/claudian-opencode-system.md',
+        systemPromptPath: '/tmp/specorator-opencode-system.md',
       };
     });
     (runtime as any).startProcess = jest.fn().mockImplementation(async () => {
@@ -244,11 +244,11 @@ describe('OpencodeChatRuntime', () => {
     const mockConnection = { dispose: jest.fn() };
 
     jest.spyOn(launchArtifacts, 'prepareOpencodeLaunchArtifacts').mockResolvedValue({
-      configPath: '/tmp/claudian-opencode-config.json',
+      configPath: '/tmp/specorator-opencode-config.json',
       configContent: '{}\n',
       databasePath: '/default/opencode.db',
       launchKey: 'launch-key',
-      systemPromptPath: '/tmp/claudian-opencode-system.md',
+      systemPromptPath: '/tmp/specorator-opencode-system.md',
     });
     const shutdownProcess = jest.spyOn(runtime as any, 'shutdownProcess').mockResolvedValue(undefined);
     const startProcess = jest.spyOn(runtime as any, 'startProcess').mockImplementation(async () => {
@@ -427,7 +427,7 @@ describe('OpencodeChatRuntime', () => {
     expect((runtime as any).resolveSelectedModeId()).toBe(OPENCODE_YOLO_MODE_ID);
   });
 
-  it('falls back to the managed YOLO mode when a saved custom mode is not managed by Claudian', () => {
+  it('falls back to the managed YOLO mode when a saved custom mode is not managed by Specorator', () => {
     const plugin = createMockPlugin({
       settings: {
         permissionMode: 'yolo',
@@ -454,7 +454,7 @@ describe('OpencodeChatRuntime', () => {
             availableModes: [
               { id: OPENCODE_BUILD_MODE_ID, name: 'build' },
               { id: 'compaction', name: 'compaction' },
-              { id: OPENCODE_SAFE_MODE_ID, name: 'claudian-safe' },
+              { id: OPENCODE_SAFE_MODE_ID, name: 'specorator-safe' },
               { id: 'plan', name: 'plan' },
             ],
             selectedMode: '',
@@ -875,7 +875,7 @@ describe('OpencodeChatRuntime', () => {
   itPosix('rejects main-runtime read/write paths that escape the session workspace (posix)', () => {
     const runtime = new OpencodeChatRuntime(createMockPlugin(), createMockRuntimeHost());
 
-    (runtime as any).sessionCwds = new Map([['session-1', '/tmp/claudian-test-vault']]);
+    (runtime as any).sessionCwds = new Map([['session-1', '/tmp/specorator-test-vault']]);
 
     // relative `..` escape
     expect(() =>
@@ -890,12 +890,12 @@ describe('OpencodeChatRuntime', () => {
     // in-workspace relative still works
     expect(
       (runtime as any).resolveSessionPath('session-1', 'notes/today.md'),
-    ).toBe('/tmp/claudian-test-vault/notes/today.md');
+    ).toBe('/tmp/specorator-test-vault/notes/today.md');
 
     // in-workspace absolute still works
     expect(
-      (runtime as any).resolveSessionPath('session-1', '/tmp/claudian-test-vault/notes/today.md'),
-    ).toBe('/tmp/claudian-test-vault/notes/today.md');
+      (runtime as any).resolveSessionPath('session-1', '/tmp/specorator-test-vault/notes/today.md'),
+    ).toBe('/tmp/specorator-test-vault/notes/today.md');
   });
 
   // Windows-only path assertion; uses drive-rooted absolute paths.

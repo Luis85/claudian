@@ -1,5 +1,5 @@
 import type { ProviderId } from '../../../../src/core/providers/types';
-import type { ClaudianSettings } from '../../../../src/core/types/settings';
+import type { SpecoratorSettings } from '../../../../src/core/types/settings';
 
 jest.mock('../../../../src/core/providers/ProviderRegistry', () => ({
   ProviderRegistry: {
@@ -17,7 +17,7 @@ function settings(
   enabled: ProviderId[],
   storedProvider: ProviderId | null = null,
   storedModel: string | null = null,
-): ClaudianSettings {
+): SpecoratorSettings {
   const provs = ['claude', 'codex', 'opencode', 'cursor'] as ProviderId[];
   return {
     agentBoardDefaultProvider: storedProvider,
@@ -25,7 +25,7 @@ function settings(
     providerConfigs: Object.fromEntries(
       provs.map((id) => [id, { enabled: enabled.includes(id) }]),
     ),
-  } as unknown as ClaudianSettings;
+  } as unknown as SpecoratorSettings;
 }
 
 describe('resolveAgentBoardDefaultModel', () => {

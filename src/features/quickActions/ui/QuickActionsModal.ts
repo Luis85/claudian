@@ -88,12 +88,12 @@ export class QuickActionsModal extends Modal {
 
   onOpen(): void {
     this.setTitle(t('quickActions.modal.title'));
-    this.modalEl.addClass('claudian-sp-modal', 'claudian-quick-actions-modal');
+    this.modalEl.addClass('specorator-sp-modal', 'specorator-quick-actions-modal');
 
-    this.tabStripEl = this.contentEl.createDiv({ cls: 'claudian-quick-actions-tabs' });
+    this.tabStripEl = this.contentEl.createDiv({ cls: 'specorator-quick-actions-tabs' });
     this.renderTabStrip();
 
-    this.bodyEl = this.contentEl.createDiv({ cls: 'claudian-quick-actions-body' });
+    this.bodyEl = this.contentEl.createDiv({ cls: 'specorator-quick-actions-body' });
     void this.renderActiveTab();
   }
 
@@ -111,7 +111,7 @@ export class QuickActionsModal extends Modal {
 
     for (const entry of entries) {
       const tab = this.tabStripEl.createEl('button', {
-        cls: 'claudian-quick-actions-tab',
+        cls: 'specorator-quick-actions-tab',
         text: entry.label,
         attr: { type: 'button' },
       });
@@ -167,16 +167,16 @@ export class QuickActionsModal extends Modal {
   // ============================================================
 
   private renderQuickActionsBody(host: HTMLElement): HTMLInputElement {
-    this.introEl = host.createDiv({ cls: 'claudian-quick-actions-intro' });
+    this.introEl = host.createDiv({ cls: 'specorator-quick-actions-intro' });
 
-    this.searchWrapEl = host.createDiv({ cls: 'claudian-quick-actions-search' });
+    this.searchWrapEl = host.createDiv({ cls: 'specorator-quick-actions-search' });
     const inputContainer = this.searchWrapEl.createDiv({
-      cls: 'claudian-quick-actions-search-container',
+      cls: 'specorator-quick-actions-search-container',
     });
     const placeholder = t('quickActions.modal.searchPlaceholder');
     const searchInput = inputContainer.createEl('input', {
       type: 'search',
-      cls: 'claudian-quick-actions-search-input',
+      cls: 'specorator-quick-actions-search-input',
       attr: { placeholder, 'aria-label': placeholder },
     });
     this.searchInputEl = searchInput;
@@ -198,7 +198,7 @@ export class QuickActionsModal extends Modal {
     });
 
     const resetBtn = inputContainer.createEl('button', {
-      cls: 'claudian-quick-actions-search-reset',
+      cls: 'specorator-quick-actions-search-reset',
       text: '✕',
       attr: { title: 'Clear search', 'aria-label': 'Clear search' },
     });
@@ -206,9 +206,9 @@ export class QuickActionsModal extends Modal {
       this.setFilter('');
     });
 
-    this.listEl = host.createDiv({ cls: 'claudian-quick-actions-list' });
+    this.listEl = host.createDiv({ cls: 'specorator-quick-actions-list' });
 
-    const footer = host.createDiv({ cls: 'claudian-quick-actions-footer' });
+    const footer = host.createDiv({ cls: 'specorator-quick-actions-footer' });
     footer
       .createEl('button', {
         cls: 'mod-cta',
@@ -257,18 +257,18 @@ export class QuickActionsModal extends Modal {
     this.listEl.empty();
 
     if (this.actions.length === 0) {
-      this.listEl.addClass('claudian-quick-actions-list--empty');
-      this.searchWrapEl.addClass('claudian-quick-actions-search--hidden');
+      this.listEl.addClass('specorator-quick-actions-list--empty');
+      this.searchWrapEl.addClass('specorator-quick-actions-search--hidden');
       return;
     }
 
-    this.listEl.removeClass('claudian-quick-actions-list--empty');
-    this.searchWrapEl.removeClass('claudian-quick-actions-search--hidden');
+    this.listEl.removeClass('specorator-quick-actions-list--empty');
+    this.searchWrapEl.removeClass('specorator-quick-actions-search--hidden');
 
     const ordered = this.applyFilteredOrder();
     if (ordered.length === 0) {
       this.listEl.createDiv({
-        cls: 'claudian-quick-actions-empty-results',
+        cls: 'specorator-quick-actions-empty-results',
         text: t('quickActions.modal.noResults'),
       });
       return;
@@ -323,13 +323,13 @@ export class QuickActionsModal extends Modal {
     this.introEl.empty();
 
     if (this.actions.length === 0) {
-      this.introEl.addClass('claudian-quick-actions-intro--empty');
+      this.introEl.addClass('specorator-quick-actions-intro--empty');
       this.introEl.createEl('p', {
-        cls: 'claudian-quick-actions-intro-lead',
+        cls: 'specorator-quick-actions-intro-lead',
         text: t('quickActions.modal.emptyLead'),
       });
       const hints = this.introEl.createEl('ul', {
-        cls: 'claudian-quick-actions-intro-hints',
+        cls: 'specorator-quick-actions-intro-hints',
       });
       hints.createEl('li', { text: t('quickActions.modal.emptyHintVault') });
       hints.createEl('li', { text: t('quickActions.modal.emptyHintRun') });
@@ -337,7 +337,7 @@ export class QuickActionsModal extends Modal {
       return;
     }
 
-    this.introEl.removeClass('claudian-quick-actions-intro--empty');
+    this.introEl.removeClass('specorator-quick-actions-intro--empty');
     this.introEl.createEl('p', { text: t('quickActions.modal.intro') });
   }
 
@@ -346,21 +346,21 @@ export class QuickActionsModal extends Modal {
       return;
     }
 
-    const row = this.listEl.createDiv({ cls: 'claudian-quick-action-row' });
-    const main = row.createDiv({ cls: 'claudian-quick-action-main' });
+    const row = this.listEl.createDiv({ cls: 'specorator-quick-action-row' });
+    const main = row.createDiv({ cls: 'specorator-quick-action-main' });
 
     if (action.icon) {
-      const iconEl = main.createSpan({ cls: 'claudian-quick-action-icon' });
+      const iconEl = main.createSpan({ cls: 'specorator-quick-action-icon' });
       setIcon(iconEl, action.icon);
     }
 
-    const textCol = main.createDiv({ cls: 'claudian-quick-action-text' });
+    const textCol = main.createDiv({ cls: 'specorator-quick-action-text' });
     textCol.createEl('strong', { text: action.name });
     if (this.callbacks.usageTracker) {
       const stem = action.filePath ? quickActionStemFromPath(action.filePath) : action.name;
       const record = this.callbacks.usageTracker.getAll().get(`quickAction:_:${stem}`) ?? null;
       textCol.createSpan({
-        cls: 'claudian-quick-action-usage-badge',
+        cls: 'specorator-quick-action-usage-badge',
         text: formatUsageBadge(
           record,
           this.callbacks.now?.() ?? Date.now(),
@@ -370,15 +370,15 @@ export class QuickActionsModal extends Modal {
     }
     if (action.description !== action.name) {
       textCol.createDiv({
-        cls: 'claudian-quick-action-desc',
+        cls: 'specorator-quick-action-desc',
         text: action.description,
       });
     }
     if (action.tags && action.tags.length > 0) {
-      const tagsEl = textCol.createDiv({ cls: 'claudian-quick-action-tags' });
+      const tagsEl = textCol.createDiv({ cls: 'specorator-quick-action-tags' });
       for (const tag of action.tags) {
         const chip = tagsEl.createSpan({
-          cls: 'claudian-quick-action-tag',
+          cls: 'specorator-quick-action-tag',
           text: `#${tag}`,
           attr: {
             role: 'button',
@@ -406,7 +406,7 @@ export class QuickActionsModal extends Modal {
     });
 
     const starBtn = row.createEl('button', {
-      cls: 'claudian-quick-action-favorite',
+      cls: 'specorator-quick-action-favorite',
       attr: {
         'aria-label': action.favorite
           ? t('quickActions.modal.unmarkFavorite')
@@ -422,7 +422,7 @@ export class QuickActionsModal extends Modal {
       void this.toggleFavorite(action, starBtn);
     });
 
-    const actions = row.createDiv({ cls: 'claudian-quick-action-actions' });
+    const actions = row.createDiv({ cls: 'specorator-quick-action-actions' });
     actions
       .createEl('button', { text: t('common.edit') })
       .addEventListener('click', (e) => {

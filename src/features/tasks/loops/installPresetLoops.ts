@@ -1,7 +1,7 @@
 import { normalizePath, Notice } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { LoopNoteStore } from './LoopNoteStore';
 import { PRESET_LOOPS } from './presetLoops';
 
@@ -15,7 +15,7 @@ function normalizeFolder(value: string): string {
   return value.replace(/^\/+|\/+$/g, '');
 }
 
-export async function installPresetLoops(plugin: ClaudianPlugin): Promise<InstallPresetLoopsResult> {
+export async function installPresetLoops(plugin: SpecoratorPlugin): Promise<InstallPresetLoopsResult> {
   // Settings-derived folder feeds vault.createFolder/getAbstractFileByPath below.
   const folder = normalizePath(normalizeFolder(plugin.settings.agentBoardLoopFolder || 'Agent Board/loops'));
   const store = new LoopNoteStore();
@@ -40,7 +40,7 @@ export async function installPresetLoops(plugin: ClaudianPlugin): Promise<Instal
 }
 
 /** Installs the preset loops and surfaces the installed/skipped summary as a Notice. */
-export async function installPresetLoopsWithNotice(plugin: ClaudianPlugin): Promise<void> {
+export async function installPresetLoopsWithNotice(plugin: SpecoratorPlugin): Promise<void> {
   const result = await installPresetLoops(plugin);
   const parts: string[] = [];
   if (result.installed > 0) parts.push(`installed ${result.installed}`);

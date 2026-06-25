@@ -120,7 +120,7 @@ export function openPluginSettingsTab(app: App, pluginId: string): boolean {
 }
 
 /**
- * Opens the Claudian plugin settings and switches its inner tab to the given
+ * Opens the Specorator plugin settings and switches its inner tab to the given
  * provider's sub-tab (e.g. `claude`, `codex`). Falls back to the default tab
  * when the provider sub-tab is not rendered (typically because the provider is
  * disabled and its tab is hidden). Returns `false` when the private settings
@@ -130,7 +130,7 @@ export function openPluginSettingsTab(app: App, pluginId: string): boolean {
  * the sub-tab `data-tab-id` button is queried after `PRIVATE_SETTINGS_RENDER_DELAY_MS`
  * and clicked to switch.
  */
-export function openClaudianProviderSettings(
+export function openSpecoratorProviderSettings(
   app: App,
   pluginId: string,
   providerId: string,
@@ -147,7 +147,7 @@ export function openClaudianProviderSettings(
       return;
     }
     const button = tab.containerEl.querySelector<HTMLButtonElement>(
-      `.claudian-settings-tab[data-tab-id="${providerId}"]`,
+      `.specorator-settings-tab[data-tab-id="${providerId}"]`,
     );
     button?.click();
   }, PRIVATE_SETTINGS_RENDER_DELAY_MS);

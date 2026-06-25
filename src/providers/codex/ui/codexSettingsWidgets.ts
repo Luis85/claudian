@@ -41,7 +41,7 @@ export const mountCodexInstallationMethodSetting: ProviderSettingsWidgetMount = 
 
   new Setting(host)
     .setName('Installation method')
-    .setDesc('How Claudian should launch Codex on Windows. Native Windows uses a Windows executable path. WSL launches the Linux CLI inside a selected distro.')
+    .setDesc('How Specorator should launch Codex on Windows. Native Windows uses a Windows executable path. WSL launches the Linux CLI inside a selected distro.')
     .addDropdown((dropdown) => {
       dropdown
         .addOption('native-windows', 'Native Windows')
@@ -134,7 +134,7 @@ export const mountCodexWslDistroOverrideSetting: ProviderSettingsWidgetMount = (
     .setName('WSL distro override')
     .setDesc('Optional advanced override. Leave empty to infer the distro from a WSL workspace path when possible, otherwise use the default WSL distro.');
 
-  wslDistroSetting.settingEl.toggleClass('claudian-hidden', !isWslMode);
+  wslDistroSetting.settingEl.toggleClass('specorator-hidden', !isWslMode);
   wslDistroSetting.addText((text) => {
     text
       .setPlaceholder('Ubuntu')
@@ -144,7 +144,7 @@ export const mountCodexWslDistroOverrideSetting: ProviderSettingsWidgetMount = (
         await context.plugin.saveSettings();
       });
 
-    text.inputEl.addClass('claudian-settings-cli-path-input');
+    text.inputEl.addClass('specorator-settings-cli-path-input');
     text.inputEl.disabled = !isWslMode;
   });
 };
@@ -155,13 +155,13 @@ export const mountCodexSkillsSection: ProviderSettingsWidgetMount = (host, conte
     return;
   }
 
-  const skillsDesc = host.createDiv({ cls: 'claudian-sp-settings-desc' });
+  const skillsDesc = host.createDiv({ cls: 'specorator-sp-settings-desc' });
   skillsDesc.createEl('p', {
     cls: 'setting-item-description',
     text: 'Manage vault-level Codex skills stored in .codex/skills/ or .agents/skills/. Home-level skills are excluded here.',
   });
 
-  const skillsContainer = host.createDiv({ cls: 'claudian-slash-commands-container' });
+  const skillsContainer = host.createDiv({ cls: 'specorator-slash-commands-container' });
   new CodexSkillSettings(skillsContainer, codexCatalog, context.plugin.app);
 };
 
@@ -176,24 +176,24 @@ export const mountCodexHiddenSkillsSetting: ProviderSettingsWidgetMount = (host,
 export const mountCodexSubagentsSection: ProviderSettingsWidgetMount = (host, context) => {
   const codexWorkspace = getCodexWorkspaceServices();
 
-  const subagentDesc = host.createDiv({ cls: 'claudian-sp-settings-desc' });
+  const subagentDesc = host.createDiv({ cls: 'specorator-sp-settings-desc' });
   subagentDesc.createEl('p', {
     cls: 'setting-item-description',
     text: 'Manage vault-level Codex subagents stored in .codex/agents/. Each TOML file defines one custom agent.',
   });
 
-  const subagentContainer = host.createDiv({ cls: 'claudian-slash-commands-container' });
+  const subagentContainer = host.createDiv({ cls: 'specorator-slash-commands-container' });
   new CodexSubagentSettings(subagentContainer, codexWorkspace.subagentStorage, context.plugin.app, () => {
     void codexWorkspace.refreshAgentMentions?.();
   });
 };
 
 export const mountCodexMcpNotice: ProviderSettingsWidgetMount = (host) => {
-  const mcpNotice = host.createDiv({ cls: 'claudian-mcp-settings-desc' });
+  const mcpNotice = host.createDiv({ cls: 'specorator-mcp-settings-desc' });
   const mcpDesc = mcpNotice.createEl('p', { cls: 'setting-item-description' });
   mcpDesc.appendText('Codex manages MCP servers via its own CLI. Configure with ');
   mcpDesc.createEl('code').appendText('codex mcp');
-  mcpDesc.appendText(' and they will be available in Claudian. ');
+  mcpDesc.appendText(' and they will be available in Specorator. ');
   mcpDesc.createEl('a', {
     text: 'Learn more',
     href: 'https://developers.openai.com/codex/mcp',

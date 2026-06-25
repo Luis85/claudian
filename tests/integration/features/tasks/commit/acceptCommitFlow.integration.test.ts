@@ -6,7 +6,7 @@ import { TaskNoteStore } from '@/features/tasks/storage/TaskNoteStore';
 const TASK_PATH = 'Agent Board/tasks/wo-1.md';
 
 const TASK_CONTENT = `---
-type: claudian-work-order
+type: specorator-work-order
 schema_version: 1
 id: wo-1
 title: Integration Task

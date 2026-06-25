@@ -3,7 +3,7 @@ import { Menu, Notice, setIcon } from 'obsidian';
 import type { TitleGenerationService } from '../../../core/providers/types';
 import type { ConversationMeta } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import type { ChatState } from '../state/ChatState';
 
 function runConversationAction(action: () => Promise<void>, failureMessage: string): void {
@@ -29,7 +29,7 @@ export type HistoryRenderOptions = {
 };
 
 export interface ConversationHistoryViewDeps {
-  plugin: ClaudianPlugin;
+  plugin: SpecoratorPlugin;
   state: ChatState;
   getHistoryDropdown: () => HTMLElement | null;
   getTitleGenerationService: () => TitleGenerationService | null;
@@ -90,14 +90,14 @@ export class ConversationHistoryView {
 
     container.empty();
 
-    const dropdownHeader = container.createDiv({ cls: 'claudian-history-header' });
+    const dropdownHeader = container.createDiv({ cls: 'specorator-history-header' });
     dropdownHeader.createSpan({ text: 'Conversations' });
 
-    const list = container.createDiv({ cls: 'claudian-history-list' });
+    const list = container.createDiv({ cls: 'specorator-history-list' });
     const allConversations = plugin.getConversationList();
 
     if (allConversations.length === 0) {
-      list.createDiv({ cls: 'claudian-history-empty', text: 'No conversations' });
+      list.createDiv({ cls: 'specorator-history-empty', text: 'No conversations' });
       return;
     }
 
@@ -135,9 +135,9 @@ export class ConversationHistoryView {
     renderChunk();
 
     if (rendered < conversations.length) {
-      const showMore = list.createDiv({ cls: 'claudian-history-show-more' });
+      const showMore = list.createDiv({ cls: 'specorator-history-show-more' });
       const btn = showMore.createEl('button', {
-        cls: 'claudian-history-show-more-btn',
+        cls: 'specorator-history-show-more-btn',
         text: t('chat.history.showMore'),
         attr: { type: 'button' },
       });
@@ -162,17 +162,17 @@ export class ConversationHistoryView {
     const { state } = this.deps;
     const isCurrent = conv.id === state.currentConversationId;
     const item = list.createDiv({
-      cls: `claudian-history-item${isCurrent ? ' active' : ''}`,
+      cls: `specorator-history-item${isCurrent ? ' active' : ''}`,
     });
 
-    const iconEl = item.createDiv({ cls: 'claudian-history-item-icon' });
+    const iconEl = item.createDiv({ cls: 'specorator-history-item-icon' });
     setIcon(iconEl, isCurrent ? 'message-square-dot' : 'message-square');
 
-    const content = item.createDiv({ cls: 'claudian-history-item-content' });
-    const titleEl = content.createDiv({ cls: 'claudian-history-item-title', text: conv.title });
+    const content = item.createDiv({ cls: 'specorator-history-item-content' });
+    const titleEl = content.createDiv({ cls: 'specorator-history-item-title', text: conv.title });
     titleEl.setAttribute('title', conv.title);
     content.createDiv({
-      cls: 'claudian-history-item-date',
+      cls: 'specorator-history-item-date',
       text: isCurrent ? 'Current session' : this.formatDate(conv.lastResponseAt ?? conv.createdAt),
     });
 
@@ -222,15 +222,15 @@ export class ConversationHistoryView {
       this.showHistoryContextMenu(item, conv.id, conv.title, isCurrent, options, e);
     });
 
-    const actions = item.createDiv({ cls: 'claudian-history-item-actions' });
+    const actions = item.createDiv({ cls: 'specorator-history-item-actions' });
 
     // Show regenerate button if title generation failed, or loading indicator if pending
     if (conv.titleGenerationStatus === 'pending') {
-      const loadingEl = actions.createEl('span', { cls: 'claudian-action-btn claudian-action-loading' });
+      const loadingEl = actions.createEl('span', { cls: 'specorator-action-btn specorator-action-loading' });
       setIcon(loadingEl, 'loader-2');
       loadingEl.setAttribute('aria-label', 'Generating title...');
     } else if (conv.titleGenerationStatus === 'failed') {
-      const regenerateBtn = actions.createEl('button', { cls: 'claudian-action-btn' });
+      const regenerateBtn = actions.createEl('button', { cls: 'specorator-action-btn' });
       setIcon(regenerateBtn, 'refresh-cw');
       regenerateBtn.setAttribute('aria-label', 'Regenerate title');
       regenerateBtn.addEventListener('click', (e) => {
@@ -242,7 +242,7 @@ export class ConversationHistoryView {
       });
     }
 
-    const renameBtn = actions.createEl('button', { cls: 'claudian-action-btn' });
+    const renameBtn = actions.createEl('button', { cls: 'specorator-action-btn' });
     setIcon(renameBtn, 'pencil');
     renameBtn.setAttribute('aria-label', 'Rename');
     renameBtn.addEventListener('click', (e) => {
@@ -250,7 +250,7 @@ export class ConversationHistoryView {
       this.showRenameInput(item, conv.id, conv.title);
     });
 
-    const deleteBtn = actions.createEl('button', { cls: 'claudian-action-btn claudian-delete-btn' });
+    const deleteBtn = actions.createEl('button', { cls: 'specorator-action-btn specorator-delete-btn' });
     setIcon(deleteBtn, 'trash-2');
     deleteBtn.setAttribute('aria-label', 'Delete');
     deleteBtn.addEventListener('click', (e) => {
@@ -355,12 +355,12 @@ export class ConversationHistoryView {
 
   /** Shows inline rename input for a conversation. */
   private showRenameInput(item: HTMLElement, convId: string, currentTitle: string): void {
-    const titleEl = item.querySelector('.claudian-history-item-title') as HTMLElement;
+    const titleEl = item.querySelector('.specorator-history-item-title') as HTMLElement;
     if (!titleEl) return;
 
     const input = (item.ownerDocument ?? window.document).createElement('input');
     input.type = 'text';
-    input.className = 'claudian-rename-input';
+    input.className = 'specorator-rename-input';
     input.value = currentTitle;
 
     titleEl.replaceWith(input);
@@ -456,7 +456,7 @@ export class ConversationHistoryView {
 
   /**
    * Renders the history dropdown content to a provided container.
-   * Used by ClaudianView to render the dropdown with custom selection callback.
+   * Used by SpecoratorView to render the dropdown with custom selection callback.
    */
   renderHistoryDropdown(
     container: HTMLElement,

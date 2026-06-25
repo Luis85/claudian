@@ -7,10 +7,10 @@ import type { TranslationKey } from '../i18n/types';
  * view modules that render it.
  */
 export const LIBRARY_VIEW_TYPES = {
-  agents: 'claudian-agent-roster',
-  tools: 'claudian-tool-library',
-  skills: 'claudian-skill-library',
-  loops: 'claudian-loop-library',
+  agents: 'specorator-agent-roster',
+  tools: 'specorator-tool-library',
+  skills: 'specorator-skill-library',
+  loops: 'specorator-loop-library',
 } as const;
 
 const LIBRARY_NAV_ITEMS: ReadonlyArray<{ type: string; labelKey: TranslationKey }> = [
@@ -26,13 +26,13 @@ export interface LibraryNavHost {
 
 /** Renders the Agents / Tools / Skills / Loops nav strip, highlighting `activeType`. */
 export function renderLibraryNav(container: HTMLElement, host: LibraryNavHost, activeType: string): void {
-  const nav = container.createDiv({ cls: 'claudian-library-nav' });
+  const nav = container.createDiv({ cls: 'specorator-library-nav' });
   nav.setAttribute('role', 'navigation');
   nav.setAttribute('aria-label', t('agentRoster.navAriaLabel'));
   for (const item of LIBRARY_NAV_ITEMS) {
     const active = item.type === activeType;
     const btn = nav.createEl('button', {
-      cls: `claudian-library-nav-item${active ? ' is-active' : ''}`,
+      cls: `specorator-library-nav-item${active ? ' is-active' : ''}`,
       text: t(item.labelKey),
     });
     if (active) {

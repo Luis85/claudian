@@ -18,7 +18,7 @@ describe('createProviderIconSvg', () => {
     expect(svg.getAttribute('viewBox')).toBe(OPENAI_PROVIDER_ICON.viewBox);
     expect(svg.getAttribute('width')).toBe('12');
     expect(svg.getAttribute('height')).toBe('12');
-    expect(svg.classList.contains('claudian-provider-icon')).toBe(true);
+    expect(svg.classList.contains('specorator-provider-icon')).toBe(true);
     expect(svg.classList.contains('test-icon')).toBe(true);
 
     const path = svg.querySelector('path');
@@ -36,7 +36,7 @@ describe('createProviderIconSvg', () => {
 
     expect(svg.getAttribute('data-provider')).toBe('opencode');
     expect(svg.getAttribute('viewBox')).toBe(OPENCODE_PROVIDER_ICON.viewBox);
-    expect(svg.querySelector('.claudian-provider-icon-variant--light')).not.toBeNull();
-    expect(svg.querySelector('.claudian-provider-icon-variant--dark')).not.toBeNull();
+    expect(svg.querySelector('.specorator-provider-icon-variant--light')).not.toBeNull();
+    expect(svg.querySelector('.specorator-provider-icon-variant--dark')).not.toBeNull();
   });
 });

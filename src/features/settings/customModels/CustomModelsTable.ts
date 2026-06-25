@@ -61,23 +61,23 @@ export class CustomModelsTable {
   }
 
   private renderTable(rows: ProviderCustomModel[]): void {
-    const table = this.host.createDiv({ cls: 'claudian-customModels-table' });
+    const table = this.host.createDiv({ cls: 'specorator-customModels-table' });
     for (let i = 0; i < rows.length; i += 1) {
       const row = rows[i];
-      const rowEl = table.createDiv({ cls: 'claudian-customModels-row' });
+      const rowEl = table.createDiv({ cls: 'specorator-customModels-row' });
       rowEl.dataset.row = String(i);
       rowEl.dataset.source = row.source;
-      rowEl.createEl('span', { cls: 'claudian-customModels-id', text: row.id });
+      rowEl.createEl('span', { cls: 'specorator-customModels-id', text: row.id });
       rowEl.createEl('span', {
-        cls: 'claudian-customModels-label',
+        cls: 'specorator-customModels-label',
         text: row.label ?? '',
       });
       rowEl.createEl('span', {
-        cls: 'claudian-customModels-ctxWindow',
+        cls: 'specorator-customModels-ctxWindow',
         text: row.contextWindow !== undefined ? String(row.contextWindow) : '',
       });
       rowEl.createEl('span', {
-        cls: 'claudian-customModels-source',
+        cls: 'specorator-customModels-source',
         text: row.source === 'env' ? 'env' : 'user',
       });
       if (row.source === 'user') {
@@ -111,7 +111,7 @@ export class CustomModelsTable {
     const existing = this.host.querySelector('[data-role="editor"]');
     if (existing) existing.remove();
 
-    const editor = this.host.createDiv({ cls: 'claudian-customModels-editor' });
+    const editor = this.host.createDiv({ cls: 'specorator-customModels-editor' });
     editor.dataset.role = 'editor';
     if (prefill) {
       editor.dataset.mode = 'edit';
@@ -148,7 +148,7 @@ export class CustomModelsTable {
     cancelBtn.dataset.action = 'cancel';
     cancelBtn.onclick = () => {
       editor.remove();
-      const errorEl = this.host.querySelector('.claudian-customModels-error');
+      const errorEl = this.host.querySelector('.specorator-customModels-error');
       if (errorEl) errorEl.remove();
     };
   }
@@ -159,7 +159,7 @@ export class CustomModelsTable {
     ctxWindowInput: HTMLInputElement,
     prefill?: ProviderCustomModel,
   ): Promise<void> {
-    const existingError = this.host.querySelector('.claudian-customModels-error');
+    const existingError = this.host.querySelector('.specorator-customModels-error');
     if (existingError) existingError.remove();
 
     const id = idInput.value.trim();
@@ -214,7 +214,7 @@ export class CustomModelsTable {
     const parent = anchor.parentElement;
     if (!parent) return;
     const errorEl = parent.ownerDocument.createElement('p');
-    errorEl.className = 'claudian-customModels-error';
+    errorEl.className = 'specorator-customModels-error';
     errorEl.textContent = message;
     parent.appendChild(errorEl);
   }

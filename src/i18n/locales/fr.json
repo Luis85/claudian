@@ -129,7 +129,7 @@
     "runtimeError": {
       "cliNotFound": {
         "title": "CLI not found",
-        "body": "Claudian couldn't find the provider's command-line tool. Set the correct path in settings, then try again.",
+        "body": "Specorator couldn't find the provider's command-line tool. Set the correct path in settings, then try again.",
         "openSettings": "Open settings"
       },
       "unauthenticated": {
@@ -156,12 +156,12 @@
       "detailsLabel": "Details"
     },
     "context": {
-      "fileNoTab": "Open Claudian chat and enable a provider before adding file context.",
-      "folderNoTab": "Open Claudian chat and enable a provider before adding folder context.",
+      "fileNoTab": "Open Specorator chat and enable a provider before adding file context.",
+      "folderNoTab": "Open Specorator chat and enable a provider before adding folder context.",
       "fileAttachFailed": "Could not add file to chat: {path}",
       "folderAttachFailed": "Could not add folder to chat: {path}",
-      "fileAdded": "Added {path} to Claudian chat",
-      "folderAdded": "Added {path}/ to Claudian chat"
+      "fileAdded": "Added {path} to Specorator chat",
+      "folderAdded": "Added {path}/ to Specorator chat"
     },
     "drop": {
       "image": "Drop image",
@@ -211,7 +211,7 @@
     }
   },
   "settings": {
-    "title": "Paramètres Claudian",
+    "title": "Paramètres Specorator",
     "tabs": {
       "general": "Général",
       "claude": "Claude",
@@ -226,7 +226,7 @@
     "models": "Modèles",
     "experimental": "Expérimental",
     "userName": {
-      "name": "Comment Claudian doit-il vous appeler ?",
+      "name": "Comment Specorator doit-il vous appeler ?",
       "desc": "Votre nom pour les salutations personnalisées (laisser vide pour les salutations génériques)"
     },
     "excludedTags": {
@@ -321,7 +321,7 @@
     },
     "hiddenSlashCommands": {
       "name": "Commandes et compétences masquées",
-      "desc": "Masquez des commandes et compétences spécifiques du menu déroulant. Utile pour masquer les entrées Claude Code qui ne sont pas pertinentes pour Claudian. Saisissez les noms sans le slash initial, un par ligne.",
+      "desc": "Masquez des commandes et compétences spécifiques du menu déroulant. Utile pour masquer les entrées Claude Code qui ne sont pas pertinentes pour Specorator. Saisissez les noms sans le slash initial, un par ligne.",
       "placeholder": "commit\nbuild\ntest"
     },
     "mcpServers": {
@@ -487,7 +487,7 @@
       "desc": "Afficher les diffs Write et Edit développés lors de leur première apparition."
     },
     "chatViewPlacement": {
-      "name": "Ouvrir Claudian dans",
+      "name": "Ouvrir Specorator dans",
       "desc": "Choisissez où le panneau de chat s'ouvre lors de sa création",
       "rightSidebar": "Barre latérale droite",
       "leftSidebar": "Barre latérale gauche",
@@ -737,7 +737,7 @@
         "toggleFailed": "Failed to toggle plugin: {error}",
         "listRefreshed": "Plugin list refreshed",
         "refreshFailed": "Failed to refresh plugins: {error}",
-        "malformedEntry": "Claudian: plugin \"{id}\" has malformed entry in installed_plugins.json (expected array, got {type})"
+        "malformedEntry": "Specorator: plugin \"{id}\" has malformed entry in installed_plugins.json (expected array, got {type})"
       },
       "task": {
         "resultRenderFailed": "Background task completed, but the result could not be rendered."
@@ -887,7 +887,7 @@
     "create": {
       "noActiveNote": "Open a note to create a work order from it.",
       "noSelection": "Select text in a note to create a work order from it.",
-      "needsBrowserSelection": "Open Claudian chat and select text in a browser view first."
+      "needsBrowserSelection": "Open Specorator chat and select text in a browser view first."
     },
     "fromChat": {
       "nothingToCapture": "Nothing to capture from this message.",
@@ -1029,7 +1029,7 @@
     "secretAdd": "Ajouter une variable secrète",
     "secretNamePlaceholder": "VARIABLE_NAME",
     "secretAddButton": "Ajouter",
-    "secretMissing": "Le secret du fournisseur « {name} » n’est pas défini sur cet appareil — saisissez-le à nouveau dans les paramètres de Claudian.",
+    "secretMissing": "Le secret du fournisseur « {name} » n’est pas défini sur cet appareil — saisissez-le à nouveau dans les paramètres de Specorator.",
     "applyPartial": "Environment changes applied, but {count} affected tab(s) failed to restart.",
     "applied": "Environment variables applied.",
     "appliedRebuild": "Environment variables applied. Sessions will be rebuilt on next message."

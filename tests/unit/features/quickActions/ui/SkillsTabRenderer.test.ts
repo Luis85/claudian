@@ -130,7 +130,7 @@ describe('SkillsTabRenderer', () => {
       expect(source._calls.listCachedNow).toBe(1);
       expect(source._calls.listAllStreaming).toBe(1);
       const rows = host.querySelectorAll(
-        '.claudian-quick-actions-skill-row:not(.is-skeleton)',
+        '.specorator-quick-actions-skill-row:not(.is-skeleton)',
       );
       expect(rows).toHaveLength(1);
       expect(rows[0].textContent).toContain('cached-skill');
@@ -150,11 +150,11 @@ describe('SkillsTabRenderer', () => {
       await renderer.render(host);
 
       const rows = host.querySelectorAll(
-        '.claudian-quick-actions-skill-row:not(.is-skeleton)',
+        '.specorator-quick-actions-skill-row:not(.is-skeleton)',
       );
       expect(rows).toHaveLength(2);
       const skeletons = host.querySelectorAll(
-        '.claudian-quick-actions-skill-row.is-skeleton',
+        '.specorator-quick-actions-skill-row.is-skeleton',
       );
       expect(skeletons).toHaveLength(0);
     });
@@ -167,7 +167,7 @@ describe('SkillsTabRenderer', () => {
       await renderer.render(host);
 
       const skeletons = host.querySelectorAll(
-        '.claudian-quick-actions-skill-row.is-skeleton',
+        '.specorator-quick-actions-skill-row.is-skeleton',
       );
       expect(skeletons).toHaveLength(4);
     });
@@ -203,7 +203,7 @@ describe('SkillsTabRenderer', () => {
 
       const names = Array.from(
         host.querySelectorAll(
-          '.claudian-quick-actions-skill-row:not(.is-skeleton) strong',
+          '.specorator-quick-actions-skill-row:not(.is-skeleton) strong',
         ),
       ).map((el) => el.textContent);
       // Claude rows replaced; codex row preserved.
@@ -233,12 +233,12 @@ describe('SkillsTabRenderer', () => {
       await flush();
 
       const rows = host.querySelectorAll(
-        '.claudian-quick-actions-skill-row:not(.is-skeleton)',
+        '.specorator-quick-actions-skill-row:not(.is-skeleton)',
       );
       expect(rows).toHaveLength(2);
 
       const headers = Array.from(
-        host.querySelectorAll('.claudian-quick-actions-provider-header'),
+        host.querySelectorAll('.specorator-quick-actions-provider-header'),
       ).map((h) => h.textContent);
       expect(headers).toEqual(['Claude', 'Codex']);
     });
@@ -254,7 +254,7 @@ describe('SkillsTabRenderer', () => {
       await renderer.render(host);
 
       const refresh = host.querySelector(
-        '.claudian-quick-actions-search-refresh',
+        '.specorator-quick-actions-search-refresh',
       ) as HTMLButtonElement;
       expect(refresh).not.toBeNull();
       expect(refresh.getAttribute('title')).toBe('quickActions.skills.refreshTooltip');
@@ -280,7 +280,7 @@ describe('SkillsTabRenderer', () => {
       expect(source._calls.invalidate).toBe(0);
 
       const refresh = host.querySelector(
-        '.claudian-quick-actions-search-refresh',
+        '.specorator-quick-actions-search-refresh',
       ) as HTMLButtonElement;
       refresh.click();
 
@@ -313,7 +313,7 @@ describe('SkillsTabRenderer', () => {
       input.dispatchEvent(new Event('input'));
 
       const rows = host.querySelectorAll(
-        '.claudian-quick-actions-skill-row:not(.is-skeleton)',
+        '.specorator-quick-actions-skill-row:not(.is-skeleton)',
       );
       expect(rows).toHaveLength(1);
       expect(rows[0].textContent).toContain('tdd');
@@ -337,14 +337,14 @@ describe('SkillsTabRenderer', () => {
       input.value = 'tdd';
       input.dispatchEvent(new Event('input'));
       expect(
-        host.querySelectorAll('.claudian-quick-actions-skill-row:not(.is-skeleton)'),
+        host.querySelectorAll('.specorator-quick-actions-skill-row:not(.is-skeleton)'),
       ).toHaveLength(1);
 
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
       expect(input.value).toBe('');
       expect(
-        host.querySelectorAll('.claudian-quick-actions-skill-row:not(.is-skeleton)'),
+        host.querySelectorAll('.specorator-quick-actions-skill-row:not(.is-skeleton)'),
       ).toHaveLength(2);
     });
   });
@@ -411,7 +411,7 @@ describe('SkillsTabRenderer', () => {
       await renderer.render(host);
 
       const main = host.querySelector(
-        '.claudian-quick-actions-skill-row-main',
+        '.specorator-quick-actions-skill-row-main',
       ) as HTMLElement;
       main.click();
 
@@ -440,7 +440,7 @@ describe('SkillsTabRenderer', () => {
       await renderer.render(host);
 
       const edit = host.querySelector(
-        '.claudian-quick-actions-skill-edit',
+        '.specorator-quick-actions-skill-edit',
       ) as HTMLButtonElement;
       expect(edit).not.toBeNull();
       edit.click();

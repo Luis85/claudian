@@ -1,7 +1,7 @@
 /* src/style/features/work-order-protocol-cards.css */
 
 /* ----- Progress (compact, inline) ----- */
-.claudian-work-order-progress-card {
+.specorator-work-order-progress-card {
   margin: 6px 0;
   padding: 6px 8px;
   border-left: 3px solid var(--interactive-accent);
@@ -10,13 +10,13 @@
   font-size: var(--font-ui-small);
 }
 
-.claudian-work-order-progress-card-header {
+.specorator-work-order-progress-card-header {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.claudian-work-order-progress-card-icon {
+.specorator-work-order-progress-card-icon {
   color: var(--interactive-accent);
   width: 14px;
   height: 14px;
@@ -24,26 +24,26 @@
   display: inline-flex;
 }
 
-.claudian-work-order-progress-card-main {
+.specorator-work-order-progress-card-main {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.claudian-work-order-progress-card-step {
+.specorator-work-order-progress-card-step {
   color: var(--text-normal);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.claudian-work-order-progress-card-counter {
+.specorator-work-order-progress-card-counter {
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
   font-variant-numeric: tabular-nums;
   flex: 0 0 auto;
 }
 
-.claudian-work-order-progress-card-bar {
+.specorator-work-order-progress-card-bar {
   margin-top: 4px;
   height: 3px;
   background: var(--background-modifier-border);
@@ -51,20 +51,20 @@
   overflow: hidden;
 }
 
-.claudian-work-order-progress-card-bar-fill {
+.specorator-work-order-progress-card-bar-fill {
   height: 100%;
   background: var(--interactive-accent);
   transition: width 200ms ease-out;
 }
 
-.claudian-work-order-progress-card-note {
+.specorator-work-order-progress-card-note {
   margin-top: 3px;
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 
 /* ----- Needs input (amber) ----- */
-.claudian-work-order-needs-input-card {
+.specorator-work-order-needs-input-card {
   margin: 8px 0;
   padding: 8px 10px;
   border: 1px solid var(--text-warning, #d29922);
@@ -74,13 +74,13 @@
   font-size: var(--font-ui-small);
 }
 
-.claudian-work-order-needs-input-card-header {
+.specorator-work-order-needs-input-card-header {
   display: flex;
   align-items: flex-start;
   gap: 8px;
 }
 
-.claudian-work-order-needs-input-card-icon {
+.specorator-work-order-needs-input-card-icon {
   color: var(--text-warning, #d29922);
   width: 16px;
   height: 16px;
@@ -89,12 +89,12 @@
   margin-top: 2px;
 }
 
-.claudian-work-order-needs-input-card-main {
+.specorator-work-order-needs-input-card-main {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.claudian-work-order-needs-input-card-title {
+.specorator-work-order-needs-input-card-title {
   color: var(--text-warning, #d29922);
   font-weight: 600;
   font-size: var(--font-ui-smaller);
@@ -102,25 +102,25 @@
   letter-spacing: 0.02em;
 }
 
-.claudian-work-order-needs-input-card-question {
+.specorator-work-order-needs-input-card-question {
   color: var(--text-normal);
   margin-top: 2px;
 }
 
-.claudian-work-order-needs-input-card-why,
-.claudian-work-order-needs-input-card-default {
+.specorator-work-order-needs-input-card-why,
+.specorator-work-order-needs-input-card-default {
   margin-top: 4px;
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 
-.claudian-work-order-needs-input-card-label {
+.specorator-work-order-needs-input-card-label {
   font-weight: 600;
   color: var(--text-muted);
 }
 
 /* ----- Needs approval (red) ----- */
-.claudian-work-order-needs-approval-card {
+.specorator-work-order-needs-approval-card {
   margin: 8px 0;
   padding: 8px 10px;
   border: 1px solid var(--text-error, #cf222e);
@@ -130,13 +130,13 @@
   font-size: var(--font-ui-small);
 }
 
-.claudian-work-order-needs-approval-card-header {
+.specorator-work-order-needs-approval-card-header {
   display: flex;
   align-items: flex-start;
   gap: 8px;
 }
 
-.claudian-work-order-needs-approval-card-icon {
+.specorator-work-order-needs-approval-card-icon {
   color: var(--text-error, #cf222e);
   width: 16px;
   height: 16px;
@@ -145,12 +145,12 @@
   margin-top: 2px;
 }
 
-.claudian-work-order-needs-approval-card-main {
+.specorator-work-order-needs-approval-card-main {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.claudian-work-order-needs-approval-card-title {
+.specorator-work-order-needs-approval-card-title {
   color: var(--text-error, #cf222e);
   font-weight: 600;
   font-size: var(--font-ui-smaller);
@@ -158,14 +158,14 @@
   letter-spacing: 0.02em;
 }
 
-.claudian-work-order-needs-approval-card-action {
+.specorator-work-order-needs-approval-card-action {
   color: var(--text-normal);
   margin-top: 2px;
   font-family: var(--font-monospace);
   word-break: break-word;
 }
 
-.claudian-work-order-needs-approval-card-reversible-chip {
+.specorator-work-order-needs-approval-card-reversible-chip {
   padding: 1px 6px;
   border-radius: 999px;
   font-size: var(--font-ui-smaller);
@@ -174,17 +174,17 @@
   flex: 0 0 auto;
 }
 
-.claudian-work-order-needs-approval-card-reversible-chip.is-irreversible {
+.specorator-work-order-needs-approval-card-reversible-chip.is-irreversible {
   background: var(--background-modifier-error, #cf222e);
 }
 
-.claudian-work-order-needs-approval-card-risk {
+.specorator-work-order-needs-approval-card-risk {
   margin-top: 4px;
   color: var(--text-muted);
   font-size: var(--font-ui-smaller);
 }
 
-.claudian-work-order-needs-approval-card-label {
+.specorator-work-order-needs-approval-card-label {
   font-weight: 600;
   color: var(--text-muted);
 }

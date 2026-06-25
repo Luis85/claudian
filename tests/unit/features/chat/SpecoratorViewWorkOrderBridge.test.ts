@@ -1,16 +1,16 @@
 import {
-  ClaudianViewWorkOrderBridge,
-  type ClaudianViewWorkOrderBridgeDeps,
-} from '@/features/chat/ClaudianViewWorkOrderBridge';
+  SpecoratorViewWorkOrderBridge,
+  type SpecoratorViewWorkOrderBridgeDeps,
+} from '@/features/chat/SpecoratorViewWorkOrderBridge';
 
-function makeBridge(overrides: Partial<ClaudianViewWorkOrderBridgeDeps> = {}) {
-  const deps: ClaudianViewWorkOrderBridgeDeps = {
+function makeBridge(overrides: Partial<SpecoratorViewWorkOrderBridgeDeps> = {}) {
+  const deps: SpecoratorViewWorkOrderBridgeDeps = {
     getTabManager: () => null,
     findConversationTab: () => null,
     openConversationInNewTab: jest.fn(async () => {}),
     ...overrides,
   };
-  return { bridge: new ClaudianViewWorkOrderBridge(deps), deps };
+  return { bridge: new SpecoratorViewWorkOrderBridge(deps), deps };
 }
 
 const commitOptions = {
@@ -20,7 +20,7 @@ const commitOptions = {
   prompt: 'PROMPT',
 };
 
-describe('ClaudianViewWorkOrderBridge.startTaskRunInFreshTab', () => {
+describe('SpecoratorViewWorkOrderBridge.startTaskRunInFreshTab', () => {
   it('releases the reservation and returns null when there is no tab manager', async () => {
     const release = jest.fn();
     const { bridge } = makeBridge();
@@ -37,7 +37,7 @@ describe('ClaudianViewWorkOrderBridge.startTaskRunInFreshTab', () => {
   });
 });
 
-describe('ClaudianViewWorkOrderBridge.injectCommitTurnForConversation', () => {
+describe('SpecoratorViewWorkOrderBridge.injectCommitTurnForConversation', () => {
   it('throws when the chat view has no tab manager', async () => {
     const { bridge } = makeBridge();
     await expect(bridge.injectCommitTurnForConversation(commitOptions)).rejects.toThrow(/chat view/i);

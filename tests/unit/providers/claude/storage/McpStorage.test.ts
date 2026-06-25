@@ -34,12 +34,12 @@ describe('McpStorage', () => {
       expect(servers).toEqual([]);
     });
 
-    it('loads servers with disabledTools from _claudian metadata', async () => {
+    it('loads servers with disabledTools from _specorator metadata', async () => {
       const config = {
         mcpServers: {
           alpha: { command: 'alpha-cmd', args: ['--arg'] },
         },
-        _claudian: {
+        _specorator: {
           servers: {
             alpha: {
               enabled: true,
@@ -71,7 +71,7 @@ describe('McpStorage', () => {
         mcpServers: {
           alpha: { command: 'alpha-cmd' },
         },
-        _claudian: {
+        _specorator: {
           servers: {
             alpha: {
               disabledTools: ['valid', 123, null, 'also_valid'],
@@ -94,7 +94,7 @@ describe('McpStorage', () => {
         mcpServers: {
           alpha: { command: 'alpha-cmd' },
         },
-        _claudian: {
+        _specorator: {
           servers: {
             alpha: {
               disabledTools: [],
@@ -157,7 +157,7 @@ describe('McpStorage', () => {
       expect(servers[0].name).toBe('valid');
     });
 
-    it('defaults untrusted vault-sourced servers (no _claudian metadata) to disabled', async () => {
+    it('defaults untrusted vault-sourced servers (no _specorator metadata) to disabled', async () => {
       const config = {
         mcpServers: {
           alpha: { command: 'alpha-cmd' },
@@ -182,7 +182,7 @@ describe('McpStorage', () => {
     it('honors enabled=true when the server carries trust metadata', async () => {
       const config = {
         mcpServers: { alpha: { command: 'alpha-cmd' } },
-        _claudian: { servers: { alpha: { enabled: true } } },
+        _specorator: { servers: { alpha: { enabled: true } } },
       };
       const adapter = createMockAdapter({
         '.claude/mcp.json': JSON.stringify(config),
@@ -194,12 +194,12 @@ describe('McpStorage', () => {
     });
 
     it('disables a server whose metadata omits an explicit enabled:true (SEC-3)', async () => {
-      // Presence of a `_claudian.servers.<name>` entry is NOT trust — `_claudian`
+      // Presence of a `_specorator.servers.<name>` entry is NOT trust — `_specorator`
       // is committable/syncable, so a malicious vault could ship empty/partial
       // metadata to imply trust. Only an explicit `enabled: true` enables.
       const config = {
         mcpServers: { alpha: { command: 'alpha-cmd' }, beta: { command: 'beta-cmd' } },
-        _claudian: { servers: { alpha: { description: 'known server' }, beta: {} } },
+        _specorator: { servers: { alpha: { description: 'known server' }, beta: {} } },
       };
       const adapter = createMockAdapter({
         '.claude/mcp.json': JSON.stringify(config),
@@ -214,7 +214,7 @@ describe('McpStorage', () => {
     it('enables a server only with explicit enabled:true', async () => {
       const config = {
         mcpServers: { alpha: { command: 'alpha-cmd' } },
-        _claudian: { servers: { alpha: { enabled: true } } },
+        _specorator: { servers: { alpha: { enabled: true } } },
       };
       const adapter = createMockAdapter({
         '.claude/mcp.json': JSON.stringify(config),
@@ -225,10 +225,10 @@ describe('McpStorage', () => {
       expect(servers[0]).toMatchObject({ name: 'alpha', enabled: true });
     });
 
-    it('loads description from _claudian metadata', async () => {
+    it('loads description from _specorator metadata', async () => {
       const config = {
         mcpServers: { alpha: { command: 'cmd' } },
-        _claudian: {
+        _specorator: {
           servers: {
             alpha: { description: 'My server' },
           },
@@ -244,7 +244,7 @@ describe('McpStorage', () => {
   });
 
   describe('save', () => {
-    it('saves disabledTools to _claudian metadata', async () => {
+    it('saves disabledTools to _specorator metadata', async () => {
       const adapter = createMockAdapter();
       const storage = new McpStorage(adapter);
 
@@ -259,7 +259,7 @@ describe('McpStorage', () => {
       ]);
 
       const saved = JSON.parse(adapter._store['.claude/mcp.json']);
-      expect(saved._claudian.servers.alpha.disabledTools).toEqual(['tool_a', 'tool_b']);
+      expect(saved._specorator.servers.alpha.disabledTools).toEqual(['tool_a', 'tool_b']);
     });
 
     it('trims and filters blank disabledTools on save', async () => {
@@ -277,7 +277,7 @@ describe('McpStorage', () => {
       ]);
 
       const saved = JSON.parse(adapter._store['.claude/mcp.json']);
-      expect(saved._claudian.servers.alpha.disabledTools).toEqual(['tool_a', 'tool_b']);
+      expect(saved._specorator.servers.alpha.disabledTools).toEqual(['tool_a', 'tool_b']);
     });
 
     it('omits disabledTools from metadata when empty but persists trust', async () => {
@@ -297,15 +297,15 @@ describe('McpStorage', () => {
       const saved = JSON.parse(adapter._store['.claude/mcp.json']);
       // SEC-3: enabled is always persisted so the server is remembered as
       // user-trusted; only the truly default disabledTools/contextSaving are omitted.
-      expect(saved._claudian.servers.alpha).toEqual({ enabled: true });
+      expect(saved._specorator.servers.alpha).toEqual({ enabled: true });
     });
 
-    it('preserves existing _claudian metadata when saving', async () => {
+    it('preserves existing _specorator metadata when saving', async () => {
       const existing = {
         mcpServers: {
           alpha: { command: 'alpha-cmd' },
         },
-        _claudian: {
+        _specorator: {
           customField: 'should be preserved',
           servers: {
             alpha: { enabled: false },
@@ -329,8 +329,8 @@ describe('McpStorage', () => {
       ]);
 
       const saved = JSON.parse(adapter._store['.claude/mcp.json']);
-      expect(saved._claudian.customField).toBe('should be preserved');
-      expect(saved._claudian.servers.alpha.disabledTools).toEqual(['tool_a']);
+      expect(saved._specorator.customField).toBe('should be preserved');
+      expect(saved._specorator.servers.alpha.disabledTools).toEqual(['tool_a']);
     });
 
     it('round-trips disabledTools correctly', async () => {
@@ -368,7 +368,7 @@ describe('McpStorage', () => {
       });
     });
 
-    it('saves description to _claudian metadata', async () => {
+    it('saves description to _specorator metadata', async () => {
       const adapter = createMockAdapter();
       const storage = new McpStorage(adapter);
 
@@ -383,10 +383,10 @@ describe('McpStorage', () => {
       ]);
 
       const saved = JSON.parse(adapter._store['.claude/mcp.json']);
-      expect(saved._claudian.servers.alpha.description).toBe('A test server');
+      expect(saved._specorator.servers.alpha.description).toBe('A test server');
     });
 
-    it('stores enabled=false in _claudian when different from default', async () => {
+    it('stores enabled=false in _specorator when different from default', async () => {
       const adapter = createMockAdapter();
       const storage = new McpStorage(adapter);
 
@@ -400,10 +400,10 @@ describe('McpStorage', () => {
       ]);
 
       const saved = JSON.parse(adapter._store['.claude/mcp.json']);
-      expect(saved._claudian.servers.alpha.enabled).toBe(false);
+      expect(saved._specorator.servers.alpha.enabled).toBe(false);
     });
 
-    it('stores contextSaving=false in _claudian when different from default', async () => {
+    it('stores contextSaving=false in _specorator when different from default', async () => {
       const adapter = createMockAdapter();
       const storage = new McpStorage(adapter);
 
@@ -417,13 +417,13 @@ describe('McpStorage', () => {
       ]);
 
       const saved = JSON.parse(adapter._store['.claude/mcp.json']);
-      expect(saved._claudian.servers.alpha.contextSaving).toBe(false);
+      expect(saved._specorator.servers.alpha.contextSaving).toBe(false);
     });
 
     it('persists enabled metadata for trusted servers (no longer all-default)', async () => {
       const existing = {
         mcpServers: { alpha: { command: 'cmd' } },
-        _claudian: { servers: { alpha: { enabled: false } } },
+        _specorator: { servers: { alpha: { enabled: false } } },
       };
       const adapter = createMockAdapter({
         '.claude/mcp.json': JSON.stringify(existing),
@@ -441,13 +441,13 @@ describe('McpStorage', () => {
 
       const saved = JSON.parse(adapter._store['.claude/mcp.json']);
       // SEC-3: enabled state is always recorded so trust survives reloads.
-      expect(saved._claudian.servers.alpha).toEqual({ enabled: true });
+      expect(saved._specorator.servers.alpha).toEqual({ enabled: true });
     });
 
-    it('preserves non-servers _claudian fields when saving', async () => {
+    it('preserves non-servers _specorator fields when saving', async () => {
       const existing = {
         mcpServers: { alpha: { command: 'cmd' } },
-        _claudian: {
+        _specorator: {
           customField: 'keep',
           servers: { alpha: { enabled: false } },
         },
@@ -467,8 +467,8 @@ describe('McpStorage', () => {
       ]);
 
       const saved = JSON.parse(adapter._store['.claude/mcp.json']);
-      expect(saved._claudian.customField).toBe('keep');
-      expect(saved._claudian.servers.alpha).toEqual({ enabled: true });
+      expect(saved._specorator.customField).toBe('keep');
+      expect(saved._specorator.servers.alpha).toEqual({ enabled: true });
     });
 
     it('handles corrupted existing file gracefully', async () => {
@@ -516,7 +516,7 @@ describe('McpStorage', () => {
   });
 
   describe('SEC-A Phase 3 — secret header/env refs', () => {
-    it('round-trips secretHeaders/secretEnv through _claudian metadata', async () => {
+    it('round-trips secretHeaders/secretEnv through _specorator metadata', async () => {
       const adapter = createMockAdapter();
       const storage = new McpStorage(adapter);
 
@@ -526,21 +526,21 @@ describe('McpStorage', () => {
           config: { type: 'http', url: 'https://x', headers: { Accept: 'application/json' } },
           enabled: true,
           contextSaving: false,
-          secretHeaders: { Authorization: 'claudian-mcp-remote-header-authorization' },
+          secretHeaders: { Authorization: 'specorator-mcp-remote-header-authorization' },
         },
       ]);
 
       const file = JSON.parse(adapter._store['.claude/mcp.json']) as {
         mcpServers: Record<string, { headers?: Record<string, string> }>;
-        _claudian: { servers: Record<string, { secretHeaders?: Record<string, string> }> };
+        _specorator: { servers: Record<string, { secretHeaders?: Record<string, string> }> };
       };
-      expect(file._claudian.servers.remote.secretHeaders).toEqual({
-        Authorization: 'claudian-mcp-remote-header-authorization',
+      expect(file._specorator.servers.remote.secretHeaders).toEqual({
+        Authorization: 'specorator-mcp-remote-header-authorization',
       });
       expect(file.mcpServers.remote.headers).toEqual({ Accept: 'application/json' });
 
       const [loaded] = await storage.load();
-      expect(loaded.secretHeaders).toEqual({ Authorization: 'claudian-mcp-remote-header-authorization' });
+      expect(loaded.secretHeaders).toEqual({ Authorization: 'specorator-mcp-remote-header-authorization' });
     });
 
     it('strips a secret-referenced header value from the persisted plaintext config', async () => {
@@ -605,7 +605,7 @@ describe('McpStorage', () => {
       const adapter = createMockAdapter({
         '.claude/mcp.json': JSON.stringify({
           mcpServers: { keep: { command: 'k' }, off: { command: 'o' } },
-          _claudian: { servers: { off: { enabled: false } } },
+          _specorator: { servers: { off: { enabled: false } } },
         }),
       });
       const storage = new McpStorage(adapter);
@@ -627,7 +627,7 @@ describe('McpStorage', () => {
     it('does not rewrite the file when every server already has metadata', async () => {
       const content = JSON.stringify({
         mcpServers: { a: { command: 'a' } },
-        _claudian: { servers: { a: { enabled: true } } },
+        _specorator: { servers: { a: { enabled: true } } },
       });
       const adapter = createMockAdapter({ '.claude/mcp.json': content });
       const storage = new McpStorage(adapter);

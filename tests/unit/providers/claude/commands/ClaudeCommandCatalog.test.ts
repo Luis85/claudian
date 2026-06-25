@@ -1,4 +1,4 @@
-import type { ClaudianEventMap } from '@/app/events/claudianEvents';
+import type { SpecoratorEventMap } from '@/app/events/specoratorEvents';
 import { EventBus } from '@/core/events/EventBus';
 import type { ProviderCommandEntry } from '@/core/providers/commands/ProviderCommandEntry';
 import type { VaultFileAdapter } from '@/core/storage/VaultFileAdapter';
@@ -448,7 +448,7 @@ describe('ClaudeCommandCatalog EventBus emission', () => {
     const events: Array<{ providerId: string }> = [];
     bus.on('vaultSkill.changed', (p) => { events.push(p); });
     const catalog = new ClaudeCommandCatalog(
-      mkStorage(), mkStorage(), undefined, bus as unknown as EventBus<ClaudianEventMap>,
+      mkStorage(), mkStorage(), undefined, bus as unknown as EventBus<SpecoratorEventMap>,
     );
     await catalog.saveVaultEntry(skillEntry());
     expect(events).toEqual([{ providerId: 'claude' }]);
@@ -459,7 +459,7 @@ describe('ClaudeCommandCatalog EventBus emission', () => {
     const events: Array<{ providerId: string }> = [];
     bus.on('vaultSkill.changed', (p) => { events.push(p); });
     const catalog = new ClaudeCommandCatalog(
-      mkStorage(), mkStorage(), undefined, bus as unknown as EventBus<ClaudianEventMap>,
+      mkStorage(), mkStorage(), undefined, bus as unknown as EventBus<SpecoratorEventMap>,
     );
     await catalog.deleteVaultEntry(skillEntry());
     expect(events).toEqual([{ providerId: 'claude' }]);
@@ -470,7 +470,7 @@ describe('ClaudeCommandCatalog EventBus emission', () => {
     const events: unknown[] = [];
     bus.on('vaultSkill.changed', (p) => { events.push(p); });
     const catalog = new ClaudeCommandCatalog(
-      mkStorage(), mkStorage(), undefined, bus as unknown as EventBus<ClaudianEventMap>,
+      mkStorage(), mkStorage(), undefined, bus as unknown as EventBus<SpecoratorEventMap>,
     );
     await catalog.saveVaultEntry(commandEntry());
     await catalog.deleteVaultEntry(commandEntry());

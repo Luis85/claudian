@@ -235,7 +235,7 @@ export function noteVisibleStreamContent(
 }
 
 /**
- * Pure computation behind `ClaudianService.buildSessionUpdates`: derive the
+ * Pure computation behind `ClaudeChatRuntime.buildSessionUpdates`: derive the
  * conversation-level session id plus the next ClaudeProviderState from the
  * runtime's current session id and the conversation's existing state.
  *

@@ -46,7 +46,7 @@ export class QuickActionLaunchModal extends Modal {
   }
 
   onOpen(): void {
-    this.modalEl?.addClass?.('claudian-qa-launch-modal');
+    this.modalEl?.addClass?.('specorator-qa-launch-modal');
     const root = this.contentEl;
     root.empty();
 
@@ -66,7 +66,7 @@ export class QuickActionLaunchModal extends Modal {
 
     if (this.options.fallbackNotice) {
       const notice = root.createDiv({
-        cls: 'claudian-qa-launch-notice',
+        cls: 'specorator-qa-launch-notice',
         attr: { 'data-testid': 'qa-fallback-notice', role: 'alert' },
       });
       notice.setText(t('quickActions.launchModal.fallbackNotice', {
@@ -76,9 +76,9 @@ export class QuickActionLaunchModal extends Modal {
     }
 
     if (this.options.enabledProviders.length === 0) {
-      const emptyId = 'claudian-qa-empty-' + Math.random().toString(36).slice(2, 9);
+      const emptyId = 'specorator-qa-empty-' + Math.random().toString(36).slice(2, 9);
       const empty = root.createDiv({
-        cls: 'claudian-qa-launch-empty',
+        cls: 'specorator-qa-launch-empty',
         attr: { id: emptyId, 'data-testid': 'qa-empty', 'aria-live': 'polite' },
       });
       empty.setText(t('quickActions.launchModal.noProvidersEnabled'));
@@ -95,15 +95,15 @@ export class QuickActionLaunchModal extends Modal {
   }
 
   onClose(): void {
-    this.modalEl?.removeClass?.('claudian-qa-launch-modal');
+    this.modalEl?.removeClass?.('specorator-qa-launch-modal');
     this.contentEl.empty();
     this.providerSelect = null;
     this.modelSelect = null;
   }
 
   private renderProviderRow(root: HTMLElement): void {
-    const selectId = 'claudian-qa-provider-' + Math.random().toString(36).slice(2, 9);
-    const row = root.createDiv({ cls: 'claudian-qa-launch-row' });
+    const selectId = 'specorator-qa-provider-' + Math.random().toString(36).slice(2, 9);
+    const row = root.createDiv({ cls: 'specorator-qa-launch-row' });
     row.createEl('label', {
       text: t('quickActions.launchModal.providerLabel'),
       attr: { for: selectId },
@@ -126,8 +126,8 @@ export class QuickActionLaunchModal extends Modal {
   }
 
   private renderModelRow(root: HTMLElement): void {
-    const selectId = 'claudian-qa-model-' + Math.random().toString(36).slice(2, 9);
-    const row = root.createDiv({ cls: 'claudian-qa-launch-row' });
+    const selectId = 'specorator-qa-model-' + Math.random().toString(36).slice(2, 9);
+    const row = root.createDiv({ cls: 'specorator-qa-launch-row' });
     row.createEl('label', {
       text: t('quickActions.launchModal.modelLabel'),
       attr: { for: selectId },
@@ -155,7 +155,7 @@ export class QuickActionLaunchModal extends Modal {
   }
 
   private renderActions(root: HTMLElement, runDisabled: boolean, describedById?: string): void {
-    const actions = root.createDiv({ cls: 'claudian-qa-launch-actions' });
+    const actions = root.createDiv({ cls: 'specorator-qa-launch-actions' });
 
     // DOM order: Cancel first, Run second. Visual order is reversed via
     // `flex-direction: row-reverse` in CSS so Run appears on the right while

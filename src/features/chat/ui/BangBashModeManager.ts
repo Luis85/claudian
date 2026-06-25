@@ -23,7 +23,7 @@ export class BangBashModeManager {
     this.callbacks = callbacks;
     this.mode = new TriggerInputMode(inputEl, callbacks.getInputWrapper, {
       triggerKey: '!',
-      wrapperClass: 'claudian-input-bang-bash-mode',
+      wrapperClass: 'specorator-input-bang-bash-mode',
       activePlaceholder: t('chat.bangBash.placeholder'),
     });
   }

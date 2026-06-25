@@ -37,8 +37,8 @@ interface OpencodeAuxQueryRunnerOptions {
 }
 
 const OPENCODE_AUX_AGENT_IDS: Record<OpencodeAuxAgentProfile, string> = {
-  passive: 'claudian-aux-passive',
-  readonly: 'claudian-aux-readonly',
+  passive: 'specorator-aux-passive',
+  readonly: 'specorator-aux-readonly',
 };
 
 const OPENCODE_AUX_READ_PERMISSION = Object.freeze({
@@ -272,7 +272,7 @@ export class OpencodeAuxQueryRunner implements AuxQueryRunner {
 
     this.connection = new AcpClientConnection({
       clientInfo: {
-        name: 'claudian-aux',
+        name: 'specorator-aux',
         version: this.plugin.manifest?.version ?? '0.0.0',
       },
       delegate: {
@@ -367,7 +367,7 @@ function buildOpencodeAuxAgentConfig(profile: OpencodeAuxAgentProfile): Opencode
   if (profile === 'readonly') {
     return {
       definition: {
-        description: 'Internal Claudian read-only agent for OpenCode auxiliary tasks.',
+        description: 'Internal Specorator read-only agent for OpenCode auxiliary tasks.',
         mode: 'primary',
         permission: {
           '*': 'deny',
@@ -387,7 +387,7 @@ function buildOpencodeAuxAgentConfig(profile: OpencodeAuxAgentProfile): Opencode
 
   return {
     definition: {
-      description: 'Internal Claudian no-tool agent for OpenCode auxiliary tasks.',
+      description: 'Internal Specorator no-tool agent for OpenCode auxiliary tasks.',
       mode: 'primary',
       permission: {
         '*': 'deny',

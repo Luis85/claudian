@@ -7,7 +7,7 @@ import type { SettingsCtx } from './SettingsField';
 import type { SettingsRegistry } from './SettingsRegistry';
 
 // Returns a disposer that runs every field-level disposer in the order they
-// were registered. The CALLER (typically `ClaudianSettings.display()`) owns the
+// were registered. The CALLER (typically `SpecoratorSettings.display()`) owns the
 // lifecycle: it must invoke the returned disposer before the host element is
 // removed, otherwise widget subscriptions to the event bus accumulate. A
 // previous implementation tracked disposers in a WeakMap keyed by `host`, but
@@ -24,23 +24,23 @@ export function renderTab(
 
   host.empty();
   if (tabId === 'general' && !ctx.settings.firstRunDismissed && !hasAnyProviderEnabled(ctx.settings)) {
-    const bannerHost = host.createDiv({ cls: 'claudian-first-run-banner-host' });
+    const bannerHost = host.createDiv({ cls: 'specorator-first-run-banner-host' });
     new FirstRunBanner(bannerHost, ctx).render();
   }
   for (const section of registry.getSections(tabId, ctx.settings)) {
     const fields = registry.getFields(tabId, section.id, ctx.settings);
     if (fields.length === 0) continue;
-    const sectionEl = host.createDiv({ cls: 'claudian-settings-section' });
+    const sectionEl = host.createDiv({ cls: 'specorator-settings-section' });
     sectionEl.dataset.sectionId = section.id;
     // Use Obsidian's native heading row so registry tabs visually match the
     // imperative General tab. setHeading() applies `.setting-item-heading` —
-    // the same class the legacy ClaudianSettings.renderGeneralTab uses.
+    // the same class the legacy SpecoratorSettings.renderGeneralTab uses.
     const heading = new Setting(sectionEl).setName(section.label).setHeading();
     if (section.description) {
       heading.setDesc(section.description);
     }
     for (const field of fields) {
-      const fieldEl = sectionEl.createDiv({ cls: 'claudian-settings-field' });
+      const fieldEl = sectionEl.createDiv({ cls: 'specorator-settings-field' });
       fieldEl.dataset.fieldId = field.id;
       const disposer = renderField(fieldEl, field, ctx);
       if (disposer) {

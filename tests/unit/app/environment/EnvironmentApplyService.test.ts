@@ -4,7 +4,7 @@ import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
 import { ProviderSettingsCoordinator } from '@/core/providers/ProviderSettingsCoordinator';
 import type { ProviderId } from '@/core/providers/types';
 import type { Conversation } from '@/core/types';
-import type ClaudianPlugin from '@/main';
+import type SpecoratorPlugin from '@/main';
 
 function createTab(overrides: Partial<{
   providerId: ProviderId;
@@ -33,7 +33,7 @@ function createPlugin(overrides: Partial<{
   affectedTabs: ReturnType<typeof createTab>[];
   settings: Record<string, unknown>;
   reconcileResult: { changed: boolean; invalidatedConversations: Conversation[] };
-}> = {}): ClaudianPlugin {
+}> = {}): SpecoratorPlugin {
   const tabs = overrides.affectedTabs ?? [];
   const tabManager = {
     getAllTabs: jest.fn().mockReturnValue(tabs),
@@ -63,7 +63,7 @@ function createPlugin(overrides: Partial<{
       list: jest.fn().mockReturnValue([]),
     },
     getResolvedEnvironmentVariables: jest.fn().mockReturnValue({}),
-  } as unknown as ClaudianPlugin;
+  } as unknown as SpecoratorPlugin;
 }
 
 describe('EnvironmentApplyService', () => {

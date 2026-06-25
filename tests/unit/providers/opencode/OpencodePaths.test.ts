@@ -20,7 +20,7 @@ describe('OpencodePaths', () => {
   });
 
   it('falls back to the existing resolved database when persisted metadata points at a missing path', () => {
-    const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'claudian-opencode-paths-'));
+    const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'specorator-opencode-paths-'));
     const xdgDataHome = path.join(tmpRoot, 'xdg-data');
     const dbDir = path.join(xdgDataHome, 'opencode');
     const dbPath = path.join(dbDir, 'opencode.db');

@@ -21,7 +21,7 @@ class StubAdapter {
 function makeStore(adapter: StubAdapter, logger?: { warn: jest.Mock }) {
   return new QuickActionLastUsedStore({
     adapter: adapter as unknown as VaultFileAdapter,
-    cachePath: '.claudian/cache/quick-action-last-used.json',
+    cachePath: '.specorator/cache/quick-action-last-used.json',
     debounceMs: 10,
     logger: (logger ?? { warn: jest.fn() }) as unknown as Logger,
     now: () => 5000,
@@ -38,7 +38,7 @@ describe('QuickActionLastUsedStore', () => {
 
   it('hydrates from a valid file', async () => {
     const adapter = new StubAdapter();
-    adapter.files['.claudian/cache/quick-action-last-used.json'] = JSON.stringify({
+    adapter.files['.specorator/cache/quick-action-last-used.json'] = JSON.stringify({
       schemaVersion: 1,
       writtenAt: 0,
       entries: { summarize: { providerId: 'claude', model: 'm', updatedAt: 1 } },
@@ -50,7 +50,7 @@ describe('QuickActionLastUsedStore', () => {
 
   it('warn-logs and treats malformed JSON as cold cache', async () => {
     const adapter = new StubAdapter();
-    adapter.files['.claudian/cache/quick-action-last-used.json'] = 'not-json';
+    adapter.files['.specorator/cache/quick-action-last-used.json'] = 'not-json';
     const logger = { warn: jest.fn() };
     const store = makeStore(adapter, logger);
     await store.hydrate();
@@ -72,7 +72,7 @@ describe('QuickActionLastUsedStore', () => {
     store.set('c', { providerId: 'claude', model: 'm3' });
     await store.flush();
     expect(adapter.writeCount).toBe(1);
-    const parsed = JSON.parse(adapter.files['.claudian/cache/quick-action-last-used.json']);
+    const parsed = JSON.parse(adapter.files['.specorator/cache/quick-action-last-used.json']);
     expect(Object.keys(parsed.entries).sort()).toEqual(['a', 'b', 'c']);
   });
 
@@ -125,7 +125,7 @@ describe('QuickActionLastUsedStore', () => {
     store.delete('a');
     await store.flush();
     expect(adapter.writeCount).toBe(2);
-    const parsed = JSON.parse(adapter.files['.claudian/cache/quick-action-last-used.json']);
+    const parsed = JSON.parse(adapter.files['.specorator/cache/quick-action-last-used.json']);
     expect(parsed.entries.a).toBeUndefined();
   });
 

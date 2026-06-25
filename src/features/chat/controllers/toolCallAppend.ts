@@ -35,7 +35,7 @@ export function appendToolCallToMessage(msg: ChatMessage, toolCall: ToolCallInfo
 /**
  * Refreshes the header name + summary of an already-rendered tool block when a
  * later streaming chunk completes its input. Handles both the generic tool
- * layout (`.claudian-tool-*`) and the write/edit layout (`.claudian-write-edit-*`).
+ * layout (`.specorator-tool-*`) and the write/edit layout (`.specorator-write-edit-*`).
  * Pure DOM work — no state mutation — so it stays out of the streaming handler.
  */
 export function updateRenderedToolCallHeader(
@@ -44,13 +44,13 @@ export function updateRenderedToolCallHeader(
   name: string,
   input: Record<string, unknown>,
 ): void {
-  const nameEl = toolEl.querySelector('.claudian-tool-name')
-    ?? toolEl.querySelector('.claudian-write-edit-name');
+  const nameEl = toolEl.querySelector('.specorator-tool-name')
+    ?? toolEl.querySelector('.specorator-write-edit-name');
   if (nameEl) {
     nameEl.setText(getToolName(name, input));
   }
-  const summaryEl = toolEl.querySelector('.claudian-tool-summary')
-    ?? toolEl.querySelector('.claudian-write-edit-summary');
+  const summaryEl = toolEl.querySelector('.specorator-tool-summary')
+    ?? toolEl.querySelector('.specorator-write-edit-summary');
   if (summaryEl) {
     summaryEl.setText(getToolSummary(name, input));
     decorateToolSummaryPath(app, summaryEl as HTMLElement, name, input);

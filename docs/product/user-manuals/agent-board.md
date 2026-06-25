@@ -4,9 +4,9 @@ status: shipped
 type: user-manual
 parent: "[[Agent Kanban Board]]"
 ---
-# Claudian — Agent Board
+# Specorator — Agent Board
 
-The Agent Board is a kanban-style view for **work orders**: Markdown notes (`type: claudian-work-order`) that Claudian tracks through a set of status lanes and runs through a fresh chat tab. This manual covers the base board — opening it, the work-order note structure, the default lanes, the detail view, and running.
+The Agent Board is a kanban-style view for **work orders**: Markdown notes (`type: specorator-work-order`) that Specorator tracks through a set of status lanes and runs through a fresh chat tab. This manual covers the base board — opening it, the work-order note structure, the default lanes, the detail view, and running.
 
 Capture (creating work orders from chat, selections, browser pages, file menus) is covered in [[agent-board-chat-interop-and-capture]]. Templates that prefill a work order's body are covered in [[work-order-templates]]. For the high-level choice between live chat and managed handoffs, see [[chat-vs-agent-board]].
 
@@ -16,7 +16,7 @@ Use chat when you want to work through something immediately. Use the Agent Boar
 
 ## Before you start
 
-Set these in **Settings → Claudian → General → Agent Board**:
+Set these in **Settings → Specorator → General → Agent Board**:
 
 | Setting | What it does | Default |
 |---------|--------------|---------|
@@ -27,7 +27,7 @@ Set these in **Settings → Claudian → General → Agent Board**:
 
 If **Default provider** or **Default model** is unset, creation is blocked with a notice (*"Set an Agent Board default provider in settings first."* / *"Set an Agent Board default model in settings first."*). Pick both before you start.
 
-A separate setting controls how many chat tabs Claudian will keep open at once:
+A separate setting controls how many chat tabs Specorator will keep open at once:
 
 | Setting | What it does | Default |
 |---------|--------------|---------|
@@ -50,13 +50,13 @@ The board re-indexes the Work order folder whenever a note in it is created, mod
 
 ## Work-order anatomy
 
-A work order is a Markdown note Claudian writes into the Work order folder. The file name is `task-<timestamp>-<slug>.md` based on the title.
+A work order is a Markdown note Specorator writes into the Work order folder. The file name is `task-<timestamp>-<slug>.md` based on the title.
 
 ### Frontmatter
 
 ```yaml
 ---
-type: claudian-work-order
+type: specorator-work-order
 schema_version: 1
 id: task-20260528-example
 title: "Example work order"
@@ -75,7 +75,7 @@ attempts: 0
 ---
 ```
 
-You own `title`, `priority` (`low | normal | high | urgent`), and the body. Claudian owns `id`, `status`, `created`, `updated`, the run fields, and `conversation_id` (set when the order was promoted from chat). Unknown frontmatter keys are preserved.
+You own `title`, `priority` (`low | normal | high | urgent`), and the body. Specorator owns `id`, `status`, `created`, `updated`, the run fields, and `conversation_id` (set when the order was promoted from chat). Unknown frontmatter keys are preserved.
 
 ### Body sections
 
@@ -95,16 +95,16 @@ Source notes, files, scope.
 
 ## Run Ledger
 
-<!-- claudian:run-ledger-start -->
-<!-- claudian:run-ledger-end -->
+<!-- specorator:run-ledger-start -->
+<!-- specorator:run-ledger-end -->
 
 ## Result / Handoff
 
-<!-- claudian:handoff-start -->
-<!-- claudian:handoff-end -->
+<!-- specorator:handoff-start -->
+<!-- specorator:handoff-end -->
 ```
 
-Keep the four `##` headings — the run prompt reads them by name, and a missing heading just produces an empty section. The **Run Ledger** and **Result / Handoff** regions are *generated*: Claudian writes between the marker comments and nowhere else. Don't edit inside the markers; everything else is yours.
+Keep the four `##` headings — the run prompt reads them by name, and a missing heading just produces an empty section. The **Run Ledger** and **Result / Handoff** regions are *generated*: Specorator writes between the marker comments and nowhere else. Don't edit inside the markers; everything else is yours.
 
 Acceptance Criteria task-list items (`- [ ]` / `- [x]`) drive a small progress bar on the card and the count next to the **Acceptance criteria** heading in the detail view.
 
@@ -121,7 +121,7 @@ Lane titles in the UI are: **Inbox, Ready, Running, Needs input, Needs approval,
 - Captured work orders land in **Inbox** — a triage lane that is *not* auto-run.
 - **Ready** and **Needs fix** are picked up by **Run next ready** (see [[agent-board-chat-interop-and-capture]] for the selection rule). `needs_fix` cards are treated as runnable so a reworked order can be queued without per-card intervention.
 - **Running** is reached only by clicking **Run**. The board enforces one active run per work order.
-- **Review** is reached only after a run produces a valid `<claudian_handoff>` block. A missing or malformed handoff sends the card to **Failed** instead.
+- **Review** is reached only after a run produces a valid `<specorator_handoff>` block. A missing or malformed handoff sends the card to **Failed** instead.
 - **Failed** and **Canceled** cards keep their ledger and can be reopened to **Ready**.
 
 ---
@@ -186,7 +186,7 @@ The **quick-action block** (favorites + picker) is hidden when either of:
 
 From a card, the inline action button reads **Run** on `ready` / `needs_fix`, **Stop** on `running`, **Mark ready** on `inbox`, and **Accept** / **Rework** on `review`. The detail view offers the same actions.
 
-A run validates provider/model against the provider registry (disabled providers and unknown models fail fast), writes `status: running` with a `Run started.` ledger entry, opens a fresh chat tab bound to a new conversation, forces the work order's provider/model, and auto-sends the rendered task prompt. On a valid `<claudian_handoff>` block in the final response, Claudian writes the **Handoff** region and transitions to **Review** with a `Handoff written.` ledger entry. On a missing/malformed handoff, the card moves to **Failed**; on stop, to **Canceled**. The chat tab stays open after the run — streaming and tool use are fully visible.
+A run validates provider/model against the provider registry (disabled providers and unknown models fail fast), writes `status: running` with a `Run started.` ledger entry, opens a fresh chat tab bound to a new conversation, forces the work order's provider/model, and auto-sends the rendered task prompt. On a valid `<specorator_handoff>` block in the final response, Specorator writes the **Handoff** region and transitions to **Review** with a `Handoff written.` ledger entry. On a missing/malformed handoff, the card moves to **Failed**; on stop, to **Canceled**. The chat tab stays open after the run — streaming and tool use are fully visible.
 
 ### Run next ready
 
@@ -214,6 +214,6 @@ Capture commands (selection, browser selection, message promotion, conversation 
 1. Open the board (ribbon or command).
 2. Click **Add work order**, pick **Blank work order** (or any template) → the new card opens in the detail view.
 3. Fill **Objective**, draft **Acceptance criteria** as task-list items, drop the source/scope into **Context**, click **Mark ready**.
-4. Click **Run** on the card (or **Run next ready** in the header). Claudian opens a fresh chat tab and streams the agent's reply.
-5. When the agent ends with a valid `<claudian_handoff>` block, the card moves to **Review**. Open the detail view, read the **Handoff** block, then click **Accept** (→ `done`) or **Rework** (→ `needs_fix`). Clicking **Rework** opens a reason prompt — describe what the agent should fix. The reason appears under **Rework Notes** in the next run prompt so the agent receives concrete feedback. The prior **Handoff** block stays visible in the detail modal while the card sits in `needs_fix`.
+4. Click **Run** on the card (or **Run next ready** in the header). Specorator opens a fresh chat tab and streams the agent's reply.
+5. When the agent ends with a valid `<specorator_handoff>` block, the card moves to **Review**. Open the detail view, read the **Handoff** block, then click **Accept** (→ `done`) or **Rework** (→ `needs_fix`). Clicking **Rework** opens a reason prompt — describe what the agent should fix. The reason appears under **Rework Notes** in the next run prompt so the agent receives concrete feedback. The prior **Handoff** block stays visible in the detail modal while the card sits in `needs_fix`.
 6. On terminal statuses, **Archive** moves the note out of the board folder. From `done`, **Reopen** moves the card back to **Inbox** for re-scoping or re-running.

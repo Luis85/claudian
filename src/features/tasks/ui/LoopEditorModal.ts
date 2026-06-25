@@ -24,7 +24,7 @@ export class LoopEditorModal extends Modal {
   onOpen(): void {
     const isEdit = Boolean(this.existing);
     this.setTitle(isEdit ? t('tasks.loopEditor.titleEdit') : t('tasks.loopEditor.titleNew'));
-    this.modalEl.addClass('claudian-sp-modal', 'claudian-loop-editor-modal');
+    this.modalEl.addClass('specorator-sp-modal', 'specorator-loop-editor-modal');
 
     let name = this.existing?.name ?? '';
     let description = this.existing?.description ?? '';
@@ -67,9 +67,9 @@ export class LoopEditorModal extends Modal {
         .addTextArea((ta) => {
           ta.setValue(value).onChange(set);
           ta.inputEl.rows = 4;
-          ta.inputEl.addClass('claudian-loop-section-input');
+          ta.inputEl.addClass('specorator-loop-section-input');
         });
-      setting.settingEl.addClass('claudian-loop-section-setting');
+      setting.settingEl.addClass('specorator-loop-section-setting');
     };
 
     area(t('tasks.loopEditor.useWhenName'), t('tasks.loopEditor.useWhenDesc'), useWhen, (v) => { useWhen = v; });

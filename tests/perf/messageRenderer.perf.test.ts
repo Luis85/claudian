@@ -96,7 +96,7 @@ describe('MessageRenderer scaling (PERF-2)', () => {
 
       const ms = timeMs(() => renderer.renderMessages(messages, () => 'hi'));
 
-      const mounted = messagesEl.querySelectorAll('.claudian-message').length;
+      const mounted = messagesEl.querySelectorAll('.specorator-message').length;
       return {
         n,
         mounted,

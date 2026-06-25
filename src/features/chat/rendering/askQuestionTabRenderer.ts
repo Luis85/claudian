@@ -1,5 +1,5 @@
 /**
- * Claudian - ask-user-question option/custom-input row builders.
+ * Specorator - ask-user-question option/custom-input row builders.
  *
  * Extracted from InlineAskUserQuestion so `renderQuestionTab` stays below the
  * complexity thresholds. Each builder appends one row into the supplied list
@@ -24,27 +24,27 @@ export interface AskOptionRowParams {
 export function renderAskOptionRow(listEl: HTMLElement, params: AskOptionRowParams): HTMLElement {
   const { option, optIdx, isFocused, isSelected, isMulti } = params;
 
-  const row = listEl.createDiv({ cls: 'claudian-ask-item' });
+  const row = listEl.createDiv({ cls: 'specorator-ask-item' });
   if (isFocused) row.addClass('is-focused');
   if (isSelected) row.addClass('is-selected');
 
-  row.createSpan({ text: isFocused ? '›' : ' ', cls: 'claudian-ask-cursor' });
-  row.createSpan({ text: `${optIdx + 1}. `, cls: 'claudian-ask-item-num' });
+  row.createSpan({ text: isFocused ? '›' : ' ', cls: 'specorator-ask-cursor' });
+  row.createSpan({ text: `${optIdx + 1}. `, cls: 'specorator-ask-item-num' });
 
   if (isMulti) {
     params.renderCheckbox(row, isSelected);
   }
 
-  const labelBlock = row.createDiv({ cls: 'claudian-ask-item-content' });
-  const labelRow = labelBlock.createDiv({ cls: 'claudian-ask-label-row' });
-  labelRow.createSpan({ text: option.label, cls: 'claudian-ask-item-label' });
+  const labelBlock = row.createDiv({ cls: 'specorator-ask-item-content' });
+  const labelRow = labelBlock.createDiv({ cls: 'specorator-ask-label-row' });
+  labelRow.createSpan({ text: option.label, cls: 'specorator-ask-item-label' });
 
   if (!isMulti && isSelected) {
-    labelRow.createSpan({ text: ' ✓', cls: 'claudian-ask-check-mark' });
+    labelRow.createSpan({ text: ' ✓', cls: 'specorator-ask-check-mark' });
   }
 
   if (option.description) {
-    labelBlock.createDiv({ text: option.description, cls: 'claudian-ask-item-desc' });
+    labelBlock.createDiv({ text: option.description, cls: 'specorator-ask-item-desc' });
   }
 
   row.addEventListener('click', params.onSelect);
@@ -68,18 +68,18 @@ export interface AskCustomRowParams {
 export function renderAskCustomInputRow(listEl: HTMLElement, params: AskCustomRowParams): HTMLElement {
   const { customIdx, isFocused, isMulti, isSecret, initialText, hasCustomText } = params;
 
-  const customRow = listEl.createDiv({ cls: 'claudian-ask-item claudian-ask-custom-item' });
+  const customRow = listEl.createDiv({ cls: 'specorator-ask-item specorator-ask-custom-item' });
   if (isFocused) customRow.addClass('is-focused');
 
-  customRow.createSpan({ text: isFocused ? '›' : ' ', cls: 'claudian-ask-cursor' });
-  customRow.createSpan({ text: `${customIdx + 1}. `, cls: 'claudian-ask-item-num' });
+  customRow.createSpan({ text: isFocused ? '›' : ' ', cls: 'specorator-ask-cursor' });
+  customRow.createSpan({ text: `${customIdx + 1}. `, cls: 'specorator-ask-item-num' });
 
   if (isMulti) {
     params.renderCheckbox(customRow, hasCustomText);
   }
 
   const inputEl = customRow.createEl('input', {
-    cls: 'claudian-ask-custom-text',
+    cls: 'specorator-ask-custom-text',
     value: initialText,
   });
   inputEl.setAttribute('type', isSecret ? 'password' : 'text');

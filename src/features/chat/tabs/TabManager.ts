@@ -6,7 +6,7 @@ import type { ProviderId } from '../../../core/providers/types';
 import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
 import type { SlashCommand } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { chooseForkTarget } from '../../../shared/modals/ForkTargetModal';
 import { revealWorkspaceLeaf } from '../../../utils/obsidianCompat';
 import { getTabProviderId } from './providerResolution';
@@ -77,7 +77,7 @@ type OpenConversationOptions = {
  * TabManager coordinates multiple chat tabs.
  */
 export class TabManager implements TabManagerInterface {
-  private plugin: ClaudianPlugin;
+  private plugin: SpecoratorPlugin;
   private containerEl: HTMLElement;
   private view: TabManagerViewHost;
 
@@ -116,20 +116,20 @@ export class TabManager implements TabManagerInterface {
   }
 
   constructor(
-    plugin: ClaudianPlugin,
+    plugin: SpecoratorPlugin,
     containerEl: HTMLElement,
     view: TabManagerViewHost,
     callbacks?: TabManagerCallbacks,
   );
   constructor(
-    plugin: ClaudianPlugin,
+    plugin: SpecoratorPlugin,
     legacyArg: unknown,
     containerEl: HTMLElement,
     view: TabManagerViewHost,
     callbacks?: TabManagerCallbacks,
   );
   constructor(
-    plugin: ClaudianPlugin,
+    plugin: SpecoratorPlugin,
     arg2: unknown,
     arg3: HTMLElement | TabManagerViewHost,
     arg4?: TabManagerViewHost | TabManagerCallbacks,

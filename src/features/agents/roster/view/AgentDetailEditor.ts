@@ -4,7 +4,7 @@ import { ProviderRegistry } from '../../../../core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../../core/providers/types';
 import { asSettingsBag } from '../../../../core/types/settings';
 import { t } from '../../../../i18n/i18n';
-import type ClaudianPlugin from '../../../../main';
+import type SpecoratorPlugin from '../../../../main';
 import { confirm } from '../../../../shared/modals/ConfirmModal';
 import { renderLibraryLoading } from '../../../../utils/libraryView';
 import { renderAgentAvatar } from '../../agentAvatar';
@@ -33,7 +33,7 @@ export class AgentDetailEditor {
   private draft!: RosterAgent;
   private isNew = false;
 
-  constructor(private readonly plugin: ClaudianPlugin, private readonly callbacks: AgentDetailEditorCallbacks) {}
+  constructor(private readonly plugin: SpecoratorPlugin, private readonly callbacks: AgentDetailEditorCallbacks) {}
 
   async render(root: HTMLElement, agent: RosterAgent, opts?: { isNew?: boolean }): Promise<void> {
     this.isNew = opts?.isNew ?? false;
@@ -41,10 +41,10 @@ export class AgentDetailEditor {
     this.draft = { ...agent, roles: [...agent.roles], skills: [...agent.skills], tools: [...agent.tools] };
 
     root.empty();
-    // The list view shares the `claudian-library` shell; the detail page has its
+    // The list view shares the `specorator-library` shell; the detail page has its
     // own bespoke root, so drop the library scaffold class when switching in.
-    root.removeClass('claudian-roster', 'claudian-library');
-    root.addClass('claudian-roster-detail');
+    root.removeClass('specorator-roster', 'specorator-library');
+    root.addClass('specorator-roster-detail');
 
     this.renderTopbar(root);
     this.renderHeaderCard(root);
@@ -57,13 +57,13 @@ export class AgentDetailEditor {
   }
 
   private card(root: HTMLElement, heading?: string): HTMLElement {
-    const card = root.createDiv({ cls: 'claudian-roster-card-section' });
-    if (heading) card.createEl('h3', { cls: 'claudian-roster-section', text: heading });
+    const card = root.createDiv({ cls: 'specorator-roster-card-section' });
+    if (heading) card.createEl('h3', { cls: 'specorator-roster-section', text: heading });
     return card;
   }
 
   private renderTopbar(root: HTMLElement): void {
-    const topbar = root.createDiv({ cls: 'claudian-roster-detail-topbar' });
+    const topbar = root.createDiv({ cls: 'specorator-roster-detail-topbar' });
     const back = topbar.createEl('button', { text: t('agentRoster.back') });
     back.onclick = () => this.handleBack();
   }
@@ -79,14 +79,14 @@ export class AgentDetailEditor {
   }
 
   private renderHeaderCard(root: HTMLElement): void {
-    const head = root.createDiv({ cls: 'claudian-roster-detail-head' });
-    this.avatarHost = head.createDiv({ cls: 'claudian-roster-detail-avatar' });
+    const head = root.createDiv({ cls: 'specorator-roster-detail-head' });
+    this.avatarHost = head.createDiv({ cls: 'specorator-roster-detail-avatar' });
     // Decorative: the adjacent name field already conveys the agent's name.
     this.avatarHost.setAttribute('aria-hidden', 'true');
     this.refreshAvatar();
 
-    const fields = head.createDiv({ cls: 'claudian-roster-detail-headfields' });
-    const nameEl = fields.createEl('input', { cls: 'claudian-roster-detail-name', type: 'text' });
+    const fields = head.createDiv({ cls: 'specorator-roster-detail-headfields' });
+    const nameEl = fields.createEl('input', { cls: 'specorator-roster-detail-name', type: 'text' });
     nameEl.value = this.draft.name;
     nameEl.placeholder = t('agentRoster.fieldName');
     nameEl.setAttribute('aria-label', t('agentRoster.fieldName'));
@@ -95,7 +95,7 @@ export class AgentDetailEditor {
       this.refreshAvatar();
       this.updateDirty();
     });
-    const descEl = fields.createEl('input', { cls: 'claudian-roster-detail-desc', type: 'text' });
+    const descEl = fields.createEl('input', { cls: 'specorator-roster-detail-desc', type: 'text' });
     descEl.value = this.draft.description;
     descEl.placeholder = t('agentRoster.fieldDescription');
     descEl.setAttribute('aria-label', t('agentRoster.fieldDescription'));
@@ -106,9 +106,9 @@ export class AgentDetailEditor {
   }
 
   private renderAppearanceRow(parent: HTMLElement): void {
-    const row = parent.createDiv({ cls: 'claudian-roster-appearance' });
+    const row = parent.createDiv({ cls: 'specorator-roster-appearance' });
 
-    const color = row.createEl('select', { cls: 'claudian-roster-appearance-color dropdown' });
+    const color = row.createEl('select', { cls: 'specorator-roster-appearance-color dropdown' });
     color.setAttribute('aria-label', t('agentRoster.color'));
     color.createEl('option', { value: '', text: t('agentRoster.colorNone') });
     for (const name of AVATAR_COLORS) color.createEl('option', { value: `var(--color-${name})`, text: name });
@@ -119,7 +119,7 @@ export class AgentDetailEditor {
       this.updateDirty();
     });
 
-    const initials = row.createEl('input', { cls: 'claudian-roster-appearance-initials', type: 'text' });
+    const initials = row.createEl('input', { cls: 'specorator-roster-appearance-initials', type: 'text' });
     initials.maxLength = 2;
     initials.value = this.draft.initials ?? '';
     initials.placeholder = t('agentRoster.initials');
@@ -130,7 +130,7 @@ export class AgentDetailEditor {
       this.updateDirty();
     });
 
-    const iconSelect = row.createEl('select', { cls: 'claudian-roster-appearance-icon dropdown' });
+    const iconSelect = row.createEl('select', { cls: 'specorator-roster-appearance-icon dropdown' });
     iconSelect.setAttribute('aria-label', t('agentRoster.icon'));
     iconSelect.createEl('option', { value: '', text: t('agentRoster.iconNone') });
     for (const name of ICON_CHOICES) iconSelect.createEl('option', { value: name, text: name });
@@ -143,13 +143,13 @@ export class AgentDetailEditor {
   }
 
   private renderRolesRow(parent: HTMLElement): void {
-    const row = parent.createDiv({ cls: 'claudian-roster-roles' });
+    const row = parent.createDiv({ cls: 'specorator-roster-roles' });
     const roles: Array<['worker' | 'verifier', string]> = [
       ['worker', t('agentRoster.roleWorker')],
       ['verifier', t('agentRoster.roleVerifier')],
     ];
     for (const [role, label] of roles) {
-      const chip = row.createEl('button', { cls: 'claudian-roster-role-chip', text: label });
+      const chip = row.createEl('button', { cls: 'specorator-roster-role-chip', text: label });
       const sync = (): void => {
         const on = this.draft.roles.includes(role);
         chip.classList.toggle('is-on', on);
@@ -168,7 +168,7 @@ export class AgentDetailEditor {
 
   private renderModelCard(root: HTMLElement): void {
     const card = this.card(root, t('agentRoster.sectionModel'));
-    const grid = card.createDiv({ cls: 'claudian-roster-model-grid' });
+    const grid = card.createDiv({ cls: 'specorator-roster-model-grid' });
     const settings = asSettingsBag(this.plugin.settings);
     const providerIds = ProviderRegistry.getEnabledProviderIds(settings);
     let modelDropdown: DropdownComponent | null = null;
@@ -210,7 +210,7 @@ export class AgentDetailEditor {
 
   private renderInstructionsCard(root: HTMLElement): void {
     const card = this.card(root, t('agentRoster.sectionInstructions'));
-    const ta = card.createEl('textarea', { cls: 'claudian-roster-prompt-area' });
+    const ta = card.createEl('textarea', { cls: 'specorator-roster-prompt-area' });
     ta.setAttribute('aria-label', t('agentRoster.sectionInstructions'));
     ta.value = this.draft.prompt;
     ta.rows = 8;
@@ -249,19 +249,19 @@ export class AgentDetailEditor {
       searchPlaceholder: t('agentRoster.searchTools'),
       onChange: (ids) => { this.draft.tools = ids; this.updateDirty(); },
     });
-    card.createDiv({ cls: 'claudian-roster-tools-scope-hint', text: t('agentRoster.toolGrantScopeHint') });
+    card.createDiv({ cls: 'specorator-roster-tools-scope-hint', text: t('agentRoster.toolGrantScopeHint') });
   }
 
   private renderFooter(root: HTMLElement): void {
-    const footer = root.createDiv({ cls: 'claudian-roster-detail-footer' });
-    this.dirtyDot = footer.createSpan({ cls: 'claudian-roster-dirty', text: t('agentRoster.unsavedChanges') });
+    const footer = root.createDiv({ cls: 'specorator-roster-detail-footer' });
+    this.dirtyDot = footer.createSpan({ cls: 'specorator-roster-dirty', text: t('agentRoster.unsavedChanges') });
     this.dirtyDot.setAttribute('role', 'status');
     this.dirtyDot.setAttribute('aria-live', 'polite');
     // Keep the destructive Delete on the left, separated from the Save/Start
     // primary actions by the spacer, so it can't be hit while reaching for Save.
-    const del = footer.createEl('button', { cls: 'claudian-library-card-delete', text: t('agentRoster.delete') });
+    const del = footer.createEl('button', { cls: 'specorator-library-card-delete', text: t('agentRoster.delete') });
     del.onclick = () => this.callbacks.onDeleted(this.original);
-    footer.createDiv({ cls: 'claudian-roster-footer-spacer' });
+    footer.createDiv({ cls: 'specorator-roster-footer-spacer' });
 
     const save = footer.createEl('button', { cls: 'mod-cta', text: t('agentRoster.save') });
     save.onclick = () => void this.save();

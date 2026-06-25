@@ -51,7 +51,7 @@ describe('RunSession sidecar — work-order note is untouched between status tra
     jest.advanceTimersByTime(60);
     await Promise.resolve();
     await Promise.resolve();
-    listener.onText('<claudian_progress>\nstep: scanning\ndone: 1/3\n</claudian_progress>');
+    listener.onText('<specorator_progress>\nstep: scanning\ndone: 1/3\n</specorator_progress>');
     jest.advanceTimersByTime(120);
     await Promise.resolve();
     await Promise.resolve();
@@ -65,10 +65,10 @@ describe('RunSession sidecar — work-order note is untouched between status tra
 
     // Terminal: the handoff write to the note happens exactly once, and the
     // ledger is finalized into the note exactly once.
-    listener.onText('<claudian_handoff>\nsummary: s\nverification: v\nrisks: None\nnext_action: n\n</claudian_handoff>');
+    listener.onText('<specorator_handoff>\nsummary: s\nverification: v\nrisks: None\nnext_action: n\n</specorator_handoff>');
     listener.onEnd({
       status: 'completed',
-      finalAssistantContent: '<claudian_handoff>\nsummary: s\nverification: v\nrisks: None\nnext_action: n\n</claudian_handoff>',
+      finalAssistantContent: '<specorator_handoff>\nsummary: s\nverification: v\nrisks: None\nnext_action: n\n</specorator_handoff>',
     });
     await jest.runAllTimersAsync();
 

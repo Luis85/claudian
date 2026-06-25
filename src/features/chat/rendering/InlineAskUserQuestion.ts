@@ -58,9 +58,9 @@ export class InlineAskUserQuestion {
   }
 
   render(): void {
-    this.rootEl = this.containerEl.createDiv({ cls: 'claudian-ask-question-inline' });
+    this.rootEl = this.containerEl.createDiv({ cls: 'specorator-ask-question-inline' });
 
-    const titleEl = this.rootEl.createDiv({ cls: 'claudian-ask-inline-title' });
+    const titleEl = this.rootEl.createDiv({ cls: 'specorator-ask-inline-title' });
     titleEl.setText(this.config.title);
 
     if (this.config.headerEl) {
@@ -84,10 +84,10 @@ export class InlineAskUserQuestion {
     }
 
     if (!this.config.immediateSelect) {
-      this.tabBar = this.rootEl.createDiv({ cls: 'claudian-ask-tab-bar' });
+      this.tabBar = this.rootEl.createDiv({ cls: 'specorator-ask-tab-bar' });
       this.renderTabBar();
     }
-    this.contentArea = this.rootEl.createDiv({ cls: 'claudian-ask-content' });
+    this.contentArea = this.rootEl.createDiv({ cls: 'specorator-ask-content' });
     this.renderTabContent();
 
     this.disposeActivation = activateInlineCard({
@@ -142,9 +142,9 @@ export class InlineAskUserQuestion {
 
     for (let idx = 0; idx < this.questions.length; idx++) {
       const answered = this.isQuestionAnswered(idx);
-      const tab = this.tabBar.createSpan({ cls: 'claudian-ask-tab' });
-      tab.createSpan({ text: this.questions[idx].header, cls: 'claudian-ask-tab-label' });
-      tab.createSpan({ text: answered ? ' \u2713' : '', cls: 'claudian-ask-tab-tick' });
+      const tab = this.tabBar.createSpan({ cls: 'specorator-ask-tab' });
+      tab.createSpan({ text: this.questions[idx].header, cls: 'specorator-ask-tab-label' });
+      tab.createSpan({ text: answered ? ' \u2713' : '', cls: 'specorator-ask-tab-tick' });
       tab.setAttribute('title', this.questions[idx].question);
 
       if (idx === this.activeTabIndex) tab.addClass('is-active');
@@ -154,9 +154,9 @@ export class InlineAskUserQuestion {
     }
 
     const allAnswered = this.questions.every((_, i) => this.isQuestionAnswered(i));
-    const submitTab = this.tabBar.createSpan({ cls: 'claudian-ask-tab' });
-    submitTab.createSpan({ text: allAnswered ? '\u2713 ' : '', cls: 'claudian-ask-tab-submit-check' });
-    submitTab.createSpan({ text: 'Submit', cls: 'claudian-ask-tab-label' });
+    const submitTab = this.tabBar.createSpan({ cls: 'specorator-ask-tab' });
+    submitTab.createSpan({ text: allAnswered ? '\u2713 ' : '', cls: 'specorator-ask-tab-submit-check' });
+    submitTab.createSpan({ text: 'Submit', cls: 'specorator-ask-tab-label' });
     if (this.activeTabIndex === this.questions.length) submitTab.addClass('is-active');
     submitTab.addEventListener('click', () => this.switchTab(this.questions.length));
     this.tabElements.push(submitTab);
@@ -195,10 +195,10 @@ export class InlineAskUserQuestion {
 
     this.contentArea.createDiv({
       text: q.question,
-      cls: 'claudian-ask-question-text',
+      cls: 'specorator-ask-question-text',
     });
 
-    const listEl = this.contentArea.createDiv({ cls: 'claudian-ask-list' });
+    const listEl = this.contentArea.createDiv({ cls: 'specorator-ask-list' });
 
     for (let optIdx = 0; optIdx < q.options.length; optIdx++) {
       this.appendQuestionOptionRow(listEl, idx, optIdx);
@@ -210,7 +210,7 @@ export class InlineAskUserQuestion {
 
     this.contentArea.createDiv({
       text: this.config.immediateSelect ? HINTS_TEXT_IMMEDIATE : HINTS_TEXT,
-      cls: 'claudian-ask-hints',
+      cls: 'specorator-ask-hints',
     });
   }
 
@@ -271,40 +271,40 @@ export class InlineAskUserQuestion {
   private renderSubmitTab(): void {
     this.contentArea.createDiv({
       text: 'Review your answers',
-      cls: 'claudian-ask-review-title',
+      cls: 'specorator-ask-review-title',
     });
 
-    const reviewEl = this.contentArea.createDiv({ cls: 'claudian-ask-review' });
+    const reviewEl = this.contentArea.createDiv({ cls: 'specorator-ask-review' });
 
     for (let idx = 0; idx < this.questions.length; idx++) {
       const q = this.questions[idx];
       const answerText = this.getAnswerText(idx);
 
-      const pairEl = reviewEl.createDiv({ cls: 'claudian-ask-review-pair' });
-      pairEl.createDiv({ text: `${idx + 1}.`, cls: 'claudian-ask-review-num' });
-      const bodyEl = pairEl.createDiv({ cls: 'claudian-ask-review-body' });
-      bodyEl.createDiv({ text: q.question, cls: 'claudian-ask-review-q-text' });
+      const pairEl = reviewEl.createDiv({ cls: 'specorator-ask-review-pair' });
+      pairEl.createDiv({ text: `${idx + 1}.`, cls: 'specorator-ask-review-num' });
+      const bodyEl = pairEl.createDiv({ cls: 'specorator-ask-review-body' });
+      bodyEl.createDiv({ text: q.question, cls: 'specorator-ask-review-q-text' });
       bodyEl.createDiv({
         text: answerText || 'Not answered',
-        cls: answerText ? 'claudian-ask-review-a-text' : 'claudian-ask-review-empty',
+        cls: answerText ? 'specorator-ask-review-a-text' : 'specorator-ask-review-empty',
       });
       pairEl.addEventListener('click', () => this.switchTab(idx));
     }
 
     this.contentArea.createDiv({
       text: 'Ready to submit your answers?',
-      cls: 'claudian-ask-review-prompt',
+      cls: 'specorator-ask-review-prompt',
     });
 
-    const actionsEl = this.contentArea.createDiv({ cls: 'claudian-ask-list' });
+    const actionsEl = this.contentArea.createDiv({ cls: 'specorator-ask-list' });
     const allAnswered = this.questions.every((_, i) => this.isQuestionAnswered(i));
 
-    const submitRow = actionsEl.createDiv({ cls: 'claudian-ask-item' });
+    const submitRow = actionsEl.createDiv({ cls: 'specorator-ask-item' });
     if (this.focusedItemIndex === 0) submitRow.addClass('is-focused');
     if (!allAnswered) submitRow.addClass('is-disabled');
-    submitRow.createSpan({ text: this.focusedItemIndex === 0 ? '\u203A' : '\u00A0', cls: 'claudian-ask-cursor' });
-    submitRow.createSpan({ text: '1. ', cls: 'claudian-ask-item-num' });
-    submitRow.createSpan({ text: 'Submit answers', cls: 'claudian-ask-item-label' });
+    submitRow.createSpan({ text: this.focusedItemIndex === 0 ? '\u203A' : '\u00A0', cls: 'specorator-ask-cursor' });
+    submitRow.createSpan({ text: '1. ', cls: 'specorator-ask-item-num' });
+    submitRow.createSpan({ text: 'Submit answers', cls: 'specorator-ask-item-label' });
     submitRow.addEventListener('click', () => {
       this.focusedItemIndex = 0;
       this.updateFocusIndicator();
@@ -312,11 +312,11 @@ export class InlineAskUserQuestion {
     });
     this.currentItems.push(submitRow);
 
-    const cancelRow = actionsEl.createDiv({ cls: 'claudian-ask-item' });
+    const cancelRow = actionsEl.createDiv({ cls: 'specorator-ask-item' });
     if (this.focusedItemIndex === 1) cancelRow.addClass('is-focused');
-    cancelRow.createSpan({ text: this.focusedItemIndex === 1 ? '\u203A' : '\u00A0', cls: 'claudian-ask-cursor' });
-    cancelRow.createSpan({ text: '2. ', cls: 'claudian-ask-item-num' });
-    cancelRow.createSpan({ text: 'Cancel', cls: 'claudian-ask-item-label' });
+    cancelRow.createSpan({ text: this.focusedItemIndex === 1 ? '\u203A' : '\u00A0', cls: 'specorator-ask-cursor' });
+    cancelRow.createSpan({ text: '2. ', cls: 'specorator-ask-item-num' });
+    cancelRow.createSpan({ text: 'Cancel', cls: 'specorator-ask-item-label' });
     cancelRow.addEventListener('click', () => {
       this.focusedItemIndex = 1;
       this.handleResolve(null);
@@ -325,7 +325,7 @@ export class InlineAskUserQuestion {
 
     this.contentArea.createDiv({
       text: HINTS_TEXT,
-      cls: 'claudian-ask-hints',
+      cls: 'specorator-ask-hints',
     });
   }
 
@@ -376,7 +376,7 @@ export class InlineAskUserQuestion {
   private renderMultiSelectCheckbox(parent: HTMLElement, checked: boolean): void {
     parent.createSpan({
       text: checked ? '[\u2713] ' : '[ ] ',
-      cls: `claudian-ask-check${checked ? ' is-checked' : ''}`,
+      cls: `specorator-ask-check${checked ? ' is-checked' : ''}`,
     });
   }
 
@@ -392,16 +392,16 @@ export class InlineAskUserQuestion {
       item.toggleClass('is-selected', isSelected);
 
       if (isMulti) {
-        const checkSpan = item.querySelector('.claudian-ask-check');
+        const checkSpan = item.querySelector('.specorator-ask-check');
         if (checkSpan) {
           checkSpan.textContent = isSelected ? '[\u2713] ' : '[ ] ';
           checkSpan.toggleClass('is-checked', isSelected);
         }
       } else {
-        const labelRow = item.querySelector('.claudian-ask-label-row');
-        const existingMark = item.querySelector('.claudian-ask-check-mark');
+        const labelRow = item.querySelector('.specorator-ask-label-row');
+        const existingMark = item.querySelector('.specorator-ask-check-mark');
         if (isSelected && !existingMark && labelRow) {
-          labelRow.createSpan({ text: ' \u2713', cls: 'claudian-ask-check-mark' });
+          labelRow.createSpan({ text: ' \u2713', cls: 'specorator-ask-check-mark' });
         } else if (!isSelected && existingMark) {
           existingMark.remove();
         }
@@ -412,7 +412,7 @@ export class InlineAskUserQuestion {
   private updateFocusIndicator(): void {
     for (let i = 0; i < this.currentItems.length; i++) {
       const item = this.currentItems[i];
-      const cursor = item.querySelector('.claudian-ask-cursor');
+      const cursor = item.querySelector('.specorator-ask-cursor');
       if (i === this.focusedItemIndex) {
         item.addClass('is-focused');
         if (cursor) cursor.textContent = '\u203A';
@@ -427,14 +427,14 @@ export class InlineAskUserQuestion {
   private updateTabIndicators(): void {
     for (let idx = 0; idx < this.questions.length; idx++) {
       const tab = this.tabElements[idx];
-      const tick = tab.querySelector('.claudian-ask-tab-tick');
+      const tick = tab.querySelector('.specorator-ask-tab-tick');
       const answered = this.isQuestionAnswered(idx);
       tab.toggleClass('is-answered', answered);
       if (tick) tick.textContent = answered ? ' \u2713' : '';
     }
     const submitTab = this.tabElements[this.questions.length];
     if (submitTab) {
-      const submitCheck = submitTab.querySelector('.claudian-ask-tab-submit-check');
+      const submitCheck = submitTab.querySelector('.specorator-ask-tab-submit-check');
       const allAnswered = this.questions.every((_, i) => this.isQuestionAnswered(i));
       if (submitCheck) submitCheck.textContent = allAnswered ? '\u2713 ' : '';
     }
@@ -581,7 +581,7 @@ export class InlineAskUserQuestion {
         } else if (this.canShowCustomInputForQuestion(q)) {
           this.isInputFocused = true;
           const customRow = this.currentItems[this.focusedItemIndex];
-          const input = customRow?.querySelector('.claudian-ask-custom-text') as HTMLInputElement;
+          const input = customRow?.querySelector('.specorator-ask-custom-text') as HTMLInputElement;
           input?.focus();
         }
         break;

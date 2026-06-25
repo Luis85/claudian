@@ -41,14 +41,14 @@ export class LucideIconPicker {
       this.close();
     };
 
-    this.rootEl = parentEl.createDiv({ cls: 'claudian-lucide-icon-picker' });
-    this.triggerEl = this.rootEl.createDiv({ cls: 'claudian-lucide-icon-picker-trigger' });
+    this.rootEl = parentEl.createDiv({ cls: 'specorator-lucide-icon-picker' });
+    this.triggerEl = this.rootEl.createDiv({ cls: 'specorator-lucide-icon-picker-trigger' });
     this.triggerEl.setAttr('role', 'button');
     this.triggerEl.setAttr('tabindex', '0');
 
-    this.triggerIconEl = this.triggerEl.createSpan({ cls: 'claudian-lucide-icon-picker-trigger-icon' });
-    this.triggerLabelEl = this.triggerEl.createSpan({ cls: 'claudian-lucide-icon-picker-trigger-label' });
-    this.triggerEl.createSpan({ cls: 'claudian-lucide-icon-picker-trigger-chevron' });
+    this.triggerIconEl = this.triggerEl.createSpan({ cls: 'specorator-lucide-icon-picker-trigger-icon' });
+    this.triggerLabelEl = this.triggerEl.createSpan({ cls: 'specorator-lucide-icon-picker-trigger-label' });
+    this.triggerEl.createSpan({ cls: 'specorator-lucide-icon-picker-trigger-chevron' });
 
     this.updateTrigger();
     this.triggerEl.addEventListener('click', () => {
@@ -94,12 +94,12 @@ export class LucideIconPicker {
     this.isOpen = true;
     this.triggerEl.addClass('is-open');
 
-    this.dropdownEl = this.rootEl.createDiv({ cls: 'claudian-lucide-icon-picker-dropdown' });
+    this.dropdownEl = this.rootEl.createDiv({ cls: 'specorator-lucide-icon-picker-dropdown' });
 
-    const searchWrap = this.dropdownEl.createDiv({ cls: 'claudian-lucide-icon-picker-search' });
+    const searchWrap = this.dropdownEl.createDiv({ cls: 'specorator-lucide-icon-picker-search' });
     this.searchInputEl = searchWrap.createEl('input', {
       type: 'search',
-      cls: 'claudian-lucide-icon-picker-search-input',
+      cls: 'specorator-lucide-icon-picker-search-input',
     });
     this.searchInputEl.placeholder = t('quickActions.editor.iconSearch');
     this.searchInputEl.addEventListener('input', () => {
@@ -113,7 +113,7 @@ export class LucideIconPicker {
       }
     });
 
-    this.gridEl = this.dropdownEl.createDiv({ cls: 'claudian-lucide-icon-picker-grid' });
+    this.gridEl = this.dropdownEl.createDiv({ cls: 'specorator-lucide-icon-picker-grid' });
     this.renderGrid();
 
     window.setTimeout(() => {
@@ -163,7 +163,7 @@ export class LucideIconPicker {
     const filtered = filterLucideIcons(query);
 
     const noneBtn = this.gridEl.createEl('button', {
-      cls: 'claudian-lucide-icon-picker-item claudian-lucide-icon-picker-item-none',
+      cls: 'specorator-lucide-icon-picker-item specorator-lucide-icon-picker-item-none',
       attr: { type: 'button', title: t('quickActions.editor.iconNone') },
     });
     noneBtn.createSpan({ text: '—' });
@@ -177,7 +177,7 @@ export class LucideIconPicker {
     let rendered = 0;
     for (const iconId of filtered) {
       const btn = this.gridEl.createEl('button', {
-        cls: 'claudian-lucide-icon-picker-item',
+        cls: 'specorator-lucide-icon-picker-item',
         attr: { type: 'button', title: iconId },
       });
       if (!iconRenders(iconId, btn)) {
@@ -195,7 +195,7 @@ export class LucideIconPicker {
 
     if (rendered === 0 && query.trim()) {
       this.gridEl.createDiv({
-        cls: 'claudian-lucide-icon-picker-empty',
+        cls: 'specorator-lucide-icon-picker-empty',
         text: t('quickActions.editor.iconNoResults'),
       });
     }

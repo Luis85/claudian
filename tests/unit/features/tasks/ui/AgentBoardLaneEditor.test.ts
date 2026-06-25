@@ -58,10 +58,10 @@ function findCheckbox(
   laneIndex: number,
   status: string,
 ): HTMLInputElement {
-  const lanes = host.querySelectorAll('.claudian-lane-editor-lane');
+  const lanes = host.querySelectorAll('.specorator-lane-editor-lane');
   const lane = lanes[laneIndex];
   if (!lane) throw new Error(`No lane block at index ${laneIndex}`);
-  const labels = lane.querySelectorAll('.claudian-lane-editor-status');
+  const labels = lane.querySelectorAll('.specorator-lane-editor-status');
   for (const label of Array.from(labels)) {
     // The matching span is the one whose text equals the status. The duplicate
     // hint span (if present) reads "Also in '…'" and does not match.
@@ -123,16 +123,16 @@ describe('renderAgentBoardLaneEditor — duplicate-status hint', () => {
 
     // The second lane's `ready` checkbox is the duplicate occurrence — it should
     // surface as a duplicate.
-    const lanes = host.querySelectorAll('.claudian-lane-editor-lane');
+    const lanes = host.querySelectorAll('.specorator-lane-editor-lane');
     const lane2 = lanes[1];
-    const labels = Array.from(lane2.querySelectorAll('.claudian-lane-editor-status'));
+    const labels = Array.from(lane2.querySelectorAll('.specorator-lane-editor-status'));
     const readyLabel = labels.find(
       (label) => label.querySelector('span')?.textContent?.trim() === 'ready',
     );
     expect(readyLabel).toBeDefined();
-    expect(readyLabel!.classList.contains('claudian-lane-editor-status--duplicate')).toBe(true);
+    expect(readyLabel!.classList.contains('specorator-lane-editor-status--duplicate')).toBe(true);
 
-    const hint = lane2.querySelector('.claudian-lane-editor-status-hint');
+    const hint = lane2.querySelector('.specorator-lane-editor-status-hint');
     expect(hint).not.toBeNull();
     expect(hint!.textContent).toContain('Ready lane');
   });
@@ -145,9 +145,9 @@ describe('renderAgentBoardLaneEditor — duplicate-status hint', () => {
     const host = document.createElement('div');
     renderAgentBoardLaneEditor(host, plugin);
 
-    const duplicates = host.querySelectorAll('.claudian-lane-editor-status--duplicate');
+    const duplicates = host.querySelectorAll('.specorator-lane-editor-status--duplicate');
     expect(duplicates.length).toBe(0);
-    const hints = host.querySelectorAll('.claudian-lane-editor-status-hint');
+    const hints = host.querySelectorAll('.specorator-lane-editor-status-hint');
     expect(hints.length).toBe(0);
   });
 
@@ -163,9 +163,9 @@ describe('renderAgentBoardLaneEditor — duplicate-status hint', () => {
     const host = document.createElement('div');
     renderAgentBoardLaneEditor(host, plugin);
 
-    const duplicates = host.querySelectorAll('.claudian-lane-editor-status--duplicate');
+    const duplicates = host.querySelectorAll('.specorator-lane-editor-status--duplicate');
     expect(duplicates.length).toBe(0);
-    const hints = host.querySelectorAll('.claudian-lane-editor-status-hint');
+    const hints = host.querySelectorAll('.specorator-lane-editor-status-hint');
     expect(hints.length).toBe(0);
   });
 
@@ -178,7 +178,7 @@ describe('renderAgentBoardLaneEditor — duplicate-status hint', () => {
     const host = document.createElement('div');
     renderAgentBoardLaneEditor(host, plugin);
 
-    const duplicates = host.querySelectorAll('.claudian-lane-editor-status--duplicate');
+    const duplicates = host.querySelectorAll('.specorator-lane-editor-status--duplicate');
     expect(duplicates.length).toBe(0);
   });
 
@@ -193,8 +193,8 @@ describe('renderAgentBoardLaneEditor — duplicate-status hint', () => {
     const host = document.createElement('div');
     renderAgentBoardLaneEditor(host, plugin);
 
-    const lanes = host.querySelectorAll('.claudian-lane-editor-lane');
-    const lane2Hints = lanes[1].querySelectorAll('.claudian-lane-editor-status-hint');
+    const lanes = host.querySelectorAll('.specorator-lane-editor-lane');
+    const lane2Hints = lanes[1].querySelectorAll('.specorator-lane-editor-status-hint');
     expect(lane2Hints.length).toBe(1);
     const hintText = lane2Hints[0].textContent ?? '';
     expect(hintText).toContain('ready');
@@ -263,7 +263,7 @@ describe('renderAgentBoardLaneEditor — duplicate-status hint', () => {
     const host = document.createElement('div');
     renderAgentBoardLaneEditor(host, plugin);
 
-    const lanes = host.querySelectorAll('.claudian-lane-editor-lane');
+    const lanes = host.querySelectorAll('.specorator-lane-editor-lane');
     const instances = (Setting as unknown as { instances: Array<{ setName: jest.Mock }> })
       .instances;
     const namesCalled = instances.flatMap((s) =>

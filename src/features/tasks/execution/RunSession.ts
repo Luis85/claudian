@@ -1,9 +1,9 @@
 import type { TaskEventEmitter } from '../events';
 import type { TaskLedgerEntry, TaskSpec, TaskStatus } from '../model/taskTypes';
 import type { RunSidecarHeartbeat } from '../storage/RunSidecarStore';
-import { type ClaudianBlock,ClaudianBlockParser } from './ClaudianBlockParser';
 import { LedgerWriter } from './LedgerWriter';
 import type { ProviderStreamAdapter } from './ProviderStreamAdapter';
+import { type SpecoratorBlock,SpecoratorBlockParser } from './SpecoratorBlockParser';
 import { parseTaskHandoff } from './TaskHandoffParser';
 
 /**
@@ -54,7 +54,7 @@ export interface RunSessionDeps {
   appendLedger: (runId: string, entry: TaskLedgerEntry) => Promise<void>;
   /**
    * Snapshots the sidecar ledger into the work-order note's
-   * `<!-- claudian:run-ledger-* -->` region. Called once on every terminal
+   * `<!-- specorator:run-ledger-* -->` region. Called once on every terminal
    * path (completed, failed, canceled, needs_handoff) after the terminal
    * status write and (when present) the handoff write.
    */
@@ -90,7 +90,7 @@ const DEFAULTS = {
  * timer tick is missed while the initial status write is in flight.
  */
 export class RunSession {
-  private readonly parser = new ClaudianBlockParser();
+  private readonly parser = new SpecoratorBlockParser();
   private readonly ledger: LedgerWriter;
   private lastEvent = Date.now();
   private heartbeatTimer: number | null = null;
@@ -327,7 +327,7 @@ export class RunSession {
     }
   }
 
-  private handleProgress(block: ClaudianBlock): void {
+  private handleProgress(block: SpecoratorBlock): void {
     const step = block.fields.step ?? '';
     const doneStr = block.fields.done;
     let done: { complete: number; total: number } | undefined;
@@ -339,7 +339,7 @@ export class RunSession {
     this.deps.events.emit('task:progress', { taskId: this.taskId, path: this.path, step, done });
   }
 
-  private beginPause(kind: 'needs_input' | 'needs_approval', block: ClaudianBlock): void {
+  private beginPause(kind: 'needs_input' | 'needs_approval', block: SpecoratorBlock): void {
     this.paused = true;
     this.hasPaused = true;
     this.pauseEndsPending += 1;
@@ -352,7 +352,7 @@ export class RunSession {
 
   private async applyPause(
     kind: 'needs_input' | 'needs_approval',
-    block: ClaudianBlock,
+    block: SpecoratorBlock,
     reason: string | null,
   ): Promise<void> {
     const ts = this.deps.now();
@@ -425,7 +425,7 @@ export class RunSession {
     // handoff/pause block is the assistant pausing for clarification. Persist
     // as needs_input and keep the stream wired so a follow-up turn can settle
     // the run — instead of marking the work order needs_handoff and stranding
-    // any later `<claudian_needs_input>` block the assistant emits.
+    // any later `<specorator_needs_input>` block the assistant emits.
     if (payload.status === 'completed' && !this.paused
         && payload.finalAssistantContent.trim().length > 0
         && !parseTaskHandoff(payload.finalAssistantContent).ok) {

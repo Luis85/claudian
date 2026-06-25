@@ -15,11 +15,11 @@ import {
 
 describe('buildOpencodeManagedConfig', () => {
   it('pins OpenCode build, YOLO, safe, and plan prompts to the managed prompt file', () => {
-    expect(buildOpencodeManagedConfig({}, '/vault/.claudian/opencode/system.md', 'Yishen')).toEqual({
+    expect(buildOpencodeManagedConfig({}, '/vault/.specorator/opencode/system.md', 'Yishen')).toEqual({
       $schema: 'https://opencode.ai/config.json',
       agent: {
         build: {
-          prompt: '{file:/vault/.claudian/opencode/system.md}',
+          prompt: '{file:/vault/.specorator/opencode/system.md}',
         },
         [OPENCODE_YOLO_MODE_ID]: {
           mode: 'primary',
@@ -27,7 +27,7 @@ describe('buildOpencodeManagedConfig', () => {
             plan_enter: 'allow',
             question: 'allow',
           },
-          prompt: '{file:/vault/.claudian/opencode/system.md}',
+          prompt: '{file:/vault/.specorator/opencode/system.md}',
         },
         [OPENCODE_SAFE_MODE_ID]: {
           mode: 'primary',
@@ -37,10 +37,10 @@ describe('buildOpencodeManagedConfig', () => {
             plan_enter: 'allow',
             question: 'allow',
           },
-          prompt: '{file:/vault/.claudian/opencode/system.md}',
+          prompt: '{file:/vault/.specorator/opencode/system.md}',
         },
         plan: {
-          prompt: '{file:/vault/.claudian/opencode/system.md}',
+          prompt: '{file:/vault/.specorator/opencode/system.md}',
         },
       },
       username: 'Yishen',
@@ -50,7 +50,7 @@ describe('buildOpencodeManagedConfig', () => {
   it('can create a dedicated aux agent and default it for the process', () => {
     expect(buildOpencodeManagedConfig(
       {},
-      '/vault/.claudian/opencode/auxiliary/system.md',
+      '/vault/.specorator/opencode/auxiliary/system.md',
       undefined,
       [{
         definition: {
@@ -60,22 +60,22 @@ describe('buildOpencodeManagedConfig', () => {
             read: 'allow',
           },
         },
-        id: 'claudian-aux-readonly',
+        id: 'specorator-aux-readonly',
       }],
-      'claudian-aux-readonly',
+      'specorator-aux-readonly',
     )).toEqual({
       $schema: 'https://opencode.ai/config.json',
       agent: {
-        'claudian-aux-readonly': {
+        'specorator-aux-readonly': {
           mode: 'primary',
           permission: {
             '*': 'deny',
             read: 'allow',
           },
-          prompt: '{file:/vault/.claudian/opencode/auxiliary/system.md}',
+          prompt: '{file:/vault/.specorator/opencode/auxiliary/system.md}',
         },
       },
-      default_agent: 'claudian-aux-readonly',
+      default_agent: 'specorator-aux-readonly',
     });
   });
 
@@ -97,7 +97,7 @@ describe('buildOpencodeManagedConfig', () => {
         },
       },
       username: 'Existing',
-    }, '/vault/.claudian/opencode/system.md')).toEqual({
+    }, '/vault/.specorator/opencode/system.md')).toEqual({
       $schema: 'https://opencode.ai/config.json',
       agent: {
         build: {
@@ -106,7 +106,7 @@ describe('buildOpencodeManagedConfig', () => {
             bash: 'ask',
             edit: 'ask',
           },
-          prompt: '{file:/vault/.claudian/opencode/system.md}',
+          prompt: '{file:/vault/.specorator/opencode/system.md}',
         },
         [OPENCODE_YOLO_MODE_ID]: {
           mode: 'primary',
@@ -114,7 +114,7 @@ describe('buildOpencodeManagedConfig', () => {
             plan_enter: 'allow',
             question: 'allow',
           },
-          prompt: '{file:/vault/.claudian/opencode/system.md}',
+          prompt: '{file:/vault/.specorator/opencode/system.md}',
         },
         [OPENCODE_SAFE_MODE_ID]: {
           mode: 'primary',
@@ -124,10 +124,10 @@ describe('buildOpencodeManagedConfig', () => {
             plan_enter: 'allow',
             question: 'allow',
           },
-          prompt: '{file:/vault/.claudian/opencode/system.md}',
+          prompt: '{file:/vault/.specorator/opencode/system.md}',
         },
         plan: {
-          prompt: '{file:/vault/.claudian/opencode/system.md}',
+          prompt: '{file:/vault/.specorator/opencode/system.md}',
         },
       },
       default_agent: 'build',
@@ -140,17 +140,17 @@ describe('buildOpencodeManagedConfig', () => {
     });
   });
 
-  it('adds mcp.claudian remote entry when an httpToolServerConfig is provided', () => {
+  it('adds mcp.specorator remote entry when an httpToolServerConfig is provided', () => {
     const result = buildOpencodeManagedConfig(
       {},
-      '/vault/.claudian/opencode/system.md',
+      '/vault/.specorator/opencode/system.md',
       undefined,
       undefined,
       undefined,
       { url: 'http://127.0.0.1:54321/mcp', headers: { Authorization: 'Bearer test-token' } },
     );
     expect(result.mcp).toEqual({
-      claudian: {
+      specorator: {
         type: 'remote',
         url: 'http://127.0.0.1:54321/mcp',
         headers: { Authorization: 'Bearer test-token' },
@@ -159,10 +159,10 @@ describe('buildOpencodeManagedConfig', () => {
     });
   });
 
-  it('omits mcp.claudian when httpToolServerConfig is null', () => {
+  it('omits mcp.specorator when httpToolServerConfig is null', () => {
     const result = buildOpencodeManagedConfig(
       {},
-      '/vault/.claudian/opencode/system.md',
+      '/vault/.specorator/opencode/system.md',
       undefined,
       undefined,
       undefined,
@@ -171,15 +171,15 @@ describe('buildOpencodeManagedConfig', () => {
     expect(result.mcp).toBeUndefined();
   });
 
-  it('omits mcp.claudian when httpToolServerConfig is not provided', () => {
-    const result = buildOpencodeManagedConfig({}, '/vault/.claudian/opencode/system.md');
+  it('omits mcp.specorator when httpToolServerConfig is not provided', () => {
+    const result = buildOpencodeManagedConfig({}, '/vault/.specorator/opencode/system.md');
     expect(result.mcp).toBeUndefined();
   });
 
-  it('merges mcp.claudian with existing mcp entries from base config', () => {
+  it('merges mcp.specorator with existing mcp entries from base config', () => {
     const result = buildOpencodeManagedConfig(
       { mcp: { other: { type: 'stdio', command: 'my-server' } } },
-      '/vault/.claudian/opencode/system.md',
+      '/vault/.specorator/opencode/system.md',
       undefined,
       undefined,
       undefined,
@@ -187,7 +187,7 @@ describe('buildOpencodeManagedConfig', () => {
     );
     expect(result.mcp).toMatchObject({
       other: { type: 'stdio', command: 'my-server' },
-      claudian: { type: 'remote', enabled: true },
+      specorator: { type: 'remote', enabled: true },
     });
   });
 });
@@ -195,7 +195,7 @@ describe('buildOpencodeManagedConfig', () => {
 describe('prepareOpencodeLaunchArtifacts', () => {
   // POSIX-only path assertion; on win32 the generated config embeds Windows-style paths.
   itPosix('layers the managed prompt config on top of OPENCODE_CONFIG', async () => {
-    const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'claudian-opencode-artifacts-'));
+    const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'specorator-opencode-artifacts-'));
     const baseConfigPath = path.join(tmpRoot, 'opencode.base.json');
     await fs.writeFile(baseConfigPath, JSON.stringify({
       agent: {
@@ -225,8 +225,8 @@ describe('prepareOpencodeLaunchArtifacts', () => {
       workspaceRoot: tmpRoot,
     });
 
-    expect(result.configPath).toBe(path.join(tmpRoot, '.claudian', 'opencode', 'config.json'));
-    expect(result.systemPromptPath).toBe(path.join(tmpRoot, '.claudian', 'opencode', 'system.md'));
+    expect(result.configPath).toBe(path.join(tmpRoot, '.specorator', 'opencode', 'config.json'));
+    expect(result.systemPromptPath).toBe(path.join(tmpRoot, '.specorator', 'opencode', 'system.md'));
     expect(result.configContent).toContain(`"prompt": "{file:${result.systemPromptPath}}"`);
     const generatedConfig = JSON.parse(await fs.readFile(result.configPath, 'utf8'));
     expect(generatedConfig).toMatchObject({
@@ -268,7 +268,7 @@ describe('prepareOpencodeLaunchArtifacts', () => {
   });
 
   it('keeps the launch key stable when the resolved default database is later passed as OPENCODE_DB', async () => {
-    const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'claudian-opencode-artifacts-'));
+    const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'specorator-opencode-artifacts-'));
     const baseParams = {
       settings: {
         customPrompt: '',
@@ -298,7 +298,7 @@ describe('prepareOpencodeLaunchArtifacts', () => {
   });
 
   it('creates the resolved OpenCode database directory before launch', async () => {
-    const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'claudian-opencode-artifacts-'));
+    const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'specorator-opencode-artifacts-'));
     const xdgDataHome = path.join(tmpRoot, 'xdg-data');
     const databaseDir = path.join(xdgDataHome, 'opencode');
 

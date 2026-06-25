@@ -1,20 +1,20 @@
 /* Shared layout for the Tool Library and Skill Library views. */
 
-.claudian-library {
+.specorator-library {
   padding: var(--size-4-4);
 }
 
 /* Hide Obsidian's per-view title bar on the four library views — the in-view
    nav strip identifies the current view and navigates between them. */
-.workspace-leaf-content[data-type="claudian-agent-roster"] .view-header,
-.workspace-leaf-content[data-type="claudian-tool-library"] .view-header,
-.workspace-leaf-content[data-type="claudian-skill-library"] .view-header,
-.workspace-leaf-content[data-type="claudian-loop-library"] .view-header {
+.workspace-leaf-content[data-type="specorator-agent-roster"] .view-header,
+.workspace-leaf-content[data-type="specorator-tool-library"] .view-header,
+.workspace-leaf-content[data-type="specorator-skill-library"] .view-header,
+.workspace-leaf-content[data-type="specorator-loop-library"] .view-header {
   display: none;
 }
 
 /* ── Cross-library nav strip ── */
-.claudian-library-nav {
+.specorator-library-nav {
   display: flex;
   gap: var(--size-4-1);
   padding-bottom: var(--size-4-3);
@@ -22,7 +22,7 @@
   border-bottom: 1px solid var(--background-modifier-border);
 }
 
-.claudian-library-nav-item {
+.specorator-library-nav-item {
   flex: 1 1 0;
   font-weight: var(--font-medium);
   color: var(--text-muted);
@@ -32,18 +32,18 @@
   cursor: pointer;
 }
 
-.claudian-library-nav-item:hover {
+.specorator-library-nav-item:hover {
   color: var(--text-normal);
 }
 
-.claudian-library-nav-item.is-active {
+.specorator-library-nav-item.is-active {
   color: var(--text-on-accent);
   background: var(--interactive-accent);
   border-color: var(--interactive-accent);
   cursor: default;
 }
 
-.claudian-library-header {
+.specorator-library-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -52,29 +52,29 @@
   margin-bottom: var(--size-4-4);
 }
 
-.claudian-library-header h2 {
+.specorator-library-header h2 {
   margin: 0;
 }
 
-.claudian-library-header-actions {
+.specorator-library-header-actions {
   display: flex;
   gap: var(--size-4-2);
 }
 
-.claudian-library-list {
+.specorator-library-list {
   display: flex;
   flex-direction: column;
   gap: var(--size-4-2);
 }
 
-.claudian-library-loading {
+.specorator-library-loading {
   color: var(--text-muted);
   font-size: var(--font-ui-small);
   text-align: center;
   padding: var(--size-4-4);
 }
 
-.claudian-library-empty {
+.specorator-library-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -84,27 +84,27 @@
   padding: var(--size-4-8) var(--size-4-4);
 }
 
-.claudian-library-empty-icon {
+.specorator-library-empty-icon {
   display: flex;
   color: var(--text-faint);
 }
 
-.claudian-library-empty-icon svg {
+.specorator-library-empty-icon svg {
   width: 36px;
   height: 36px;
 }
 
-.claudian-library-empty-text {
+.specorator-library-empty-text {
   max-width: 36ch;
   font-size: var(--font-ui-small);
   line-height: var(--line-height-tight);
 }
 
-.claudian-library-empty-action {
+.specorator-library-empty-action {
   margin-top: var(--size-4-1);
 }
 
-.claudian-library-card {
+.specorator-library-card {
   display: flex;
   align-items: center;
   gap: var(--size-4-3);
@@ -115,17 +115,17 @@
 }
 
 /* Optional leading media slot (e.g. an avatar) rendered before the body. */
-.claudian-library-card-leading {
+.specorator-library-card-leading {
   flex: 0 0 auto;
   display: flex;
 }
 
-.claudian-library-card-body {
+.specorator-library-card-body {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.claudian-library-card-name {
+.specorator-library-card-name {
   font-weight: var(--font-semibold);
   display: flex;
   align-items: center;
@@ -135,7 +135,7 @@
 /* The opt-in `nameAsButton` name button (createLibraryCard) renders inline like
    the text it replaces: reset native button chrome and inherit the name row's
    font/color. A consumer can still layer its own deltas on top. */
-.claudian-library-card-name-button {
+.specorator-library-card-name-button {
   background: none;
   border: none;
   padding: 0;
@@ -147,7 +147,7 @@
   cursor: pointer;
 }
 
-.claudian-library-card-desc {
+.specorator-library-card-desc {
   color: var(--text-muted);
   font-size: var(--font-ui-small);
   margin-top: 2px;
@@ -158,14 +158,14 @@
   overflow: hidden;
 }
 
-.claudian-library-card-error {
+.specorator-library-card-error {
   color: var(--text-error);
   font-size: var(--font-ui-small);
   font-family: var(--font-monospace);
   margin-top: 2px;
 }
 
-.claudian-library-chip {
+.specorator-library-chip {
   font-size: var(--font-ui-smaller);
   border-radius: var(--radius-s);
   padding: 0 5px;
@@ -174,52 +174,52 @@
   letter-spacing: 0.03em;
 }
 
-.claudian-library-chip-ready {
+.specorator-library-chip-ready {
   color: var(--text-on-accent);
   background: var(--color-green);
 }
 
-.claudian-library-chip-error {
+.specorator-library-chip-error {
   color: var(--text-on-accent);
   background: var(--color-red);
 }
 
-.claudian-library-chip-muted {
+.specorator-library-chip-muted {
   color: var(--text-muted);
   background: var(--background-modifier-border);
 }
 
 /* Outline variant: distinguishes the read-only marker from the filled provider chip. */
-.claudian-library-chip-outline {
+.specorator-library-chip-outline {
   color: var(--text-muted);
   background: transparent;
   border: 1px solid var(--background-modifier-border);
 }
 
-.claudian-library-card-actions {
+.specorator-library-card-actions {
   flex: 0 0 auto;
   display: flex;
   gap: var(--size-4-1);
 }
 
-.claudian-library-card-delete {
+.specorator-library-card-delete {
   color: var(--text-error);
 }
 
 /* ── Editor modal (tools + skills) ── */
-.claudian-library-modal {
+.specorator-library-modal {
   --dialog-width: min(820px, 92vw);
   --modal-width: min(820px, 92vw);
   --modal-max-width: min(820px, 92vw);
 }
 
-.claudian-library-modal-content {
+.specorator-library-modal-content {
   display: flex;
   flex-direction: column;
   gap: var(--size-4-2);
 }
 
-.claudian-library-modal-meta {
+.specorator-library-modal-meta {
   display: flex;
   flex-direction: column;
   gap: var(--size-4-2);
@@ -229,34 +229,34 @@
   border-radius: var(--radius-m);
 }
 
-.claudian-library-modal-status {
+.specorator-library-modal-status {
   display: flex;
 }
 
-.claudian-library-modal-field {
+.specorator-library-modal-field {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.claudian-library-modal-label {
+.specorator-library-modal-label {
   font-size: var(--font-ui-smaller);
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--text-muted);
 }
 
-.claudian-library-modal-value {
+.specorator-library-modal-value {
   color: var(--text-normal);
 }
 
-.claudian-library-modal-hint {
+.specorator-library-modal-hint {
   color: var(--text-muted);
   font-size: var(--font-ui-small);
 }
 
-.claudian-library-modal-schema,
-.claudian-library-modal-error {
+.specorator-library-modal-schema,
+.specorator-library-modal-error {
   margin: 0;
   padding: var(--size-4-2);
   max-height: 180px;
@@ -269,11 +269,11 @@
   white-space: pre-wrap;
 }
 
-.claudian-library-modal-error {
+.specorator-library-modal-error {
   color: var(--text-error);
 }
 
-.claudian-library-modal-code {
+.specorator-library-modal-code {
   width: 100%;
   min-height: 320px;
   resize: vertical;
@@ -286,7 +286,7 @@
   overflow-x: auto;
 }
 
-.claudian-library-modal-footer {
+.specorator-library-modal-footer {
   display: flex;
   justify-content: flex-end;
   gap: var(--size-4-2);

@@ -5,8 +5,8 @@ import { scrollMessagesToBottom } from '@/features/chat/rendering/scrollToBottom
 describe('scrollMessagesToBottom', () => {
   it('scrolls the trailing element into view without reading scrollHeight', () => {
     const messagesEl = createMockEl();
-    messagesEl.createDiv({ cls: 'claudian-message' });
-    const anchor = messagesEl.createDiv({ cls: 'claudian-message' });
+    messagesEl.createDiv({ cls: 'specorator-message' });
+    const anchor = messagesEl.createDiv({ cls: 'specorator-message' });
 
     let scrollHeightReads = 0;
     Object.defineProperty(messagesEl, 'scrollHeight', {

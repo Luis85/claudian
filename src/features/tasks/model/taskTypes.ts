@@ -16,7 +16,7 @@ export type TaskStatus =
 export type TaskPriority = '0 - urgent' | '1 - high' | '2 - normal' | '3 - low';
 
 export interface TaskFrontmatter {
-  type: 'claudian-work-order';
+  type: 'specorator-work-order';
   schema_version: 1;
   id: string;
   title: string;

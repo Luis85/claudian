@@ -1,6 +1,6 @@
 import { Notice } from 'obsidian';
 
-import type { ClaudianEventMap } from '@/app/events/claudianEvents';
+import type { SpecoratorEventMap } from '@/app/events/specoratorEvents';
 import type { EventBus } from '@/core/events/EventBus';
 import { registerHydrationFailedSubscriber } from '@/features/chat/hydration/hydrationFailedSubscriber';
 
@@ -10,7 +10,7 @@ describe('hydrationFailedSubscriber', () => {
   });
 
   function makeStubBus(): {
-    bus: EventBus<ClaudianEventMap>;
+    bus: EventBus<SpecoratorEventMap>;
     handlers: Record<string, (payload: unknown) => void>;
   } {
     const handlers: Record<string, (payload: unknown) => void> = {};
@@ -19,7 +19,7 @@ describe('hydrationFailedSubscriber', () => {
         handlers[name] = h;
         return () => { delete handlers[name]; };
       },
-    } as unknown as EventBus<ClaudianEventMap>;
+    } as unknown as EventBus<SpecoratorEventMap>;
     return { bus, handlers };
   }
 

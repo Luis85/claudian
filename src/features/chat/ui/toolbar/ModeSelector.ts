@@ -12,7 +12,7 @@ export class ModeSelector {
 
   constructor(parentEl: HTMLElement, callbacks: ToolbarCallbacks) {
     this.callbacks = callbacks;
-    this.container = parentEl.createDiv({ cls: 'claudian-mode-selector' });
+    this.container = parentEl.createDiv({ cls: 'specorator-mode-selector' });
     this.render();
   }
 
@@ -23,8 +23,8 @@ export class ModeSelector {
   private render() {
     this.container.empty();
 
-    this.labelEl = this.container.createSpan({ cls: 'claudian-mode-label' });
-    this.toggleEl = this.container.createDiv({ cls: 'claudian-toggle-switch' });
+    this.labelEl = this.container.createSpan({ cls: 'specorator-mode-label' });
+    this.toggleEl = this.container.createDiv({ cls: 'specorator-toggle-switch' });
 
     this.toggleEl.addEventListener('click', () => {
       runToolbarAction(() => this.toggle(), 'Failed to change mode');
@@ -52,11 +52,11 @@ export class ModeSelector {
 
     const selectorConfig = this.getSelectorConfig();
     if (!selectorConfig || selectorConfig.options.length !== 2) {
-      this.container.addClass('claudian-hidden');
+      this.container.addClass('specorator-hidden');
       return;
     }
 
-    this.container.removeClass('claudian-hidden');
+    this.container.removeClass('specorator-hidden');
     const { active, inactive } = this.resolveOptionPair(selectorConfig);
     const currentOption = selectorConfig.options.find((option) => option.value === selectorConfig.value)
       ?? selectorConfig.options[0];

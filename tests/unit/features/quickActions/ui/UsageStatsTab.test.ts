@@ -96,7 +96,7 @@ describe('UsageStatsTab', () => {
     const host = document.createElement('div');
     tab.render(host);
 
-    const topRows = host.querySelectorAll('.claudian-usage-top-row');
+    const topRows = host.querySelectorAll('.specorator-usage-top-row');
     expect(topRows).toHaveLength(5);
     expect(topRows[0].textContent).toContain('a6');
     expect(topRows[4].textContent).toContain('a2');
@@ -140,7 +140,7 @@ describe('UsageStatsTab', () => {
     const host = document.createElement('div');
     tab.render(host);
 
-    const dropRows = host.querySelectorAll('.claudian-usage-drop-row');
+    const dropRows = host.querySelectorAll('.specorator-usage-drop-row');
     expect(dropRows).toHaveLength(1);
     expect(dropRows[0].textContent).toContain('stale');
   });
@@ -158,7 +158,7 @@ describe('UsageStatsTab', () => {
     const host = document.createElement('div');
     tab.render(host);
 
-    const btn = host.querySelector<HTMLButtonElement>('.claudian-usage-clear-all');
+    const btn = host.querySelector<HTMLButtonElement>('.specorator-usage-clear-all');
     btn?.click();
     expect(onClearAll).toHaveBeenCalled();
   });
@@ -180,7 +180,7 @@ describe('UsageStatsTab', () => {
     const host = document.createElement('div');
     tab.render(host);
 
-    const rows = host.querySelectorAll('.claudian-usage-all-row');
+    const rows = host.querySelectorAll('.specorator-usage-all-row');
     expect(rows).toHaveLength(2);
   });
 
@@ -209,7 +209,7 @@ describe('UsageStatsTab', () => {
     const host = document.createElement('div');
     tab.render(host);
 
-    const dropRows = host.querySelectorAll('.claudian-usage-drop-row');
+    const dropRows = host.querySelectorAll('.specorator-usage-drop-row');
     expect(dropRows).toHaveLength(1);
     expect(dropRows[0].textContent).toContain('low');
     for (const row of Array.from(dropRows)) {
@@ -242,7 +242,7 @@ describe('UsageStatsTab', () => {
     const host = document.createElement('div');
     tab.render(host);
 
-    const dropRows = host.querySelectorAll('.claudian-usage-drop-row');
+    const dropRows = host.querySelectorAll('.specorator-usage-drop-row');
     expect(dropRows).toHaveLength(1);
     expect(dropRows[0].textContent).toContain('old');
     for (const row of Array.from(dropRows)) {
@@ -285,7 +285,7 @@ describe('UsageStatsTab', () => {
     const host = document.createElement('div');
     tab.render(host);
 
-    const dropRows = host.querySelectorAll('.claudian-usage-drop-row');
+    const dropRows = host.querySelectorAll('.specorator-usage-drop-row');
     expect(dropRows).toHaveLength(10);
     // Slot 0 = oldest qualifying entry; slot 9 = 10th-oldest. Slots 10–11
     // (stale01, stale00) are dropped by the cap.

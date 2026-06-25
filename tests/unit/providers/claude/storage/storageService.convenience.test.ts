@@ -69,7 +69,7 @@ describe('StorageService convenience methods', () => {
     },
   });
 
-  const claudianSettingsJson = JSON.stringify({
+  const specoratorSettingsJson = JSON.stringify({
     userName: 'Test',
     model: 'haiku',
     permissionMode: 'yolo',
@@ -171,53 +171,53 @@ describe('StorageService convenience methods', () => {
     });
   });
 
-  describe('updateClaudianSettings', () => {
-    it('updates partial claudian settings', async () => {
+  describe('updateSpecoratorSettings', () => {
+    it('updates partial specorator settings', async () => {
       const { plugin, files } = createMockPlugin({
         initialFiles: {
-          '.claudian/claudian-settings.json': claudianSettingsJson,
+          '.specorator/specorator-settings.json': specoratorSettingsJson,
         },
       });
       const storage = new StorageService(plugin);
       await storage.initialize();
 
-      await storage.updateClaudianSettings({ userName: 'NewUser' });
+      await storage.updateSpecoratorSettings({ userName: 'NewUser' });
 
-      const saved = JSON.parse(files.get('.claudian/claudian-settings.json')!) as Record<string, unknown>;
+      const saved = JSON.parse(files.get('.specorator/specorator-settings.json')!) as Record<string, unknown>;
       expect(saved.userName).toBe('NewUser');
     });
   });
 
-  describe('saveClaudianSettings', () => {
-    it('saves full claudian settings', async () => {
+  describe('saveSpecoratorSettings', () => {
+    it('saves full specorator settings', async () => {
       const { plugin, files } = createMockPlugin({
         initialFiles: {
-          '.claudian/claudian-settings.json': claudianSettingsJson,
+          '.specorator/specorator-settings.json': specoratorSettingsJson,
         },
       });
       const storage = new StorageService(plugin);
       await storage.initialize();
 
-      const existing = await storage.loadClaudianSettings();
+      const existing = await storage.loadSpecoratorSettings();
       existing.userName = 'FullSave';
-      await storage.saveClaudianSettings(existing);
+      await storage.saveSpecoratorSettings(existing);
 
-      const saved = JSON.parse(files.get('.claudian/claudian-settings.json')!) as Record<string, unknown>;
+      const saved = JSON.parse(files.get('.specorator/specorator-settings.json')!) as Record<string, unknown>;
       expect(saved.userName).toBe('FullSave');
     });
   });
 
-  describe('loadClaudianSettings', () => {
-    it('loads claudian settings', async () => {
+  describe('loadSpecoratorSettings', () => {
+    it('loads specorator settings', async () => {
       const { plugin } = createMockPlugin({
         initialFiles: {
-          '.claudian/claudian-settings.json': claudianSettingsJson,
+          '.specorator/specorator-settings.json': specoratorSettingsJson,
         },
       });
       const storage = new StorageService(plugin);
       await storage.initialize();
 
-      const settings = await storage.loadClaudianSettings();
+      const settings = await storage.loadSpecoratorSettings();
       expect(settings.userName).toBe('Test');
       expect(settings.model).toBe('haiku');
     });

@@ -1,7 +1,7 @@
 import { ItemView, Notice, type WorkspaceLeaf } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { renderLibraryNav } from '../../../shared/libraryNav';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import { withErrorNotice } from '../../../shared/uiAction';
@@ -11,12 +11,12 @@ import { LoopNoteStore } from '../loops/LoopNoteStore';
 import type { LoopDefinition } from '../loops/loopTypes';
 import { LoopEditorModal } from './LoopEditorModal';
 
-export const VIEW_TYPE_LOOP_LIBRARY = 'claudian-loop-library';
+export const VIEW_TYPE_LOOP_LIBRARY = 'specorator-loop-library';
 
 export class LoopLibraryView extends ItemView {
   private readonly store = new LoopNoteStore();
 
-  constructor(leaf: WorkspaceLeaf, private plugin: ClaudianPlugin) {
+  constructor(leaf: WorkspaceLeaf, private plugin: SpecoratorPlugin) {
     super(leaf);
   }
 
@@ -56,18 +56,18 @@ export class LoopLibraryView extends ItemView {
     for (const loop of loops) {
       const { body, actions: cardActions } = createLibraryCard(list, loop.name);
       if (loop.description) {
-        body.createDiv({ cls: 'claudian-library-card-desc', text: loop.description });
+        body.createDiv({ cls: 'specorator-library-card-desc', text: loop.description });
       }
       if (loop.useWhen) {
         body.createDiv({
-          cls: 'claudian-library-card-desc',
+          cls: 'specorator-library-card-desc',
           text: `${t('loopLibrary.useWhenLabel')} ${loop.useWhen}`,
         });
       }
 
       const editBtn = cardActions.createEl('button', { text: t('loopLibrary.edit') });
       editBtn.onclick = () => this.openEditorSafely(loop);
-      const deleteBtn = cardActions.createEl('button', { cls: 'claudian-library-card-delete', text: t('loopLibrary.delete') });
+      const deleteBtn = cardActions.createEl('button', { cls: 'specorator-library-card-delete', text: t('loopLibrary.delete') });
       deleteBtn.onclick = () => void withErrorNotice(() => this.deleteLoop(loop), t('loopLibrary.actionFailed'), (e) => this.fail(e));
     }
   }

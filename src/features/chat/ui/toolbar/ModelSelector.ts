@@ -8,7 +8,7 @@ export class ModelSelector {
   private callbacks: ToolbarCallbacks;
   constructor(parentEl: HTMLElement, callbacks: ToolbarCallbacks) {
     this.callbacks = callbacks;
-    this.container = parentEl.createDiv({ cls: 'claudian-model-selector' });
+    this.container = parentEl.createDiv({ cls: 'specorator-model-selector' });
     this.render();
   }
 
@@ -24,10 +24,10 @@ export class ModelSelector {
   private render() {
     this.container.empty();
 
-    this.buttonEl = this.container.createDiv({ cls: 'claudian-model-btn' });
+    this.buttonEl = this.container.createDiv({ cls: 'specorator-model-btn' });
     this.updateDisplay();
 
-    this.dropdownEl = this.container.createDiv({ cls: 'claudian-model-dropdown' });
+    this.dropdownEl = this.container.createDiv({ cls: 'specorator-model-dropdown' });
     this.renderOptions();
   }
 
@@ -41,7 +41,7 @@ export class ModelSelector {
 
     this.buttonEl.empty();
 
-    const labelEl = this.buttonEl.createSpan({ cls: 'claudian-model-label' });
+    const labelEl = this.buttonEl.createSpan({ cls: 'specorator-model-label' });
     labelEl.setText(displayModel?.label || 'Unknown');
   }
 
@@ -56,12 +56,12 @@ export class ModelSelector {
     let lastGroup: string | undefined;
     for (const model of reversed) {
       if (model.group && model.group !== lastGroup) {
-        const separator = this.dropdownEl.createDiv({ cls: 'claudian-model-group' });
+        const separator = this.dropdownEl.createDiv({ cls: 'specorator-model-group' });
         separator.setText(model.group);
         lastGroup = model.group;
       }
 
-      const option = this.dropdownEl.createDiv({ cls: 'claudian-model-option' });
+      const option = this.dropdownEl.createDiv({ cls: 'specorator-model-option' });
       if (model.value === currentModel) {
         option.addClass('selected');
       }
@@ -69,7 +69,7 @@ export class ModelSelector {
       const icon = model.providerIcon ?? this.callbacks.getUIConfig().getProviderIcon?.();
       if (icon) {
         option.appendChild(createProviderIconSvg(icon, {
-          className: 'claudian-model-provider-icon',
+          className: 'specorator-model-provider-icon',
           height: 12,
           ownerDocument: option.ownerDocument,
           width: 12,

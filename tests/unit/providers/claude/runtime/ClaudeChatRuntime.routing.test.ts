@@ -3,10 +3,10 @@ import { Notice } from 'obsidian';
 
 import { createResponseHandler } from '@/providers/claude/runtime/types';
 
-import { setupClaudianServiceTest } from './claudianServiceTestKit';
+import { setupClaudeChatRuntimeTest } from './claudeChatRuntimeTestKit';
 
-describe('ClaudianService', () => {
-  const ctx = setupClaudianServiceTest();
+describe('ClaudeChatRuntime', () => {
+  const ctx = setupClaudeChatRuntimeTest();
   let service: typeof ctx.service;
   let mockPlugin: typeof ctx.mockPlugin;
   let host: MockRuntimeHost;

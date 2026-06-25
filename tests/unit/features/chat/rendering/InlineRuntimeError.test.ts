@@ -18,11 +18,11 @@ describe('renderInlineRuntimeError', () => {
     const onRetry = jest.fn();
     const parent = render({ kind: 'generic', content: 'Network failed', onRetry });
 
-    const card = parent.querySelector('.claudian-runtime-error-card');
+    const card = parent.querySelector('.specorator-runtime-error-card');
     expect(card).not.toBeNull();
-    expect(card?.querySelector('.claudian-runtime-error-title')?.textContent).toBeTruthy();
+    expect(card?.querySelector('.specorator-runtime-error-title')?.textContent).toBeTruthy();
 
-    const buttons = parent.querySelectorAll('.claudian-runtime-error-button');
+    const buttons = parent.querySelectorAll('.specorator-runtime-error-button');
     expect(buttons.length).toBe(1);
     buttons[0].click();
     expect(onRetry).toHaveBeenCalledTimes(1);
@@ -38,7 +38,7 @@ describe('renderInlineRuntimeError', () => {
       onRetry,
     });
 
-    const buttons = parent.querySelectorAll('.claudian-runtime-error-button');
+    const buttons = parent.querySelectorAll('.specorator-runtime-error-button');
     expect(buttons.length).toBe(2);
     buttons[0].click(); // open settings (first)
     expect(onOpenSettings).toHaveBeenCalledTimes(1);
@@ -49,9 +49,9 @@ describe('renderInlineRuntimeError', () => {
   it('unauthenticated renders a copyable provider login hint', () => {
     const parent = render({ kind: 'unauthenticated', content: '401 Unauthorized', onRetry: jest.fn() });
 
-    const command = parent.querySelector('.claudian-runtime-error-hint-command');
+    const command = parent.querySelector('.specorator-runtime-error-hint-command');
     expect(command?.textContent).toBe('claude login');
-    expect(parent.querySelector('.claudian-runtime-error-hint-copy')).not.toBeNull();
+    expect(parent.querySelector('.specorator-runtime-error-hint-copy')).not.toBeNull();
   });
 
   it('unauthenticated picks the provider-specific login command', () => {
@@ -61,7 +61,7 @@ describe('renderInlineRuntimeError', () => {
       providerId: 'cursor',
       onRetry: jest.fn(),
     });
-    expect(parent.querySelector('.claudian-runtime-error-hint-command')?.textContent).toBe(
+    expect(parent.querySelector('.specorator-runtime-error-hint-command')?.textContent).toBe(
       'cursor-agent login',
     );
   });
@@ -76,8 +76,8 @@ describe('renderInlineRuntimeError', () => {
       onRetry,
     });
 
-    expect(parent.querySelector('.claudian-runtime-error-body')?.textContent).toBeTruthy();
-    const buttons = parent.querySelectorAll('.claudian-runtime-error-button');
+    expect(parent.querySelector('.specorator-runtime-error-body')?.textContent).toBeTruthy();
+    const buttons = parent.querySelectorAll('.specorator-runtime-error-button');
     expect(buttons.length).toBe(1); // retry only
     buttons[0].click();
     expect(onRetry).toHaveBeenCalledTimes(1);
@@ -86,7 +86,7 @@ describe('renderInlineRuntimeError', () => {
 
   it('classified kinds keep the raw provider message in a details row', () => {
     const parent = render({ kind: 'cli-not-found', content: 'spawn claude ENOENT', onRetry: jest.fn() });
-    expect(parent.querySelector('.claudian-runtime-error-details-text')?.textContent).toBe(
+    expect(parent.querySelector('.specorator-runtime-error-details-text')?.textContent).toBe(
       'spawn claude ENOENT',
     );
   });

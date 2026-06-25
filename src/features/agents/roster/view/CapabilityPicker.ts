@@ -29,21 +29,21 @@ export function renderCapabilityPicker(parent: HTMLElement, options: CapabilityP
   let expanded = false;
   let query = '';
 
-  const root = parent.createDiv({ cls: 'claudian-cap-picker' });
+  const root = parent.createDiv({ cls: 'specorator-cap-picker' });
 
-  const bodyId = `claudian-cap-picker-body-${Math.random().toString(36).slice(2, 10)}`;
+  const bodyId = `specorator-cap-picker-body-${Math.random().toString(36).slice(2, 10)}`;
 
-  const header = root.createDiv({ cls: 'claudian-cap-picker-header' });
+  const header = root.createDiv({ cls: 'specorator-cap-picker-header' });
   header.setAttribute('role', 'button');
   header.setAttribute('tabindex', '0');
   header.setAttribute('aria-expanded', 'false');
   header.setAttribute('aria-controls', bodyId);
-  header.createSpan({ cls: 'claudian-cap-picker-label', text: options.label });
-  const countEl = header.createSpan({ cls: 'claudian-cap-picker-count' });
-  const caret = header.createSpan({ cls: 'claudian-cap-picker-caret' });
+  header.createSpan({ cls: 'specorator-cap-picker-label', text: options.label });
+  const countEl = header.createSpan({ cls: 'specorator-cap-picker-count' });
+  const caret = header.createSpan({ cls: 'specorator-cap-picker-caret' });
 
-  const chipsEl = root.createDiv({ cls: 'claudian-cap-picker-chips' });
-  const body = root.createDiv({ cls: 'claudian-cap-picker-body' });
+  const chipsEl = root.createDiv({ cls: 'specorator-cap-picker-chips' });
+  const body = root.createDiv({ cls: 'specorator-cap-picker-body' });
   body.id = bodyId;
 
   const emit = (): void => options.onChange([...selected]);
@@ -56,11 +56,11 @@ export function renderCapabilityPicker(parent: HTMLElement, options: CapabilityP
     chipsEl.empty();
     for (const item of options.items) {
       if (!selected.has(item.id)) continue;
-      const chip = chipsEl.createEl('button', { cls: 'claudian-cap-picker-chip' });
+      const chip = chipsEl.createEl('button', { cls: 'specorator-cap-picker-chip' });
       chip.setAttribute('aria-label', t('agentRoster.removeCapability', { name: item.name }));
       chip.createSpan({ text: item.name });
       // Decorative close glyph rendered via CSS `::before` (no keyed literal).
-      chip.createSpan({ cls: 'claudian-cap-picker-chip-x' });
+      chip.createSpan({ cls: 'specorator-cap-picker-chip-x' });
       chip.addEventListener('click', () => {
         selected.delete(item.id);
         emit();
@@ -85,7 +85,7 @@ export function renderCapabilityPicker(parent: HTMLElement, options: CapabilityP
       ...matches.filter((it) => !selected.has(it.id)),
     ];
     for (const item of ordered) {
-      const row = listEl.createEl('label', { cls: 'claudian-cap-picker-row' });
+      const row = listEl.createEl('label', { cls: 'specorator-cap-picker-row' });
       const cb = row.createEl('input', { type: 'checkbox' });
       cb.checked = selected.has(item.id);
       // Listen on `click` (not `change`): the native checkbox toggles `checked`
@@ -97,10 +97,10 @@ export function renderCapabilityPicker(parent: HTMLElement, options: CapabilityP
         renderChips();
         renderCount();
       });
-      const main = row.createDiv({ cls: 'claudian-cap-picker-row-main' });
-      main.createDiv({ cls: 'claudian-cap-picker-row-name', text: item.name });
-      if (item.description) main.createDiv({ cls: 'claudian-cap-picker-row-desc', text: item.description });
-      if (item.badge) row.createSpan({ cls: 'claudian-cap-picker-row-badge', text: item.badge });
+      const main = row.createDiv({ cls: 'specorator-cap-picker-row-main' });
+      main.createDiv({ cls: 'specorator-cap-picker-row-name', text: item.name });
+      if (item.description) main.createDiv({ cls: 'specorator-cap-picker-row-desc', text: item.description });
+      if (item.badge) row.createSpan({ cls: 'specorator-cap-picker-row-badge', text: item.badge });
     }
   };
 
@@ -109,15 +109,15 @@ export function renderCapabilityPicker(parent: HTMLElement, options: CapabilityP
     listEl = null;
     if (!expanded) return;
     if (options.items.length === 0) {
-      body.createDiv({ cls: 'claudian-cap-picker-empty', text: options.emptyHint });
+      body.createDiv({ cls: 'specorator-cap-picker-empty', text: options.emptyHint });
       return;
     }
-    const search = body.createEl('input', { cls: 'claudian-cap-picker-search', type: 'text' });
+    const search = body.createEl('input', { cls: 'specorator-cap-picker-search', type: 'text' });
     search.placeholder = options.searchPlaceholder;
     search.setAttribute('aria-label', options.searchPlaceholder);
     search.value = query;
     search.addEventListener('input', () => { query = search.value; renderRows(); });
-    listEl = body.createDiv({ cls: 'claudian-cap-picker-list' });
+    listEl = body.createDiv({ cls: 'specorator-cap-picker-list' });
     listEl.setAttribute('role', 'group');
     listEl.setAttribute('aria-label', options.label);
     renderRows();

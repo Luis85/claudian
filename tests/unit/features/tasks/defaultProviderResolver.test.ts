@@ -3,17 +3,17 @@ import '../../../../src/providers';
 
 import { ProviderRegistry } from '../../../../src/core/providers/ProviderRegistry';
 import type { ProviderId } from '../../../../src/core/providers/types';
-import type { ClaudianSettings } from '../../../../src/core/types/settings';
+import type { SpecoratorSettings } from '../../../../src/core/types/settings';
 import { resolveAgentBoardDefaultProvider } from '../../../../src/features/tasks/defaultProviderResolver';
 
-function settings(enabled: ProviderId[], stored: ProviderId | null = null): ClaudianSettings {
+function settings(enabled: ProviderId[], stored: ProviderId | null = null): SpecoratorSettings {
   const provs = ['claude', 'codex', 'opencode', 'cursor'] as ProviderId[];
   return {
     agentBoardDefaultProvider: stored,
     providerConfigs: Object.fromEntries(
       provs.map((id) => [id, { enabled: enabled.includes(id) }]),
     ),
-  } as unknown as ClaudianSettings;
+  } as unknown as SpecoratorSettings;
 }
 
 describe('resolveAgentBoardDefaultProvider', () => {

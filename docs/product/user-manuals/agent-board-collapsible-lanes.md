@@ -4,7 +4,7 @@ status: shipped
 type: user-manual
 parent: "[[Agent Kanban Board]]"
 ---
-# Claudian — Agent Board collapsible lanes
+# Specorator — Agent Board collapsible lanes
 
 This manual covers how to **collapse** and **expand** individual Agent Board lanes to reduce clutter. Collapsible lanes shrink to a narrow vertical strip showing the lane title (rotated) and a count badge of cards in that lane, then expand again with a single click.
 
@@ -16,7 +16,7 @@ When you collapse a lane, it stays collapsed across Obsidian sessions — your l
 
 To use collapsible lanes, you first mark a lane as "collapsible" in the lane editor, then collapse and expand it from the board.
 
-- **Mark a lane collapsible**: **Settings → Claudian → Agent Board → Board lanes** → toggle **Collapsible** on the lane block
+- **Mark a lane collapsible**: **Settings → Specorator → Agent Board → Board lanes** → toggle **Collapsible** on the lane block
 - **Collapse/expand a lane**: on the board, click the chevron (`›`) in the lane header (if collapsible) to collapse, or click the collapsed strip to expand
 
 ---
@@ -46,7 +46,7 @@ Not all lanes need to be collapsible. You can have a mix: some lanes stay expand
 
 ## Marking a lane as collapsible
 
-1. Open **Settings → Claudian → Agent Board → Board lanes**.
+1. Open **Settings → Specorator → Agent Board → Board lanes**.
 2. Find the lane you want to make collapsible (e.g., Done, Failed, Canceled, or Inbox).
 3. In the lane block, toggle **Collapsible** on.
 4. The board refreshes immediately; the lane now shows a chevron (`›`) in its header.
@@ -94,7 +94,7 @@ Each lane remembers its own collapse state independently. You can have Done coll
 ## Typical flow
 
 **Example 1: Focus on active work**
-1. Open **Settings → Claudian → Agent Board → Board lanes**.
+1. Open **Settings → Specorator → Agent Board → Board lanes**.
 2. Toggle **Collapsible** on for **Done**, **Failed**, and **Canceled**.
 3. Go back to the board.
 4. Click the chevron on the **Done** lane to collapse it.
@@ -117,7 +117,7 @@ You don't have to collapse every lane. Keep **Running** and **Review** expanded 
 There is no global "expand all" button. If your layout becomes confusing:
 
 1. Click the chevron on each collapsed lane to expand it manually, or
-2. Reset the board to defaults: **Settings → Claudian → Agent Board → Board lanes → Reset to default** (this also un-marks all lanes as collapsible).
+2. Reset the board to defaults: **Settings → Specorator → Agent Board → Board lanes → Reset to default** (this also un-marks all lanes as collapsible).
 
 Resetting the lane configuration is permanent — back up your custom layout if you might want it later.
 
@@ -142,4 +142,4 @@ Resetting the lane configuration is permanent — back up your custom layout if 
 - Toggling **Collapsible** off automatically expands the lane and clears the collapsed state. If it does not expand immediately, refresh the board by clicking another setting or closing and re-opening the board view.
 
 **Q: Can I rename a collapsed lane?**
-- Yes. Edit the title in **Settings → Claudian → Agent Board → Board lanes**. The renamed title appears on the collapsed strip next time you collapse it.
+- Yes. Edit the title in **Settings → Specorator → Agent Board → Board lanes**. The renamed title appears on the collapsed strip next time you collapse it.

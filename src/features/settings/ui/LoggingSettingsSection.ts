@@ -2,7 +2,7 @@ import { Notice, Setting } from 'obsidian';
 
 import type { LogLevel } from '../../../core/logging/types';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 
 const LEVEL_OPTIONS: Array<{ value: LogLevel; label: string }> = [
   { value: 'off', label: 'Off' },
@@ -14,7 +14,7 @@ const LEVEL_OPTIONS: Array<{ value: LogLevel; label: string }> = [
 
 export function renderLoggingSettingsSection(
   container: HTMLElement,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
 ): void {
   new Setting(container).setName('Diagnostics').setHeading();
 

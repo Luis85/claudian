@@ -82,13 +82,13 @@ class OpencodeAgentModal extends Modal {
 
   onOpen() {
     this.setTitle(this.existing ? 'Edit OpenCode Subagent' : 'Add OpenCode Subagent');
-    this.modalEl.addClass('claudian-sp-modal');
+    this.modalEl.addClass('specorator-sp-modal');
 
     const { contentEl } = this;
     const refs = this.buildForm(contentEl);
 
     renderModalButtonRow(contentEl, {
-      cls: 'claudian-sp-modal-buttons',
+      cls: 'specorator-sp-modal-buttons',
       saveText: 'Save',
       onCancel: () => this.close(),
       onSave: () => {
@@ -148,10 +148,10 @@ class OpencodeAgentModal extends Modal {
     let permissionInput!: HTMLTextAreaElement;
     let optionsInput!: HTMLTextAreaElement;
 
-    const details = contentEl.createEl('details', { cls: 'claudian-sp-advanced-section' });
+    const details = contentEl.createEl('details', { cls: 'specorator-sp-advanced-section' });
     details.createEl('summary', {
       text: 'Advanced options',
-      cls: 'claudian-sp-advanced-summary',
+      cls: 'specorator-sp-advanced-summary',
     });
     if (hasOpencodeAdvancedFields(this.existing)) {
       details.open = true;
@@ -277,7 +277,7 @@ class OpencodeAgentModal extends Modal {
       .setDesc('Markdown body used as the agent prompt');
 
     const promptArea = contentEl.createEl('textarea', {
-      cls: 'claudian-sp-content-area',
+      cls: 'specorator-sp-content-area',
       attr: {
         rows: '10',
         placeholder: 'Review code changes carefully and call out correctness, regressions, and missing coverage.',
@@ -481,11 +481,11 @@ export class OpencodeAgentSettings {
 
     headerRow.createSpan({
       text: 'subagent',
-      cls: 'claudian-slash-item-badge',
+      cls: 'specorator-slash-item-badge',
     });
 
     if (agent.model) {
-      headerRow.createSpan({ text: agent.model, cls: 'claudian-slash-item-badge' });
+      headerRow.createSpan({ text: agent.model, cls: 'specorator-slash-item-badge' });
     }
   }
 

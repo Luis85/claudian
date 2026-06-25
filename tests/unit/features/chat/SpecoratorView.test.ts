@@ -3,7 +3,7 @@ import { readdirSync, readFileSync, statSync } from 'fs';
 import { Platform, Scope } from 'obsidian';
 import { join } from 'path';
 
-import { ClaudianView } from '@/features/chat/ClaudianView';
+import { SpecoratorView } from '@/features/chat/SpecoratorView';
 import { ChatState } from '@/features/chat/state/ChatState';
 
 jest.mock('@/features/chat/utils/editedFiles', () => ({
@@ -23,7 +23,7 @@ function createViewHarness(options: {
   view: any;
 } {
   const newTabButtonEl = createMockEl();
-  const view = Object.create(ClaudianView.prototype) as any;
+  const view = Object.create(SpecoratorView.prototype) as any;
 
   view.plugin = {
     settings: {
@@ -46,9 +46,9 @@ function createViewHarness(options: {
   return { newTabButtonEl, view };
 }
 
-describe('ClaudianView tab controls', () => {
+describe('SpecoratorView tab controls', () => {
   it('creates the git action in the header actions instead of the input nav content', () => {
-    const view = Object.create(ClaudianView.prototype) as any;
+    const view = Object.create(SpecoratorView.prototype) as any;
     view.containerEl = createMockEl();
     view.containerEl.ownerDocument.createDocumentFragment = () => createMockEl('fragment');
     view.plugin = {
@@ -66,8 +66,8 @@ describe('ClaudianView tab controls', () => {
 
     const navContent = view.buildNavRowContent();
 
-    expect(view.headerActionsEl.querySelector('.claudian-git-action')).not.toBeNull();
-    expect(navContent.querySelector('.claudian-git-action')).toBeNull();
+    expect(view.headerActionsEl.querySelector('.specorator-git-action')).not.toBeNull();
+    expect(navContent.querySelector('.specorator-git-action')).toBeNull();
   });
 
   it('hides the new-tab button when the tab manager is at capacity', () => {
@@ -75,20 +75,20 @@ describe('ClaudianView tab controls', () => {
 
     view.refreshTabControls();
 
-    expect(newTabButtonEl.hasClass('claudian-hidden')).toBe(true);
+    expect(newTabButtonEl.hasClass('specorator-hidden')).toBe(true);
     expect(newTabButtonEl.getAttribute('aria-disabled')).toBe('true');
     expect(newTabButtonEl.getAttribute('aria-hidden')).toBe('true');
   });
 
   it('shows the new-tab button when another tab can be created', () => {
     const { newTabButtonEl, view } = createViewHarness({ canCreateTab: true });
-    newTabButtonEl.addClass('claudian-hidden');
+    newTabButtonEl.addClass('specorator-hidden');
     newTabButtonEl.setAttribute('aria-disabled', 'true');
     newTabButtonEl.setAttribute('aria-hidden', 'true');
 
     view.refreshTabControls();
 
-    expect(newTabButtonEl.hasClass('claudian-hidden')).toBe(false);
+    expect(newTabButtonEl.hasClass('specorator-hidden')).toBe(false);
     expect(newTabButtonEl.getAttribute('aria-disabled')).toBeNull();
     expect(newTabButtonEl.getAttribute('aria-hidden')).toBeNull();
   });
@@ -98,7 +98,7 @@ describe('ClaudianView tab controls', () => {
 
     view.updateTabBarVisibility();
 
-    expect(view.tabBarContainerEl.hasClass('claudian-hidden')).toBe(true);
+    expect(view.tabBarContainerEl.hasClass('specorator-hidden')).toBe(true);
   });
 
   it('shows the tab bar with two or more chat tabs', () => {
@@ -106,7 +106,7 @@ describe('ClaudianView tab controls', () => {
 
     view.updateTabBarVisibility();
 
-    expect(view.tabBarContainerEl.hasClass('claudian-hidden')).toBe(false);
+    expect(view.tabBarContainerEl.hasClass('specorator-hidden')).toBe(false);
   });
 
   it('shows the tab bar when a work-order tab is active so a single chat tab stays reachable', () => {
@@ -116,7 +116,7 @@ describe('ClaudianView tab controls', () => {
 
     view.updateTabBarVisibility();
 
-    expect(view.tabBarContainerEl.hasClass('claudian-hidden')).toBe(false);
+    expect(view.tabBarContainerEl.hasClass('specorator-hidden')).toBe(false);
   });
 
   it('keeps the tab bar hidden when a work-order tab is active but no chat tab remains', () => {
@@ -126,11 +126,11 @@ describe('ClaudianView tab controls', () => {
 
     view.updateTabBarVisibility();
 
-    expect(view.tabBarContainerEl.hasClass('claudian-hidden')).toBe(true);
+    expect(view.tabBarContainerEl.hasClass('specorator-hidden')).toBe(true);
   });
 });
 
-describe('ClaudianView.injectCommitTurnForConversation', () => {
+describe('SpecoratorView.injectCommitTurnForConversation', () => {
   type InjectHarness = {
     view: any;
     sendMessage: jest.Mock;
@@ -163,7 +163,7 @@ describe('ClaudianView.injectCommitTurnForConversation', () => {
       terminal: Promise.resolve({ status: 'completed' as const, finalAssistantContent: '' }),
     }));
 
-    const view = Object.create(ClaudianView.prototype) as any;
+    const view = Object.create(SpecoratorView.prototype) as any;
     const localTab = {
       id: 'tab-local',
       controllers: { inputController: { sendMessage } },
@@ -345,7 +345,7 @@ describe('ClaudianView.injectCommitTurnForConversation', () => {
       id: 'tab-wo',
       controllers: { inputController: { sendMessage }, conversationController },
     };
-    const view = Object.create(ClaudianView.prototype) as any;
+    const view = Object.create(SpecoratorView.prototype) as any;
     view.tabManager = {
       switchToTab,
       getTab: jest.fn(() => localTab),
@@ -409,7 +409,7 @@ describe('ClaudianView.injectCommitTurnForConversation', () => {
   });
 
   it('throws when the chat view has no tabManager', async () => {
-    const view = Object.create(ClaudianView.prototype) as any;
+    const view = Object.create(SpecoratorView.prototype) as any;
     view.tabManager = null;
     view.plugin = { findConversationAcrossViews: jest.fn() };
     await expect(
@@ -423,7 +423,7 @@ describe('ClaudianView.injectCommitTurnForConversation', () => {
   });
 });
 
-describe('ClaudianView.startTaskRunInFreshTab — chat-tab reservation', () => {
+describe('SpecoratorView.startTaskRunInFreshTab — chat-tab reservation', () => {
   it('releases the reservation once the tab is created', async () => {
     const release = jest.fn();
     const sendMessage = jest.fn(async () => ({ ok: true, finalAssistantContent: 'done' }));
@@ -435,7 +435,7 @@ describe('ClaudianView.startTaskRunInFreshTab — chat-tab reservation', () => {
         streamController: { addStreamObserver: () => () => {} },
       },
     }));
-    const view = Object.create(ClaudianView.prototype) as any;
+    const view = Object.create(SpecoratorView.prototype) as any;
     view.tabManager = { createTaskRunTab };
 
     const result = await view.startTaskRunInFreshTab({
@@ -454,7 +454,7 @@ describe('ClaudianView.startTaskRunInFreshTab — chat-tab reservation', () => {
   it('releases the reservation when the tab cap blocks creation', async () => {
     const release = jest.fn();
     const createTaskRunTab = jest.fn(async () => null);
-    const view = Object.create(ClaudianView.prototype) as any;
+    const view = Object.create(SpecoratorView.prototype) as any;
     view.tabManager = { createTaskRunTab };
 
     const result = await view.startTaskRunInFreshTab({
@@ -470,7 +470,7 @@ describe('ClaudianView.startTaskRunInFreshTab — chat-tab reservation', () => {
 
   it('releases the reservation when the chat view is not ready', async () => {
     const release = jest.fn();
-    const view = Object.create(ClaudianView.prototype) as any;
+    const view = Object.create(SpecoratorView.prototype) as any;
     view.tabManager = null;
 
     await view.startTaskRunInFreshTab({
@@ -510,7 +510,7 @@ describe('direct chat independence from Agent Board', () => {
   });
 });
 
-describe('ClaudianView Escape handling', () => {
+describe('SpecoratorView Escape handling', () => {
   beforeEach(() => {
     MockScope.instances.length = 0;
   });
@@ -525,7 +525,7 @@ describe('ClaudianView Escape handling', () => {
     const cancelStreaming = jest.fn();
     const eventRefs: unknown[] = [];
     const parentScope = new Scope();
-    const view = Object.create(ClaudianView.prototype) as any;
+    const view = Object.create(SpecoratorView.prototype) as any;
 
     view.app = { scope: parentScope };
     view.containerEl = createMockEl();
@@ -591,7 +591,7 @@ describe('ClaudianView Escape handling', () => {
     });
     const eventRefs: unknown[] = [];
     const parentScope = new Scope();
-    const view = Object.create(ClaudianView.prototype) as any;
+    const view = Object.create(SpecoratorView.prototype) as any;
 
     view.app = { scope: parentScope };
     view.containerEl = createMockEl();
@@ -772,7 +772,7 @@ describe('ClaudianView Escape handling', () => {
   });
 });
 
-describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
+describe('SpecoratorView.startTaskRunInFreshTab — stream buffering', () => {
   it('buffers chunks emitted before the runner subscribes and replays them in order', async () => {
     let rawObserver: ((chunk: { type: string }) => void) | null = null;
     const streamController = {
@@ -795,7 +795,7 @@ describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
       conversationId: 'conv-1',
       controllers: { inputController, streamController },
     };
-    const view = Object.create(ClaudianView.prototype) as any;
+    const view = Object.create(SpecoratorView.prototype) as any;
     view.tabManager = { createTaskRunTab: jest.fn(async () => tab) };
 
     const handle = await view.startTaskRunInFreshTab({ providerId: 'claude', model: 'opus', prompt: 'go' });
@@ -822,7 +822,7 @@ describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
       cancelStreaming: jest.fn(),
     };
     const tab = { id: 'tab-1', conversationId: 'conv-1', controllers: { inputController, streamController } };
-    const view = Object.create(ClaudianView.prototype) as any;
+    const view = Object.create(SpecoratorView.prototype) as any;
     view.tabManager = { createTaskRunTab: jest.fn(async () => tab) };
 
     const handle = await view.startTaskRunInFreshTab({ providerId: 'claude', model: 'opus', prompt: 'go' });
@@ -852,7 +852,7 @@ describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
       cancelStreaming: jest.fn(),
     };
     const tab = { id: 'tab-1', conversationId: 'conv-1', controllers: { inputController, streamController } };
-    const view = Object.create(ClaudianView.prototype) as any;
+    const view = Object.create(SpecoratorView.prototype) as any;
     view.tabManager = { createTaskRunTab: jest.fn(async () => tab) };
 
     const handle = await view.startTaskRunInFreshTab({ providerId: 'claude', model: 'opus', prompt: 'go' });
@@ -882,7 +882,7 @@ describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
       cancelStreaming: jest.fn(),
     };
     const tab = { id: 'tab-1', conversationId: 'conv-1', controllers: { inputController, streamController } };
-    const view = Object.create(ClaudianView.prototype) as any;
+    const view = Object.create(SpecoratorView.prototype) as any;
     view.tabManager = { createTaskRunTab: jest.fn(async () => tab) };
 
     const handle = await view.startTaskRunInFreshTab({ providerId: 'claude', model: 'opus', prompt: 'go' });
@@ -905,7 +905,7 @@ describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
       cancelStreaming: jest.fn(),
     };
     const tab = { id: 'tab-1', conversationId: 'conv-1', controllers: { inputController, streamController } };
-    const view = Object.create(ClaudianView.prototype) as any;
+    const view = Object.create(SpecoratorView.prototype) as any;
     view.tabManager = { createTaskRunTab: jest.fn(async () => tab) };
 
     const handle = await view.startTaskRunInFreshTab({ providerId: 'claude', model: 'opus', prompt: 'go' });
@@ -917,9 +917,9 @@ describe('ClaudianView.startTaskRunInFreshTab — stream buffering', () => {
 });
 
 
-describe('ClaudianView work-order activity', () => {
+describe('SpecoratorView work-order activity', () => {
   it('mounts an activity slot beside Quick Actions', () => {
-    const view = Object.create(ClaudianView.prototype) as any;
+    const view = Object.create(SpecoratorView.prototype) as any;
     view.containerEl = createMockEl();
     view.containerEl.ownerDocument.createDocumentFragment = () => createMockEl('fragment');
     view.plugin = {
@@ -939,11 +939,11 @@ describe('ClaudianView work-order activity', () => {
 
     const navContent = view.buildNavRowContent();
 
-    expect(navContent.querySelector('.claudian-work-order-activity-slot')).not.toBeNull();
+    expect(navContent.querySelector('.specorator-work-order-activity-slot')).not.toBeNull();
   });
 
   it('places the work-order activity slot before quick actions in the header row', () => {
-    const view = Object.create(ClaudianView.prototype) as any;
+    const view = Object.create(SpecoratorView.prototype) as any;
     view.containerEl = createMockEl();
     view.containerEl.ownerDocument.createDocumentFragment = () => createMockEl('fragment');
     view.plugin = {
@@ -964,10 +964,10 @@ describe('ClaudianView work-order activity', () => {
 
     const actions = view.headerActionsContent;
     const slotIndex = actions._children.findIndex((c: any) =>
-      c.hasClass('claudian-work-order-activity-slot'),
+      c.hasClass('specorator-work-order-activity-slot'),
     );
     const quickIndex = actions._children.findIndex((c: any) =>
-      c.hasClass('claudian-header-btn') && !c.hasClass('claudian-new-tab-btn'),
+      c.hasClass('specorator-header-btn') && !c.hasClass('specorator-new-tab-btn'),
     );
 
     expect(slotIndex).toBeGreaterThanOrEqual(0);
@@ -976,9 +976,9 @@ describe('ClaudianView work-order activity', () => {
   });
 });
 
-describe('ClaudianView applyEditedFilesSetting', () => {
+describe('SpecoratorView applyEditedFilesSetting', () => {
   function viewWithTab(showAgentEditedFiles?: boolean): { view: any; state: ChatState } {
-    const view = Object.create(ClaudianView.prototype) as any;
+    const view = Object.create(SpecoratorView.prototype) as any;
     const state = new ChatState();
     view.plugin = { settings: { showAgentEditedFiles }, app: {} };
     view.tabManager = { getAllTabs: () => [{ state }] };

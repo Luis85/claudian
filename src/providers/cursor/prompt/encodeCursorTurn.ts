@@ -19,7 +19,7 @@ function buildCursorContextHints(request: ChatTurnRequest): string[] {
 
   if (request.images?.length) {
     hints.push(
-      `\n[The user attached ${request.images.length} image(s) in Claudian. Use vault paths or ask which files to read if you need the image bytes.]`,
+      `\n[The user attached ${request.images.length} image(s) in Specorator. Use vault paths or ask which files to read if you need the image bytes.]`,
     );
   }
 

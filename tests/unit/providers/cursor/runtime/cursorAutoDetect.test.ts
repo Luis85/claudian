@@ -13,7 +13,7 @@ import { findCursorAgentBinaryPath } from '@/providers/cursor/runtime/CursorBina
 
 describe('cursor empty-path auto-detect', () => {
   itWin32('resolves agent.cmd from %APPDATA%\\npm without relying on PATH', () => {
-    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'claudian-appdata-'));
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'specorator-appdata-'));
     fs.mkdirSync(path.join(tmp, 'npm'));
     const cmd = path.join(tmp, 'npm', 'agent.cmd');
     fs.writeFileSync(cmd, '@echo off\n');

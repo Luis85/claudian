@@ -1,16 +1,16 @@
 import { ItemView, Notice, type WorkspaceLeaf } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { renderLibraryNav } from '../../../shared/libraryNav';
 import { confirm } from '../../../shared/modals/ConfirmModal';
 import { promptReason } from '../../../shared/modals/PromptModal';
 import { withErrorNotice } from '../../../shared/uiAction';
 import { createLibraryCard, librarySlug, renderLibraryEmptyState, renderLibraryShell, uniqueChildDir } from '../../../utils/libraryView';
-import { TOOLS_DIR } from '../ClaudianToolRegistry';
+import { TOOLS_DIR } from '../SpecoratorToolRegistry';
 import { ToolEditorModal } from './ToolEditorModal';
 
-export const VIEW_TYPE_TOOL_LIBRARY = 'claudian-tool-library';
+export const VIEW_TYPE_TOOL_LIBRARY = 'specorator-tool-library';
 
 function toolTemplate(manifestName: string): string {
   return `import { z } from 'zod';
@@ -29,7 +29,7 @@ export default {
 }
 
 export class ToolLibraryView extends ItemView {
-  constructor(leaf: WorkspaceLeaf, private plugin: ClaudianPlugin) {
+  constructor(leaf: WorkspaceLeaf, private plugin: SpecoratorPlugin) {
     super(leaf);
   }
 
@@ -64,18 +64,18 @@ export class ToolLibraryView extends ItemView {
     for (const tool of tools) {
       const { nameRow, body, actions: cardActions } = createLibraryCard(list, tool.module?.manifest.name ?? tool.id);
       nameRow.createSpan({
-        cls: `claudian-library-chip ${tool.error ? 'claudian-library-chip-error' : 'claudian-library-chip-ready'}`,
+        cls: `specorator-library-chip ${tool.error ? 'specorator-library-chip-error' : 'specorator-library-chip-ready'}`,
         text: tool.error ? t('toolLibrary.statusError') : t('toolLibrary.statusReady'),
       });
       if (tool.error) {
-        body.createDiv({ cls: 'claudian-library-card-error', text: t('toolLibrary.errorPrefix', { error: tool.error }) });
+        body.createDiv({ cls: 'specorator-library-card-error', text: t('toolLibrary.errorPrefix', { error: tool.error }) });
       } else if (tool.module) {
-        body.createDiv({ cls: 'claudian-library-card-desc', text: tool.module.manifest.description });
+        body.createDiv({ cls: 'specorator-library-card-desc', text: tool.module.manifest.description });
       }
 
       const editBtn = cardActions.createEl('button', { text: t('toolLibrary.edit') });
       editBtn.onclick = () => this.openEditor(tool.id);
-      const deleteBtn = cardActions.createEl('button', { cls: 'claudian-library-card-delete', text: t('toolLibrary.delete') });
+      const deleteBtn = cardActions.createEl('button', { cls: 'specorator-library-card-delete', text: t('toolLibrary.delete') });
       deleteBtn.onclick = () => void withErrorNotice(() => this.deleteTool(tool.id), fail, (e) => this.fail(e));
     }
   }

@@ -4,9 +4,9 @@ import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import type { LoadedTool, ToolHostContext } from '../toolTypes';
 import { makeBoundedToolCallback } from './toolInvocation';
 
-export const CLAUDIAN_TOOL_SERVER_NAME = 'claudian';
+export const SPECORATOR_TOOL_SERVER_NAME = 'specorator';
 
-export function buildClaudianToolMcpServer(
+export function buildSpecoratorToolMcpServer(
   loaded: LoadedTool[],
   ctxFactory: (signal: AbortSignal) => ToolHostContext,
 ): ReturnType<typeof createSdkMcpServer> {
@@ -22,7 +22,7 @@ export function buildClaudianToolMcpServer(
     );
 
   return createSdkMcpServer({
-    name: CLAUDIAN_TOOL_SERVER_NAME,
+    name: SPECORATOR_TOOL_SERVER_NAME,
     version: '1.0.0',
     tools,
   });

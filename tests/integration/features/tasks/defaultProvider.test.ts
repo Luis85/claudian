@@ -3,7 +3,7 @@ import { TFile } from 'obsidian';
 import { ProviderRegistry } from '@/core/providers/ProviderRegistry';
 import type { ProviderChatUIConfig, ProviderRegistration } from '@/core/providers/types';
 import { createWorkOrderFromSeed } from '@/features/tasks/commands/taskCommands';
-import type ClaudianPlugin from '@/main';
+import type SpecoratorPlugin from '@/main';
 
 /**
  * F2 contract: createWorkOrderFromSeed must read the Agent Board default
@@ -80,7 +80,7 @@ describe('createWorkOrderFromSeed default-provider resolution (integration)', ()
           }),
         },
       },
-    } as unknown as ClaudianPlugin;
+    } as unknown as SpecoratorPlugin;
 
     const file = await createWorkOrderFromSeed(plugin, { title: 'Pick the right provider' });
     expect(file).not.toBeNull();
@@ -121,7 +121,7 @@ describe('createWorkOrderFromSeed default-provider resolution (integration)', ()
           }),
         },
       },
-    } as unknown as ClaudianPlugin;
+    } as unknown as SpecoratorPlugin;
 
     const file = await createWorkOrderFromSeed(plugin, { title: 'Keep stored when enabled' });
     expect(file).not.toBeNull();

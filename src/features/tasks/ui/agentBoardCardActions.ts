@@ -216,7 +216,7 @@ export class AgentBoardCardActions {
   renderCardActions(card: HTMLElement, task: TaskSpec, persistent: boolean): HTMLElement {
     const model = CARD_ACTIONS[task.frontmatter.status] ?? FALLBACK_CARD_ACTIONS;
     const cluster = card.createDiv({
-      cls: `claudian-agent-board-card-actions${persistent ? ' claudian-agent-board-card-actions--persistent' : ''}`,
+      cls: `specorator-agent-board-card-actions${persistent ? ' specorator-agent-board-card-actions--persistent' : ''}`,
     });
     // The card opens the detail view on click; keep cluster interactions local.
     cluster.addEventListener('click', (event) => event.stopPropagation());
@@ -251,7 +251,7 @@ export class AgentBoardCardActions {
       cluster,
       task,
       action,
-      `claudian-agent-board-card-action-primary claudian-agent-board-card-action-primary--${variant}`,
+      `specorator-agent-board-card-action-primary specorator-agent-board-card-action-primary--${variant}`,
     );
   }
 
@@ -264,17 +264,17 @@ export class AgentBoardCardActions {
   private renderSecondaryAction(cluster: HTMLElement, task: TaskSpec, action: CardAction): void {
     const callbacks = this.deps.getCallbacks();
     if (action.available && !(callbacks != null && action.available(callbacks, task))) return;
-    this.buildLabeledButton(cluster, task, action, 'claudian-agent-board-card-action-secondary');
+    this.buildLabeledButton(cluster, task, action, 'specorator-agent-board-card-action-secondary');
   }
 
   /** Icon + label button shared by the primary and secondary card actions. */
   private buildLabeledButton(cluster: HTMLElement, task: TaskSpec, action: CardAction, cls: string): void {
     const button = cluster.createEl('button', { cls, attr: { type: 'button' } });
-    const icon = button.createSpan({ cls: 'claudian-agent-board-card-action-icon' });
+    const icon = button.createSpan({ cls: 'specorator-agent-board-card-action-icon' });
     icon.setAttribute('aria-hidden', 'true');
     icon.setAttribute('data-icon', action.icon);
     setIcon(icon, action.icon);
-    button.createSpan({ cls: 'claudian-agent-board-card-action-label', text: t(action.labelKey) });
+    button.createSpan({ cls: 'specorator-agent-board-card-action-label', text: t(action.labelKey) });
     button.addEventListener('click', (event) => {
       event.stopPropagation();
       const callbacks = this.deps.getCallbacks();
@@ -284,10 +284,10 @@ export class AgentBoardCardActions {
 
   private renderOverflowMenu(cluster: HTMLElement, task: TaskSpec, menu: CardAction[]): void {
     const trigger = cluster.createEl('button', {
-      cls: 'claudian-agent-board-card-action-more',
+      cls: 'specorator-agent-board-card-action-more',
       attr: { type: 'button', 'aria-label': t('tasks.board.cardAction.moreActions'), 'aria-haspopup': 'menu' },
     });
-    const glyph = trigger.createSpan({ cls: 'claudian-agent-board-card-action-icon' });
+    const glyph = trigger.createSpan({ cls: 'specorator-agent-board-card-action-icon' });
     glyph.setAttribute('aria-hidden', 'true');
     glyph.setAttribute('data-icon', 'more-horizontal');
     setIcon(glyph, 'more-horizontal');
@@ -295,7 +295,7 @@ export class AgentBoardCardActions {
     // The hover cluster hides on mouseleave (it shows on card :hover/:focus-within);
     // keep it visible while THIS card's ⋯ menu is open so the trigger isn't
     // orphaned when the pointer moves onto the (body-portaled) menu.
-    const card = cluster.closest('.claudian-agent-board-card') as HTMLElement | null;
+    const card = cluster.closest('.specorator-agent-board-card') as HTMLElement | null;
 
     const popover = new PortalPopover({
       trigger,
@@ -315,11 +315,11 @@ export class AgentBoardCardActions {
             },
           }));
       },
-      menuClass: 'claudian-agent-board-card-menu',
-      itemClass: 'claudian-agent-board-card-menu-item',
-      itemIconClass: 'claudian-agent-board-card-menu-item-icon',
-      itemDangerClass: 'claudian-agent-board-card-menu-item--danger',
-      upClass: 'claudian-agent-board-card-menu--up',
+      menuClass: 'specorator-agent-board-card-menu',
+      itemClass: 'specorator-agent-board-card-menu-item',
+      itemIconClass: 'specorator-agent-board-card-menu-item-icon',
+      itemDangerClass: 'specorator-agent-board-card-menu-item--danger',
+      upClass: 'specorator-agent-board-card-menu--up',
       onClose: () => card?.removeClass('is-menu-open'),
     });
 

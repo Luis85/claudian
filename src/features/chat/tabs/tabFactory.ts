@@ -2,7 +2,7 @@ import { getEnabledProviderForModel } from '../../../core/providers/modelRouting
 import type { ProviderId } from '../../../core/providers/types';
 import type { Conversation } from '../../../core/types';
 import { asSettingsBag } from '../../../core/types/settings';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { SubagentManager } from '../services/SubagentManager';
 import { ChatState } from '../state/ChatState';
 import { resolveBlankTabDefaultProviderId } from './tabModelPolicy';
@@ -11,7 +11,7 @@ import type { TabData, TabDOMElements, TabId, TabKind } from './types';
 import { generateTabId } from './types';
 
 export interface TabCreateOptions {
-  plugin: ClaudianPlugin;
+  plugin: SpecoratorPlugin;
 
   containerEl: HTMLElement;
   conversation?: Conversation;
@@ -51,7 +51,7 @@ export function createTab(options: TabCreateOptions): TabData {
 
   const id = tabId ?? generateTabId();
 
-  const contentEl = containerEl.createDiv({ cls: 'claudian-tab-content claudian-hidden' });
+  const contentEl = containerEl.createDiv({ cls: 'specorator-tab-content specorator-hidden' });
 
   const state = new ChatState({
     onStreamingStateChanged: onStreamingChanged,
@@ -140,18 +140,18 @@ export function createTab(options: TabCreateOptions): TabData {
  * Builds the DOM structure for a tab.
  */
 function buildTabDOM(contentEl: HTMLElement): TabDOMElements {
-  const messagesWrapperEl = contentEl.createDiv({ cls: 'claudian-messages-wrapper' });
-  const messagesEl = messagesWrapperEl.createDiv({ cls: 'claudian-messages' });
-  const welcomeEl = messagesEl.createDiv({ cls: 'claudian-welcome' });
-  const statusPanelContainerEl = contentEl.createDiv({ cls: 'claudian-status-panel-container' });
-  const inputContainerEl = contentEl.createDiv({ cls: 'claudian-input-container' });
-  const queueIndicatorEl = inputContainerEl.createDiv({ cls: 'claudian-input-queue-row' });
-  const navRowEl = inputContainerEl.createDiv({ cls: 'claudian-input-nav-row' });
-  const inputWrapper = inputContainerEl.createDiv({ cls: 'claudian-input-wrapper' });
-  const editedFilesRowEl = inputWrapper.createDiv({ cls: 'claudian-edited-files-row claudian-hidden' });
-  const contextRowEl = inputWrapper.createDiv({ cls: 'claudian-context-row' });
+  const messagesWrapperEl = contentEl.createDiv({ cls: 'specorator-messages-wrapper' });
+  const messagesEl = messagesWrapperEl.createDiv({ cls: 'specorator-messages' });
+  const welcomeEl = messagesEl.createDiv({ cls: 'specorator-welcome' });
+  const statusPanelContainerEl = contentEl.createDiv({ cls: 'specorator-status-panel-container' });
+  const inputContainerEl = contentEl.createDiv({ cls: 'specorator-input-container' });
+  const queueIndicatorEl = inputContainerEl.createDiv({ cls: 'specorator-input-queue-row' });
+  const navRowEl = inputContainerEl.createDiv({ cls: 'specorator-input-nav-row' });
+  const inputWrapper = inputContainerEl.createDiv({ cls: 'specorator-input-wrapper' });
+  const editedFilesRowEl = inputWrapper.createDiv({ cls: 'specorator-edited-files-row specorator-hidden' });
+  const contextRowEl = inputWrapper.createDiv({ cls: 'specorator-context-row' });
   const inputEl = inputWrapper.createEl('textarea', {
-    cls: 'claudian-input',
+    cls: 'specorator-input',
     attr: {
       placeholder: 'How can i help you today?',
       rows: '3',

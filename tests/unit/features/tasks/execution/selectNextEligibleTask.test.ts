@@ -8,7 +8,7 @@ function makeTask(overrides: Partial<TaskSpec['frontmatter']> & { id: string }):
   return {
     path: `tasks/${overrides.id}.md`,
     frontmatter: {
-      type: 'claudian-work-order',
+      type: 'specorator-work-order',
       schema_version: 1,
       title: overrides.id,
       status: 'ready',

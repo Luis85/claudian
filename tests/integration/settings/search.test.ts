@@ -4,7 +4,7 @@
 /**
  * Integration test for settings search functionality.
  *
- * Tests that SearchBar and SearchResultsView integrate with ClaudianSettings.display():
+ * Tests that SearchBar and SearchResultsView integrate with SpecoratorSettings.display():
  * - SearchBar mounts at the top
  * - Non-empty query hides tab strip and shows results
  * - Go button clears search, swaps tab, scrolls to field, adds highlight class
@@ -13,8 +13,8 @@
 import '../../setup/obsidianDom';
 
 import { ProviderRegistry } from '../../../src/core/providers/ProviderRegistry';
-import { ClaudianSettingTab } from '../../../src/features/settings/ClaudianSettings';
 import { resetSettingsRegistryForTests } from '../../../src/features/settings/registry';
+import { SpecoratorSettingTab } from '../../../src/features/settings/SpecoratorSettings';
 
 // Mock ProviderRegistry
 jest.mock('../../../src/core/providers/ProviderRegistry');
@@ -50,7 +50,7 @@ describe('Settings search integration', () => {
 
   it('mounts SearchBar at top of settings', () => {
     const plugin = createStubPlugin();
-    const tab = new ClaudianSettingTab({} as never, plugin as never);
+    const tab = new SpecoratorSettingTab({} as never, plugin as never);
     const containerEl = document.createElement('div');
     (tab as unknown as { containerEl: HTMLElement }).containerEl = containerEl;
     (tab as unknown as { renderGeneralTab: (el: HTMLElement) => void }).renderGeneralTab =
@@ -59,7 +59,7 @@ describe('Settings search integration', () => {
     tab.display();
 
     const searchBarInput = containerEl.querySelector(
-      '.claudian-settings-search-bar input[type="search"]',
+      '.specorator-settings-search-bar input[type="search"]',
     ) as HTMLInputElement | null;
     expect(searchBarInput).not.toBeNull();
     expect(searchBarInput?.type).toBe('search');
@@ -67,7 +67,7 @@ describe('Settings search integration', () => {
 
   it('hides tab strip and shows results when search is non-empty', async () => {
     const plugin = createStubPlugin();
-    const tab = new ClaudianSettingTab({} as never, plugin as never);
+    const tab = new SpecoratorSettingTab({} as never, plugin as never);
     const containerEl = document.createElement('div');
     (tab as unknown as { containerEl: HTMLElement }).containerEl = containerEl;
     (tab as unknown as { renderGeneralTab: (el: HTMLElement) => void }).renderGeneralTab =
@@ -75,14 +75,14 @@ describe('Settings search integration', () => {
 
     tab.display();
 
-    const tabStrip = containerEl.querySelector('.claudian-settings-tabs');
+    const tabStrip = containerEl.querySelector('.specorator-settings-tabs');
     const searchInput = containerEl.querySelector(
-      '.claudian-settings-search-bar input[type="search"]',
+      '.specorator-settings-search-bar input[type="search"]',
     ) as HTMLInputElement;
 
     expect(tabStrip).not.toBeNull();
     expect(searchInput).not.toBeNull();
-    expect(tabStrip?.classList.contains('claudian-hidden')).toBe(false);
+    expect(tabStrip?.classList.contains('specorator-hidden')).toBe(false);
 
     // Type "claude" in the search bar
     searchInput.value = 'claude';
@@ -91,18 +91,18 @@ describe('Settings search integration', () => {
     // Wait for debounce
     await new Promise((resolve) => setTimeout(resolve, 200));
 
-    const updatedTabStrip = containerEl.querySelector('.claudian-settings-tabs');
+    const updatedTabStrip = containerEl.querySelector('.specorator-settings-tabs');
     const updatedResultsView = containerEl.querySelector(
-      '.claudian-settings-search-results',
+      '.specorator-settings-search-results',
     );
 
-    expect(updatedTabStrip?.classList.contains('claudian-hidden')).toBe(true);
-    expect(updatedResultsView?.classList.contains('claudian-hidden')).toBe(false);
+    expect(updatedTabStrip?.classList.contains('specorator-hidden')).toBe(true);
+    expect(updatedResultsView?.classList.contains('specorator-hidden')).toBe(false);
   });
 
   it('shows correct results for search query', async () => {
     const plugin = createStubPlugin();
-    const tab = new ClaudianSettingTab({} as never, plugin as never);
+    const tab = new SpecoratorSettingTab({} as never, plugin as never);
     const containerEl = document.createElement('div');
     (tab as unknown as { containerEl: HTMLElement }).containerEl = containerEl;
     (tab as unknown as { renderGeneralTab: (el: HTMLElement) => void }).renderGeneralTab =
@@ -111,7 +111,7 @@ describe('Settings search integration', () => {
     tab.display();
 
     const searchInput = containerEl.querySelector(
-      '.claudian-settings-search-bar input[type="search"]',
+      '.specorator-settings-search-bar input[type="search"]',
     ) as HTMLInputElement;
 
     // Search for "Models"
@@ -121,7 +121,7 @@ describe('Settings search integration', () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     const resultsView = containerEl.querySelector(
-      '.claudian-settings-search-results',
+      '.specorator-settings-search-results',
     );
     const fieldRows = resultsView?.querySelectorAll(
       '[data-field-id]',
@@ -133,7 +133,7 @@ describe('Settings search integration', () => {
 
   it('Go button clears search, swaps tab, scrolls field into view, and adds highlight class', async () => {
     const plugin = createStubPlugin();
-    const tab = new ClaudianSettingTab({} as never, plugin as never);
+    const tab = new SpecoratorSettingTab({} as never, plugin as never);
     const containerEl = document.createElement('div');
     (tab as unknown as { containerEl: HTMLElement }).containerEl = containerEl;
     (tab as unknown as { renderGeneralTab: (el: HTMLElement) => void }).renderGeneralTab =
@@ -142,7 +142,7 @@ describe('Settings search integration', () => {
     tab.display();
 
     const searchInput = containerEl.querySelector(
-      '.claudian-settings-search-bar input[type="search"]',
+      '.specorator-settings-search-bar input[type="search"]',
     ) as HTMLInputElement;
 
     // Search for a field that exists in the registry (e.g., "Language" or "Provider")
@@ -153,7 +153,7 @@ describe('Settings search integration', () => {
 
     // Find a Go button
     let goButton = containerEl.querySelector(
-      '.claudian-settings-search-results [data-action="go"]',
+      '.specorator-settings-search-results [data-action="go"]',
     ) as HTMLButtonElement | null;
 
     // If no results, try a different search term
@@ -162,7 +162,7 @@ describe('Settings search integration', () => {
       searchInput.dispatchEvent(new Event('input', { bubbles: true }));
       await new Promise((resolve) => setTimeout(resolve, 200));
       goButton = containerEl.querySelector(
-        '.claudian-settings-search-results [data-action="go"]',
+        '.specorator-settings-search-results [data-action="go"]',
       ) as HTMLButtonElement;
     }
 
@@ -182,17 +182,17 @@ describe('Settings search integration', () => {
     expect(searchInput.value).toBe('');
 
     // Tab strip should be visible again
-    const tabStrip = containerEl.querySelector('.claudian-settings-tabs');
-    expect(tabStrip?.classList.contains('claudian-hidden')).toBe(false);
+    const tabStrip = containerEl.querySelector('.specorator-settings-tabs');
+    expect(tabStrip?.classList.contains('specorator-hidden')).toBe(false);
 
     // Results view should be hidden
     const resultsView = containerEl.querySelector(
-      '.claudian-settings-search-results',
+      '.specorator-settings-search-results',
     );
-    expect(resultsView?.classList.contains('claudian-hidden')).toBe(true);
+    expect(resultsView?.classList.contains('specorator-hidden')).toBe(true);
 
     // Tab should have switched (to general or claude depending on which field matched)
-    const activeTab = containerEl.querySelector('.claudian-settings-tab--active');
+    const activeTab = containerEl.querySelector('.specorator-settings-tab--active');
     expect(activeTab).not.toBeNull();
 
     // Target field row should have highlight class
@@ -200,17 +200,17 @@ describe('Settings search integration', () => {
       '[data-field-id][aria-highlighted="true"]',
     );
     expect(highlightedField).not.toBeNull();
-    expect(highlightedField?.classList.contains('claudian-settings-field--highlight')).toBe(true);
+    expect(highlightedField?.classList.contains('specorator-settings-field--highlight')).toBe(true);
 
     // Highlight should be removed after 1500ms
     await new Promise((resolve) => setTimeout(resolve, 1600));
 
-    expect(highlightedField?.classList.contains('claudian-settings-field--highlight')).toBe(false);
+    expect(highlightedField?.classList.contains('specorator-settings-field--highlight')).toBe(false);
   });
 
   it('clears results when search is emptied', async () => {
     const plugin = createStubPlugin();
-    const tab = new ClaudianSettingTab({} as never, plugin as never);
+    const tab = new SpecoratorSettingTab({} as never, plugin as never);
     const containerEl = document.createElement('div');
     (tab as unknown as { containerEl: HTMLElement }).containerEl = containerEl;
     (tab as unknown as { renderGeneralTab: (el: HTMLElement) => void }).renderGeneralTab =
@@ -219,7 +219,7 @@ describe('Settings search integration', () => {
     tab.display();
 
     const searchInput = containerEl.querySelector(
-      '.claudian-settings-search-bar input[type="search"]',
+      '.specorator-settings-search-bar input[type="search"]',
     ) as HTMLInputElement;
 
     // Type something
@@ -228,8 +228,8 @@ describe('Settings search integration', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 200));
 
-    let tabStrip = containerEl.querySelector('.claudian-settings-tabs');
-    expect(tabStrip?.classList.contains('claudian-hidden')).toBe(true);
+    let tabStrip = containerEl.querySelector('.specorator-settings-tabs');
+    expect(tabStrip?.classList.contains('specorator-hidden')).toBe(true);
 
     // Clear the search
     searchInput.value = '';
@@ -237,18 +237,18 @@ describe('Settings search integration', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 200));
 
-    tabStrip = containerEl.querySelector('.claudian-settings-tabs');
+    tabStrip = containerEl.querySelector('.specorator-settings-tabs');
     const resultsView = containerEl.querySelector(
-      '.claudian-settings-search-results',
+      '.specorator-settings-search-results',
     );
 
-    expect(tabStrip?.classList.contains('claudian-hidden')).toBe(false);
-    expect(resultsView?.classList.contains('claudian-hidden')).toBe(true);
+    expect(tabStrip?.classList.contains('specorator-hidden')).toBe(false);
+    expect(resultsView?.classList.contains('specorator-hidden')).toBe(true);
   });
 
   it('reset button clears search', async () => {
     const plugin = createStubPlugin();
-    const tab = new ClaudianSettingTab({} as never, plugin as never);
+    const tab = new SpecoratorSettingTab({} as never, plugin as never);
     const containerEl = document.createElement('div');
     (tab as unknown as { containerEl: HTMLElement }).containerEl = containerEl;
     (tab as unknown as { renderGeneralTab: (el: HTMLElement) => void }).renderGeneralTab =
@@ -257,7 +257,7 @@ describe('Settings search integration', () => {
     tab.display();
 
     const searchInput = containerEl.querySelector(
-      '.claudian-settings-search-bar input[type="search"]',
+      '.specorator-settings-search-bar input[type="search"]',
     ) as HTMLInputElement;
 
     // Type something that returns no results
@@ -267,7 +267,7 @@ describe('Settings search integration', () => {
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     const resetButton = containerEl.querySelector(
-      '.claudian-settings-search-results [data-action="reset"]',
+      '.specorator-settings-search-results [data-action="reset"]',
     ) as HTMLButtonElement;
 
     expect(resetButton).not.toBeNull();
@@ -280,8 +280,8 @@ describe('Settings search integration', () => {
     expect(searchInput.value).toBe('');
 
     // Tab strip should be visible
-    const tabStrip = containerEl.querySelector('.claudian-settings-tabs');
-    expect(tabStrip?.classList.contains('claudian-hidden')).toBe(false);
+    const tabStrip = containerEl.querySelector('.specorator-settings-tabs');
+    expect(tabStrip?.classList.contains('specorator-hidden')).toBe(false);
   });
 });
 

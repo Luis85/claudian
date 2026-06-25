@@ -8,7 +8,7 @@ import type {
 } from '../../../core/providers/types';
 import type { ChatRuntime } from '../../../core/runtime/ChatRuntime';
 import type { Conversation, SlashCommand } from '../../../core/types';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { getTabProviderId } from './providerResolution';
 import { initializeTabService } from './Tab';
 import type { TabData, TabId } from './types';
@@ -41,7 +41,7 @@ type ProviderCommandWarmupEntry = {
  * set / active tab without a back-reference to the manager.
  */
 export interface TabProviderCommandCoordinatorDeps {
-  readonly plugin: ClaudianPlugin;
+  readonly plugin: SpecoratorPlugin;
   getTabs(): Map<TabId, TabData>;
   getActiveTabId(): TabId | null;
   getActiveTab(): TabData | null;

@@ -1,7 +1,7 @@
 /**
  * NavigationSidebar scan scaling guard.
  *
- * `scrollToMessage` (prev/next nav) does `querySelectorAll('.claudian-message-user')`
+ * `scrollToMessage` (prev/next nav) does `querySelectorAll('.specorator-message-user')`
  * then reads `offsetTop` in a loop. That cost is O(mounted user messages) — which
  * is SAFE only because `MessageRenderer` caps the mounted DOM to its render window
  * (PERF-2). This guards that contract end to end: the nav scan must track the
@@ -101,7 +101,7 @@ class NavMockElement {
 /** Mounts `count` user-message elements with increasing offsetTop, like a rendered window. */
 function mountUserMessages(messagesEl: NavMockElement, count: number): void {
   for (let i = 0; i < count; i++) {
-    const msg = messagesEl.createDiv({ cls: 'claudian-message claudian-message-user' });
+    const msg = messagesEl.createDiv({ cls: 'specorator-message specorator-message-user' });
     msg.offsetTop = (i + 1) * 100;
   }
 }
@@ -144,8 +144,8 @@ describe('NavigationSidebar scan scaling', () => {
       messagesEl.scrollTop = (mounted / 2) * 100;
 
       NavMockElement.nodesVisited = 0;
-      const prevBtn = parentEl.querySelector('.claudian-nav-btn-prev')!;
-      const nextBtn = parentEl.querySelector('.claudian-nav-btn-next')!;
+      const prevBtn = parentEl.querySelector('.specorator-nav-btn-prev')!;
+      const nextBtn = parentEl.querySelector('.specorator-nav-btn-next')!;
       const ms = timeMs(() => { prevBtn.click(); nextBtn.click(); });
       const visited = NavMockElement.nodesVisited;
 

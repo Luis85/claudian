@@ -1,26 +1,26 @@
-.claudian-wo-templates-modal {
+.specorator-wo-templates-modal {
   max-width: 560px;
 }
 
-.claudian-wo-templates-body {
+.specorator-wo-templates-body {
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 
-.claudian-wo-templates-intro {
+.specorator-wo-templates-intro {
   margin-bottom: 0.75em;
   color: var(--text-muted);
   font-size: var(--font-ui-small);
   line-height: 1.5;
 }
 
-.claudian-wo-templates-intro-lead {
+.specorator-wo-templates-intro-lead {
   margin: 0 0 0.5em;
   color: var(--text-normal);
 }
 
-.claudian-wo-templates-list {
+.specorator-wo-templates-list {
   display: flex;
   flex-direction: column;
   gap: 0.5em;
@@ -28,7 +28,7 @@
   overflow-y: auto;
 }
 
-.claudian-wo-templates-footer {
+.specorator-wo-templates-footer {
   display: flex;
   justify-content: flex-end;
   margin-top: 1em;
@@ -36,7 +36,7 @@
   border-top: 1px solid var(--background-modifier-border);
 }
 
-.claudian-wo-templates-row {
+.specorator-wo-templates-row {
   display: flex;
   align-items: center;
   gap: 0.5em;
@@ -45,11 +45,11 @@
   padding: 0.5em 0.75em;
 }
 
-.claudian-wo-templates-row--blank {
+.specorator-wo-templates-row--blank {
   border-style: dashed;
 }
 
-.claudian-wo-templates-main {
+.specorator-wo-templates-main {
   display: flex;
   align-items: flex-start;
   gap: 0.5em;
@@ -58,61 +58,61 @@
   min-width: 0;
 }
 
-.claudian-wo-templates-main:hover {
+.specorator-wo-templates-main:hover {
   color: var(--text-accent);
 }
 
-.claudian-wo-templates-icon svg {
+.specorator-wo-templates-icon svg {
   width: 16px;
   height: 16px;
 }
 
-.claudian-wo-templates-desc {
+.specorator-wo-templates-desc {
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);
 }
 
-.claudian-wo-templates-actions {
+.specorator-wo-templates-actions {
   display: flex;
   gap: 0.25em;
   flex-shrink: 0;
 }
 
-.claudian-wo-template-body-setting {
+.specorator-wo-template-body-setting {
   display: block;
   border-top: 1px solid var(--background-modifier-border);
   padding-top: 0.75em;
 }
 
-.claudian-wo-template-body-setting .setting-item-info {
+.specorator-wo-template-body-setting .setting-item-info {
   margin-bottom: 0.5em;
 }
 
-.claudian-wo-template-body-setting .setting-item-control {
+.specorator-wo-template-body-setting .setting-item-control {
   width: 100%;
   justify-content: stretch;
 }
 
-.claudian-wo-template-body-input {
+.specorator-wo-template-body-input {
   width: 100%;
   font-family: var(--font-monospace);
 }
 
 /* ============================================================
    Loop picker modal — mirrors the work-order template picker
-   (claudian-wo-templates-*) so the two pickers read identically.
+   (specorator-wo-templates-*) so the two pickers read identically.
    ============================================================ */
-.claudian-loops-modal {
+.specorator-loops-modal {
   max-width: 560px;
 }
 
-.claudian-loops-body {
+.specorator-loops-body {
   display: flex;
   flex-direction: column;
   min-height: 0;
 }
 
-.claudian-loops-list {
+.specorator-loops-list {
   display: flex;
   flex-direction: column;
   gap: 0.5em;
@@ -120,7 +120,7 @@
   overflow-y: auto;
 }
 
-.claudian-loops-footer {
+.specorator-loops-footer {
   display: flex;
   justify-content: flex-end;
   margin-top: 1em;
@@ -128,7 +128,7 @@
   border-top: 1px solid var(--background-modifier-border);
 }
 
-.claudian-loops-row {
+.specorator-loops-row {
   display: flex;
   align-items: center;
   gap: 0.5em;
@@ -138,11 +138,11 @@
 }
 
 /* "No loop" row uses a dashed border (mirrors the blank-template row). */
-.claudian-loops-row--none {
+.specorator-loops-row--none {
   border-style: dashed;
 }
 
-.claudian-loops-main {
+.specorator-loops-main {
   display: flex;
   align-items: flex-start;
   gap: 0.5em;
@@ -151,33 +151,33 @@
   min-width: 0;
 }
 
-.claudian-loops-main:hover {
+.specorator-loops-main:hover {
   color: var(--text-accent);
 }
 
-.claudian-loops-icon svg {
+.specorator-loops-icon svg {
   width: 16px;
   height: 16px;
 }
 
 /* Text column: name (strong), description, and use-when hint. */
-.claudian-loops-text {
+.specorator-loops-text {
   min-width: 0;
 }
 
-.claudian-loops-desc {
+.specorator-loops-desc {
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);
 }
 
 /* Secondary hint line — smaller and fainter than the description. */
-.claudian-loops-usewhen {
+.specorator-loops-usewhen {
   font-size: var(--font-ui-smaller);
   color: var(--text-faint);
   font-style: italic;
 }
 
-.claudian-loops-actions {
+.specorator-loops-actions {
   display: flex;
   gap: 0.25em;
   flex-shrink: 0;
@@ -185,24 +185,24 @@
 
 /* ============================================================
    Loop editor modal — mirrors the work-order template editor
-   (claudian-wo-template-body-setting / claudian-wo-template-body-input).
+   (specorator-wo-template-body-setting / specorator-wo-template-body-input).
    ============================================================ */
-.claudian-loop-section-setting {
+.specorator-loop-section-setting {
   display: block;
   border-top: 1px solid var(--background-modifier-border);
   padding-top: 0.75em;
 }
 
-.claudian-loop-section-setting .setting-item-info {
+.specorator-loop-section-setting .setting-item-info {
   margin-bottom: 0.5em;
 }
 
-.claudian-loop-section-setting .setting-item-control {
+.specorator-loop-section-setting .setting-item-control {
   width: 100%;
   justify-content: stretch;
 }
 
-.claudian-loop-section-input {
+.specorator-loop-section-input {
   width: 100%;
   font-family: var(--font-monospace);
 }

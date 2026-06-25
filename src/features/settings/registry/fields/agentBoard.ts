@@ -284,7 +284,7 @@ function renderFolderWarning(ctx: SettingsCtx, host: HTMLElement): () => void {
     lastSame = same;
     host.empty();
     if (!same) return;
-    const warning = host.createDiv({ cls: 'claudian-agent-board-folder-warning' });
+    const warning = host.createDiv({ cls: 'specorator-agent-board-folder-warning' });
     warning.setText(
       'Warning: the template folder matches the work order folder, so templates will appear as invalid notes on the board.',
     );
@@ -337,7 +337,7 @@ function renderDefaultProviderWidget(ctx: SettingsCtx, host: HTMLElement): () =>
       setting.descEl.createSpan({
 
         text: 'Enable a provider in General to set a default for Agent Board.',
-        cls: 'claudian-agent-board-hint',
+        cls: 'specorator-agent-board-hint',
       });
     } else if (enabledIds.length === 1) {
       setting.addText((text) => {
@@ -346,7 +346,7 @@ function renderDefaultProviderWidget(ctx: SettingsCtx, host: HTMLElement): () =>
       setting.descEl.createEl('br');
       setting.descEl.createSpan({
         text: 'Only one provider is enabled — locked to it.',
-        cls: 'claudian-agent-board-hint',
+        cls: 'specorator-agent-board-hint',
       });
     } else {
       setting.addDropdown((dropdown) => {
@@ -370,7 +370,7 @@ function renderDefaultProviderWidget(ctx: SettingsCtx, host: HTMLElement): () =>
   renderInto(host);
   return ctx.plugin.events.on('task:board-config-changed', () => {
     // Defensive: between event dispatch and this listener executing,
-    // ClaudianSettings.display() may have replaced `containerEl` and detached
+    // SpecoratorSettings.display() may have replaced `containerEl` and detached
     // the host. Re-rendering into a detached node is wasted DOM work and risks
     // mutating a host that the EventBus snapshot still holds a stale closure
     // for. The unsubscribe in renderTab's disposer runs at the top of the
@@ -403,7 +403,7 @@ function renderDefaultModelWidget(ctx: SettingsCtx, host: HTMLElement): () => vo
       setting.descEl.createSpan({
 
         text: 'Pick an Agent Board default provider first to choose a model.',
-        cls: 'claudian-agent-board-hint',
+        cls: 'specorator-agent-board-hint',
       });
     } else {
       const settingsBag = asSettingsBag(ctx.settings);
@@ -414,7 +414,7 @@ function renderDefaultModelWidget(ctx: SettingsCtx, host: HTMLElement): () => vo
         setting.descEl.createEl('br');
         setting.descEl.createSpan({
           text: `No models available for ${providerLabel(provider)}.`,
-          cls: 'claudian-agent-board-hint',
+          cls: 'specorator-agent-board-hint',
         });
       } else if (options.length === 1) {
         setting.addText((text) => {

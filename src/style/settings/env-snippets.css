@@ -1,9 +1,9 @@
 /* Context Limits Styles */
-.claudian-context-limits-container {
+.specorator-context-limits-container {
   margin-top: 16px;
 }
 
-.claudian-context-limits-header {
+.specorator-context-limits-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -12,27 +12,27 @@
   padding: 0 12px;
 }
 
-.claudian-context-limits-label {
+.specorator-context-limits-label {
   font-size: var(--font-ui-small);
   color: var(--text-muted);
   font-weight: var(--font-medium);
 }
 
-.claudian-context-limits-desc {
+.specorator-context-limits-desc {
   font-size: var(--font-ui-smaller);
   color: var(--text-muted);
   padding: 0 12px;
   margin-bottom: 8px;
 }
 
-.claudian-context-limits-list {
+.specorator-context-limits-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-top: 8px;
 }
 
-.claudian-context-limits-item {
+.specorator-context-limits-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -42,11 +42,11 @@
   transition: background-color 0.2s;
 }
 
-.claudian-context-limits-item:hover {
+.specorator-context-limits-item:hover {
   background: var(--background-modifier-hover);
 }
 
-.claudian-context-limits-model {
+.specorator-context-limits-model {
   font-family: var(--font-monospace);
   font-size: var(--font-ui-small);
   color: var(--text-normal);
@@ -55,7 +55,7 @@
   word-break: break-all;
 }
 
-.claudian-context-limits-input-wrapper {
+.specorator-context-limits-input-wrapper {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -63,7 +63,7 @@
   flex-shrink: 0;
 }
 
-.claudian-context-alias-input {
+.specorator-context-alias-input {
   width: 180px;
   padding: 4px 8px;
   font-size: var(--font-ui-small);
@@ -73,12 +73,12 @@
   color: var(--text-normal);
 }
 
-.claudian-context-alias-input:focus {
+.specorator-context-alias-input:focus {
   border-color: var(--interactive-accent);
   outline: none;
 }
 
-.claudian-context-limits-input {
+.specorator-context-limits-input {
   width: 80px;
   padding: 4px 8px;
   font-size: var(--font-ui-small);
@@ -88,27 +88,27 @@
   color: var(--text-normal);
 }
 
-.claudian-context-limits-input:focus {
+.specorator-context-limits-input:focus {
   border-color: var(--interactive-accent);
   outline: none;
 }
 
-.claudian-context-limits-input.claudian-input-error {
+.specorator-context-limits-input.specorator-input-error {
   border-color: var(--text-error);
 }
 
-.claudian-context-limit-validation {
+.specorator-context-limit-validation {
   font-size: var(--font-ui-smaller);
   color: var(--text-error);
   margin-left: 4px;
 }
 
 /* Environment Snippets Styles */
-.claudian-env-snippets-container {
+.specorator-env-snippets-container {
   margin-top: 16px;
 }
 
-.claudian-snippet-header {
+.specorator-snippet-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -117,13 +117,13 @@
   padding: 0 12px;
 }
 
-.claudian-snippet-label {
+.specorator-snippet-label {
   font-size: var(--font-ui-small);
   color: var(--text-muted);
   font-weight: var(--font-medium);
 }
 
-.claudian-save-env-btn {
+.specorator-save-env-btn {
   padding: 6px 16px;
   font-size: 13px;
   background: var(--interactive-accent);
@@ -134,11 +134,11 @@
   transition: opacity 0.2s;
 }
 
-.claudian-save-env-btn:hover {
+.specorator-save-env-btn:hover {
   opacity: 0.9;
 }
 
-.claudian-snippet-empty {
+.specorator-snippet-empty {
   padding: 20px;
   text-align: center;
   color: var(--text-muted);
@@ -147,14 +147,14 @@
   margin-top: 8px;
 }
 
-.claudian-snippet-list {
+.specorator-snippet-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-top: 8px;
 }
 
-.claudian-snippet-item {
+.specorator-snippet-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -164,34 +164,34 @@
   transition: background-color 0.2s;
 }
 
-.claudian-snippet-item:hover {
+.specorator-snippet-item:hover {
   background: var(--background-modifier-hover);
 }
 
-.claudian-snippet-info {
+.specorator-snippet-info {
   flex: 1;
   min-width: 0;
 }
 
-.claudian-snippet-name {
+.specorator-snippet-name {
   font-weight: 600;
   margin-bottom: 4px;
   word-break: break-word;
 }
 
-.claudian-snippet-description {
+.specorator-snippet-description {
   font-size: 13px;
   color: var(--text-muted);
 }
 
-.claudian-snippet-actions {
+.specorator-snippet-actions {
   display: flex;
   gap: 4px;
   margin-left: 16px;
   flex-shrink: 0;
 }
 
-.claudian-restore-snippet-btn {
+.specorator-restore-snippet-btn {
   padding: 4px 12px;
   font-size: 12px;
   background: var(--interactive-accent);
@@ -201,11 +201,11 @@
   cursor: pointer;
 }
 
-.claudian-restore-snippet-btn:hover {
+.specorator-restore-snippet-btn:hover {
   opacity: 0.9;
 }
 
-.claudian-edit-snippet-btn {
+.specorator-edit-snippet-btn {
   padding: 4px 12px;
   font-size: 12px;
   background: var(--background-modifier-border);
@@ -215,11 +215,11 @@
   cursor: pointer;
 }
 
-.claudian-edit-snippet-btn:hover {
+.specorator-edit-snippet-btn:hover {
   background: var(--background-modifier-border-hover);
 }
 
-.claudian-delete-snippet-btn {
+.specorator-delete-snippet-btn {
   padding: 4px 12px;
   font-size: 12px;
   background: var(--background-modifier-error);
@@ -229,46 +229,46 @@
   cursor: pointer;
 }
 
-.claudian-delete-snippet-btn:hover {
+.specorator-delete-snippet-btn:hover {
   opacity: 0.9;
 }
 
 /* Env Snippet Modal */
-.claudian-env-snippet-modal .modal-content {
+.specorator-env-snippet-modal .modal-content {
   max-width: 550px;
   width: 550px;
   padding: 16px;
 }
 
-.claudian-env-snippet-modal h2 {
+.specorator-env-snippet-modal h2 {
   margin: 0 0 16px 0;
 }
 
-.claudian-env-snippet-modal .setting-item {
+.specorator-env-snippet-modal .setting-item {
   padding: 8px 0;
   margin: 0;
 }
 
-.claudian-env-snippet-modal .setting-item-info {
+.specorator-env-snippet-modal .setting-item-info {
   margin-bottom: 4px;
 }
 
 /* Full-width env vars textarea setting */
-.claudian-env-snippet-setting {
+.specorator-env-snippet-setting {
   flex-direction: column;
   align-items: flex-start;
 }
 
-.claudian-env-snippet-setting .setting-item-info {
+.specorator-env-snippet-setting .setting-item-info {
   width: 100%;
   margin-bottom: 8px;
 }
 
-.claudian-env-snippet-control {
+.specorator-env-snippet-control {
   width: 100%;
 }
 
-.claudian-env-snippet-control textarea {
+.specorator-env-snippet-control textarea {
   width: 100%;
   min-width: 100%;
   font-family: var(--font-monospace);
@@ -276,14 +276,14 @@
   resize: vertical;
 }
 
-.claudian-snippet-preview {
+.specorator-snippet-preview {
   margin: 8px 0;
   padding: 6px;
   background: var(--background-secondary);
   border-radius: 6px;
 }
 
-.claudian-env-preview {
+.specorator-env-preview {
   background: var(--background-primary);
   padding: 6px;
   border-radius: 4px;
@@ -298,15 +298,15 @@
   margin: 0;
 }
 
-.claudian-snippet-buttons {
+.specorator-snippet-buttons {
   display: flex;
   gap: 8px;
   margin-top: 16px;
   justify-content: flex-end;
 }
 
-.claudian-cancel-btn,
-.claudian-save-btn {
+.specorator-cancel-btn,
+.specorator-save-btn {
   padding: 6px 16px;
   font-size: 13px;
   border: none;
@@ -314,53 +314,53 @@
   cursor: pointer;
 }
 
-.claudian-cancel-btn {
+.specorator-cancel-btn {
   background: var(--background-modifier-border);
   color: var(--text-normal);
 }
 
-.claudian-cancel-btn:hover {
+.specorator-cancel-btn:hover {
   background: var(--background-modifier-border-hover);
 }
 
-.claudian-save-btn {
+.specorator-save-btn {
   background: var(--interactive-accent);
   color: var(--text-on-accent);
 }
 
-.claudian-save-btn:hover {
+.specorator-save-btn:hover {
   opacity: 0.9;
 }
 
 /* Context limits section in snippet modal */
-.claudian-snippet-context-limits {
+.specorator-snippet-context-limits {
   margin-top: 1em;
 }
 
-.claudian-snippet-context-limits .setting-item-description {
+.specorator-snippet-context-limits .setting-item-description {
   margin-bottom: 0.5em;
 }
 
-.claudian-snippet-limit-row {
+.specorator-snippet-limit-row {
   display: flex;
   align-items: center;
   gap: 0.5em;
   margin-bottom: 0.5em;
 }
 
-.claudian-snippet-limit-model {
+.specorator-snippet-limit-model {
   font-family: var(--font-monospace);
   font-size: var(--font-ui-small);
 }
 
-.claudian-snippet-limit-spacer {
+.specorator-snippet-limit-spacer {
   flex: 1;
 }
 
-.claudian-snippet-limit-input {
+.specorator-snippet-limit-input {
   width: 80px;
 }
 
-.claudian-snippet-alias-input {
+.specorator-snippet-alias-input {
   width: 160px;
 }

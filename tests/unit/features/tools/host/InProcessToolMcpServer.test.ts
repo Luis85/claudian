@@ -7,14 +7,14 @@ jest.mock('@anthropic-ai/claude-agent-sdk', () => ({
 import { createSdkMcpServer, tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 
-import { buildClaudianToolMcpServer } from '@/features/tools/host/InProcessToolMcpServer';
-import type { ClaudianToolModule, LoadedTool, ToolHostContext } from '@/features/tools/toolTypes';
+import { buildSpecoratorToolMcpServer } from '@/features/tools/host/InProcessToolMcpServer';
+import type { LoadedTool, SpecoratorToolModule, ToolHostContext } from '@/features/tools/toolTypes';
 
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
-function echoTool(handler: ClaudianToolModule['handler'] = async (a) => ({
+function echoTool(handler: SpecoratorToolModule['handler'] = async (a) => ({
   content: [{ type: 'text', text: String((a as { text: string }).text) }],
 })): LoadedTool {
   return {
@@ -27,16 +27,16 @@ function echoTool(handler: ClaudianToolModule['handler'] = async (a) => ({
   };
 }
 
-describe('buildClaudianToolMcpServer', () => {
+describe('buildSpecoratorToolMcpServer', () => {
   it('registers one SDK tool per error-free loaded tool', () => {
     const loaded: LoadedTool[] = [echoTool(), { id: 'broken', error: 'bad' }];
 
-    buildClaudianToolMcpServer(loaded, () => ({ app: {} as never, signal: new AbortController().signal }));
+    buildSpecoratorToolMcpServer(loaded, () => ({ app: {} as never, signal: new AbortController().signal }));
 
     expect(tool).toHaveBeenCalledTimes(1);
     expect((tool as jest.Mock).mock.calls[0][0]).toBe('echo');
     expect(createSdkMcpServer).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'claudian' }),
+      expect.objectContaining({ name: 'specorator' }),
     );
   });
 
@@ -44,7 +44,7 @@ describe('buildClaudianToolMcpServer', () => {
     const handler = jest.fn(async () => ({ content: [{ type: 'text' as const, text: 'ok' }] }));
     const ctx: ToolHostContext = { app: {} as never, signal: new AbortController().signal };
 
-    buildClaudianToolMcpServer([echoTool(handler)], () => ctx);
+    buildSpecoratorToolMcpServer([echoTool(handler)], () => ctx);
 
     // The 4th arg to tool() is the SDK-facing handler the server invokes.
     const sdkHandler = (tool as jest.Mock).mock.calls[0][3] as (args: unknown) => Promise<unknown>;

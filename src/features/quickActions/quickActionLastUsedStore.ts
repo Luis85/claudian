@@ -77,7 +77,7 @@ export interface QuickActionLastUsedStoreOptions {
   now?: () => number;
 }
 
-const DEFAULT_CACHE_PATH = '.claudian/cache/quick-action-last-used.json';
+const DEFAULT_CACHE_PATH = '.specorator/cache/quick-action-last-used.json';
 const DEFAULT_DEBOUNCE_MS = 500;
 
 /**

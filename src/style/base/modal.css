@@ -1,4 +1,4 @@
-/* Shared Claudian modal shell.
+/* Shared Specorator modal shell.
  *
  * Pattern: the outer modal class (added to `modalEl`) drives sizing. The inner
  * `.modal-content` is always fluid so any per-modal shell class can override
@@ -8,12 +8,12 @@
  * later in index.css) win the cascade with a plain shell selector.
  */
 
-.claudian-sp-modal {
+.specorator-sp-modal {
   max-width: 600px;
   width: 90vw;
 }
 
-.claudian-sp-modal .modal-content {
+.specorator-sp-modal .modal-content {
   width: 100%;
   max-width: 100%;
 }

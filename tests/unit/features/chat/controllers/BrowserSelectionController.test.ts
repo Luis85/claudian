@@ -6,30 +6,30 @@ import { BrowserSelectionController } from '@/features/chat/controllers/BrowserS
 
 function createMockIndicator() {
   const indicatorEl = createMockEl();
-  indicatorEl.addClass('claudian-browser-selection-indicator');
-  indicatorEl.addClass('claudian-hidden');
+  indicatorEl.addClass('specorator-browser-selection-indicator');
+  indicatorEl.addClass('specorator-hidden');
   return indicatorEl;
 }
 
 function createMockContextRow(browserIndicator: HTMLElement) {
   const editorIndicator = createMockEl();
-  editorIndicator.addClass('claudian-selection-indicator');
-  editorIndicator.addClass('claudian-hidden');
+  editorIndicator.addClass('specorator-selection-indicator');
+  editorIndicator.addClass('specorator-hidden');
   const canvasIndicator = createMockEl();
-  canvasIndicator.addClass('claudian-canvas-indicator');
-  canvasIndicator.addClass('claudian-hidden');
+  canvasIndicator.addClass('specorator-canvas-indicator');
+  canvasIndicator.addClass('specorator-hidden');
   const fileIndicator = createMockEl();
-  fileIndicator.addClass('claudian-file-indicator');
-  fileIndicator.addClass('claudian-hidden');
+  fileIndicator.addClass('specorator-file-indicator');
+  fileIndicator.addClass('specorator-hidden');
   const imagePreview = createMockEl();
-  imagePreview.addClass('claudian-image-preview');
-  imagePreview.addClass('claudian-hidden');
+  imagePreview.addClass('specorator-image-preview');
+  imagePreview.addClass('specorator-hidden');
   const elements: Record<string, any> = {
-    '.claudian-selection-indicator': editorIndicator,
-    '.claudian-browser-selection-indicator': browserIndicator,
-    '.claudian-canvas-indicator': canvasIndicator,
-    '.claudian-file-indicator': fileIndicator,
-    '.claudian-image-preview': imagePreview,
+    '.specorator-selection-indicator': editorIndicator,
+    '.specorator-browser-selection-indicator': browserIndicator,
+    '.specorator-canvas-indicator': canvasIndicator,
+    '.specorator-file-indicator': fileIndicator,
+    '.specorator-image-preview': imagePreview,
   };
   const contextRow = createMockEl();
   const toggle = contextRow.classList.toggle;

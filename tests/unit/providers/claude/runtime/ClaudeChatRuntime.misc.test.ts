@@ -7,11 +7,11 @@ import {
   collectChunks,
   type MockMcpServerManager,
   sdkMock,
-  setupClaudianServiceTest,
-} from './claudianServiceTestKit';
+  setupClaudeChatRuntimeTest,
+} from './claudeChatRuntimeTestKit';
 
-describe('ClaudianService', () => {
-  const ctx = setupClaudianServiceTest();
+describe('ClaudeChatRuntime', () => {
+  const ctx = setupClaudeChatRuntimeTest();
   let service: typeof ctx.service;
   let mockPlugin: typeof ctx.mockPlugin;
   let mockMcpManager: MockMcpServerManager;

@@ -28,7 +28,7 @@ Core modules stay provider-neutral. Features depend on `core/`; providers implem
 | `storage/` | Generic filesystem adapters | `VaultFileAdapter`, `HomeFileAdapter` |
 | `tools/` | Shared tool constants and formatting helpers | `toolNames`, `toolIcons`, `toolInput`, `todo` |
 | `types/` | Shared type definitions | `settings`, `mcp`, `chat`, `tools`, `diff`, `agent`, `plugins` |
-| `usage/` | Cross-cutting per-entry usage counter (quick-actions + skills): typed events, composite key, debounced JSON persistence at `.claudian/usage.json` | `UsageTracker` (debounced flush + hydrate), `UsageStorage` (corrupt-file backup, schema-version cold-start), `serializeKey`/`parseKey`, `UsageEventMap` (`usage.recorded`, `usage.cleared`) |
+| `usage/` | Cross-cutting per-entry usage counter (quick-actions + skills): typed events, composite key, debounced JSON persistence at `.specorator/usage.json` | `UsageTracker` (debounced flush + hydrate), `UsageStorage` (corrupt-file backup, schema-version cold-start), `serializeKey`/`parseKey`, `UsageEventMap` (`usage.recorded`, `usage.cleared`) |
 
 ## Dependency Rules
 

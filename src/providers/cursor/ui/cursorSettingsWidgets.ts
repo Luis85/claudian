@@ -57,13 +57,13 @@ export const mountCursorSubagentsSection: ProviderSettingsWidgetMount = (host, c
     return;
   }
 
-  const subagentsDesc = host.createDiv({ cls: 'claudian-sp-settings-desc' });
+  const subagentsDesc = host.createDiv({ cls: 'specorator-sp-settings-desc' });
   subagentsDesc.createEl('p', {
     cls: 'setting-item-description',
     text: 'Manage Cursor subagents in .cursor/agents/ (vault) and ~/.cursor/agents/ (global). Claude vault agents from .claude/agents/ and the built-in Explore, Bash, and Browser agents are listed read-only. Entries appear in the @mention menu.',
   });
 
-  const subagentsContainer = host.createDiv({ cls: 'claudian-slash-commands-container' });
+  const subagentsContainer = host.createDiv({ cls: 'specorator-slash-commands-container' });
   new CursorAgentSettings(
     subagentsContainer,
     cursorWorkspace.agentStorage,

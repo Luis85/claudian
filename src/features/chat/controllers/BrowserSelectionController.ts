@@ -213,9 +213,9 @@ export class BrowserSelectionController extends SelectionPollingController {
       const lineLabel = lineCount === 1 ? 'line' : 'lines';
       this.indicatorEl.textContent = `${lineCount} ${lineLabel} selected`;
       this.indicatorEl.setAttribute('title', this.buildIndicatorTitle());
-      this.indicatorEl.removeClass('claudian-hidden');
+      this.indicatorEl.removeClass('specorator-hidden');
     } else {
-      this.indicatorEl.addClass('claudian-hidden');
+      this.indicatorEl.addClass('specorator-hidden');
       this.indicatorEl.textContent = '';
       this.indicatorEl.removeAttribute('title');
     }

@@ -19,7 +19,7 @@ function makeTask(overrides: Partial<TaskSpec['frontmatter']> = {}): TaskSpec {
     raw: '',
     body: '',
     frontmatter: {
-      type: 'claudian-work-order',
+      type: 'specorator-work-order',
       schema_version: 1,
       id: 'task-1',
       title: 'Task 1',
@@ -106,12 +106,12 @@ function flushMicrotasks(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
-const VALID_HANDOFF = `<claudian_handoff>
+const VALID_HANDOFF = `<specorator_handoff>
 summary: Done.
 verification: Tests passed.
 risks: None known.
 next_action: Review.
-</claudian_handoff>`;
+</specorator_handoff>`;
 
 describe('TaskRunCoordinator', () => {
   it('blocks missing provider', async () => {

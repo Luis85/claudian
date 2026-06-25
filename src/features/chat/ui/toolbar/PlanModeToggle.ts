@@ -12,7 +12,7 @@ export class PlanModeToggle {
 
   constructor(parentEl: HTMLElement, callbacks: ToolbarCallbacks) {
     this.callbacks = callbacks;
-    this.container = parentEl.createDiv({ cls: 'claudian-plan-mode-toggle' });
+    this.container = parentEl.createDiv({ cls: 'specorator-plan-mode-toggle' });
     this.render();
   }
 
@@ -24,11 +24,11 @@ export class PlanModeToggle {
   private render(): void {
     this.container.empty();
 
-    this.buttonEl = this.container.createDiv({ cls: 'claudian-plan-mode-button' });
+    this.buttonEl = this.container.createDiv({ cls: 'specorator-plan-mode-button' });
     this.buttonEl.setAttr('aria-label', t('chat.planMode.ariaLabel'));
     this.buttonEl.setAttr('title', t('chat.planMode.titleInactive'));
 
-    this.iconEl = this.buttonEl.createSpan({ cls: 'claudian-plan-mode-icon' });
+    this.iconEl = this.buttonEl.createSpan({ cls: 'specorator-plan-mode-icon' });
     setIcon(this.iconEl, 'map');
 
     this.updateDisplay();
@@ -62,11 +62,11 @@ export class PlanModeToggle {
       && Boolean(planValue);
 
     if (!canShow) {
-      this.container.addClass('claudian-hidden');
+      this.container.addClass('specorator-hidden');
       return;
     }
 
-    this.container.removeClass('claudian-hidden');
+    this.container.removeClass('specorator-hidden');
     const isActive = this.callbacks.getSettings().permissionMode === planValue;
     this.buttonEl.toggleClass('active', isActive);
     this.buttonEl.setAttr(

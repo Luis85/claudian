@@ -50,7 +50,7 @@ module.exports = {
     // global functions floor lowered 75 -> 74 (2026-06-19): the dedicated Agent
     // Roster / Tool / Skill library views are manually-verified UI excluded from
     // collection, but their plugin-wiring closures in main.ts (view registration,
-    // openView, getClaudianToolServer) are untested glue that nudged the function
+    // openView, getSpecoratorToolServer) are untested glue that nudged the function
     // ratio to 74.97. Statements/branches/lines remain comfortably above floor.
     global: { statements: 79, branches: 68, functions: 74, lines: 80 },
     'src/utils/': { statements: 88, branches: 80, functions: 92, lines: 90 },

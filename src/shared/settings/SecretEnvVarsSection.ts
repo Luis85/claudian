@@ -1,6 +1,6 @@
 import { SecretComponent, Setting } from 'obsidian';
 
-import { isClaudianGeneratedSecretId } from '../../core/security/secretIds';
+import { isSpecoratorGeneratedSecretId } from '../../core/security/secretIds';
 import type { PluginContext } from '../../core/types/PluginContext';
 import type { EnvironmentScope, SecretEnvVarRef } from '../../core/types/settings';
 import { t } from '../../i18n/i18n';
@@ -20,7 +20,7 @@ interface SecretEnvVarsSectionOptions {
  */
 export function renderSecretEnvVarsSection(options: SecretEnvVarsSectionOptions): void {
   const { container, plugin, scope } = options;
-  const host = container.createDiv({ cls: 'claudian-secret-env-vars' });
+  const host = container.createDiv({ cls: 'specorator-secret-env-vars' });
   render();
 
   function render(): void {
@@ -99,12 +99,12 @@ export function renderSecretEnvVarsSection(options: SecretEnvVarsSectionOptions)
 
   /**
    * SEC-A: clear a secret value once no ref points at it, so a deleted/retargeted
-   * key doesn't linger (matches snippet/MCP deletion). Limited to Claudian-owned
+   * key doesn't linger (matches snippet/MCP deletion). Limited to Specorator-owned
    * ids — SecretStorage ids are global, so an external/user-selected id another
    * plugin owns is never auto-erased.
    */
   function clearIfOrphaned(secretId: string, refs: SecretEnvVarRef[]): void {
-    if (!isClaudianGeneratedSecretId(secretId)) return;
+    if (!isSpecoratorGeneratedSecretId(secretId)) return;
     if (refs.some((ref) => ref.secretId === secretId)) return;
     plugin.secretStore.clear(secretId);
   }

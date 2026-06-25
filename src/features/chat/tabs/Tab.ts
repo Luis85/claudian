@@ -1,4 +1,4 @@
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import type { TabData } from './types';
 
 export { getTabProviderId } from './providerResolution';
@@ -33,7 +33,7 @@ export {
  * Gets the display title for a tab.
  * Uses synchronous access since we only need the title, not messages.
  */
-export function getTabTitle(tab: TabData, plugin: ClaudianPlugin): string {
+export function getTabTitle(tab: TabData, plugin: SpecoratorPlugin): string {
   if (tab.conversationId) {
     const conversation = plugin.getConversationSync(tab.conversationId);
     if (conversation?.title) {

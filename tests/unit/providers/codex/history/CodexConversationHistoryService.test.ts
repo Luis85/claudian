@@ -61,7 +61,7 @@ describe('CodexConversationHistoryService.hydrateConversationHistory', () => {
   });
 
   it('bypasses the hydration cache for established forks (re-runs the merge on every open)', async () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'claudian-codex-fork-'));
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'specorator-codex-fork-'));
     const transcript = path.join(dir, 'sess.jsonl');
     fs.writeFileSync(transcript, '{}');
     const turnsSpy = jest.spyOn(Store, 'parseCodexSessionTurns').mockReturnValue([

@@ -1,7 +1,7 @@
 ---
 type: quick-action
 name: Responsive Sidebar Layout
-description: Review or improve Claudian UI behavior across narrow, medium, and wide Obsidian sidebar panes.
+description: Review or improve Specorator UI behavior across narrow, medium, and wide Obsidian sidebar panes.
 icon: panel-right
 tags:
   - frontend
@@ -10,7 +10,7 @@ tags:
   - obsidian
 ---
 
-Use this action when a Claudian UI surface may overflow, crowd, collapse poorly, or assume a full browser viewport instead of an Obsidian pane.
+Use this action when a Specorator UI surface may overflow, crowd, collapse poorly, or assume a full browser viewport instead of an Obsidian pane.
 
 ## 1. Define pane scenarios
 

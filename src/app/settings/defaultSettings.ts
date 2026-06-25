@@ -1,8 +1,8 @@
 import { getDefaultHiddenProviderCommands } from '../../core/providers/commands/hiddenCommands';
 import { ProviderRegistry } from '../../core/providers/ProviderRegistry';
-import { type ClaudianSettings } from '../../core/types/settings';
+import { type SpecoratorSettings } from '../../core/types/settings';
 
-export const DEFAULT_CLAUDIAN_SETTINGS: ClaudianSettings = {
+export const DEFAULT_SPECORATOR_SETTINGS: SpecoratorSettings = {
   userName: '',
 
   // SECURITY (SEC-1): Default to a prompting mode so tools require approval out of
@@ -43,7 +43,7 @@ export const DEFAULT_CLAUDIAN_SETTINGS: ClaudianSettings = {
   // the registry assembles them here. Resolved lazily (via a getter) so this
   // module no longer statically imports each provider's settings module — that
   // static barrel was the root of the `core -> app -> all-providers -> core`
-  // cycle class. Spread/access of DEFAULT_CLAUDIAN_SETTINGS happens at runtime,
+  // cycle class. Spread/access of DEFAULT_SPECORATOR_SETTINGS happens at runtime,
   // after the built-in providers have registered.
   get providerConfigs() {
     return ProviderRegistry.getDefaultProviderConfigs();

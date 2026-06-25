@@ -26,7 +26,7 @@ import type {
 } from '../../../core/runtime/types';
 import type { ApprovalDecision, ChatMessage, ExitPlanModeDecision, StreamChunk } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { ResumeSessionDropdown } from '../../../shared/components/ResumeSessionDropdown';
 import { InstructionModal } from '../../../shared/modals/InstructionConfirmModal';
 import type { BrowserSelectionContext } from '../../../utils/browser';
@@ -70,7 +70,7 @@ import type { SelectionController } from './SelectionController';
 import type { StreamController } from './StreamController';
 
 export interface InputControllerDeps {
-  plugin: ClaudianPlugin;
+  plugin: SpecoratorPlugin;
   state: ChatState;
   renderer: MessageRenderer;
   streamController: StreamController;
@@ -475,7 +475,7 @@ export class InputController {
 
     streamController.showThinkingIndicator(
       isCompact ? 'Compacting...' : undefined,
-      isCompact ? 'claudian-thinking--compact' : undefined,
+      isCompact ? 'specorator-thinking--compact' : undefined,
     );
     state.responseStartTime = performance.now();
 
@@ -646,7 +646,7 @@ export class InputController {
     const { finalAssistantMsg } = turn;
     const didCancelThisTurn = turn.wasInterrupted || state.cancelRequested;
     if (didCancelThisTurn && !state.pendingNewSessionPlan) {
-      await streamController.appendText('\n\n<span class="claudian-interrupted">Interrupted</span> <span class="claudian-interrupted-hint">· What should Claudian do instead?</span>');
+      await streamController.appendText('\n\n<span class="specorator-interrupted">Interrupted</span> <span class="specorator-interrupted-hint">· What should Specorator do instead?</span>');
     }
     streamController.hideThinkingIndicator();
     state.isStreaming = false;
@@ -884,7 +884,7 @@ export class InputController {
   private activateStreamingAssistantMessage(message: ChatMessage): void {
     const { state, renderer } = this.deps;
     const msgEl = renderer.addMessage(message);
-    const contentEl = msgEl.querySelector<HTMLElement>('.claudian-message-content');
+    const contentEl = msgEl.querySelector<HTMLElement>('.specorator-message-content');
 
     if (!contentEl) {
       return;

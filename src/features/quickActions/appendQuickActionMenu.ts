@@ -1,7 +1,7 @@
 import type { Menu, TAbstractFile } from 'obsidian';
 
 import { t } from '../../i18n/i18n';
-import type ClaudianPlugin from '../../main';
+import type SpecoratorPlugin from '../../main';
 import { launchQuickAction } from './launchQuickAction';
 import { openContextMenuQuickAction } from './openContextMenuQuickAction';
 
@@ -37,7 +37,7 @@ import { openContextMenuQuickAction } from './openContextMenuQuickAction';
  */
 export function appendQuickActionFavoritesAndPicker(
   menu: Menu,
-  plugin: ClaudianPlugin,
+  plugin: SpecoratorPlugin,
   file: TAbstractFile,
 ): number {
   menu.addItem((item) => item

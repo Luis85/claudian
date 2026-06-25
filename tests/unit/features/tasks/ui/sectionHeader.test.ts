@@ -52,13 +52,13 @@ describe('renderSectionHeader', () => {
     const { section } = renderSectionHeader(parent, { icon: 'target', label: 'Objective' });
 
     const sectionEl = section as unknown as El;
-    expect(sectionEl.cls.has('claudian-work-order-modal-section')).toBe(true);
+    expect(sectionEl.cls.has('specorator-work-order-modal-section')).toBe(true);
 
-    const icon = find(sectionEl, 'claudian-work-order-modal-section-icon');
+    const icon = find(sectionEl, 'specorator-work-order-modal-section-icon');
     expect(icon).toBeDefined();
     expect(icon!.attrs['data-icon']).toBe('target');
 
-    const label = find(sectionEl, 'claudian-work-order-modal-section-label');
+    const label = find(sectionEl, 'specorator-work-order-modal-section-label');
     expect(label).toBeDefined();
     expect(label!.text).toBe('Objective');
   });
@@ -69,11 +69,11 @@ describe('renderSectionHeader', () => {
     const sectionEl = handle.section as unknown as El;
 
     // No right slot until requested.
-    expect(find(sectionEl, 'claudian-work-order-modal-section-right')).toBeUndefined();
+    expect(find(sectionEl, 'specorator-work-order-modal-section-right')).toBeUndefined();
 
     const right1 = handle.right();
     const right2 = handle.right();
-    expect(find(sectionEl, 'claudian-work-order-modal-section-right')).toBeDefined();
+    expect(find(sectionEl, 'specorator-work-order-modal-section-right')).toBeDefined();
     // Idempotent: the same element is returned, not a second slot.
     expect(right1).toBe(right2);
   });

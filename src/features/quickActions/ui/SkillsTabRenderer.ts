@@ -28,7 +28,7 @@ export class SkillsTabRenderer {
     this.filter = '';
     this.buildSearch(host);
     this.listEl = host.createDiv({
-      cls: 'claudian-quick-actions-list claudian-quick-actions-skill-list',
+      cls: 'specorator-quick-actions-list specorator-quick-actions-skill-list',
     });
 
     // Phase A: instant paint from in-memory cache (may be empty on cold start).
@@ -50,14 +50,14 @@ export class SkillsTabRenderer {
   }
 
   private buildSearch(host: HTMLElement): void {
-    const searchWrap = host.createDiv({ cls: 'claudian-quick-actions-search' });
+    const searchWrap = host.createDiv({ cls: 'specorator-quick-actions-search' });
     const inputContainer = searchWrap.createDiv({
-      cls: 'claudian-quick-actions-search-container',
+      cls: 'specorator-quick-actions-search-container',
     });
     const placeholder = t('quickActions.skills.searchPlaceholder');
     this.searchInputEl = inputContainer.createEl('input', {
       type: 'search',
-      cls: 'claudian-quick-actions-search-input',
+      cls: 'specorator-quick-actions-search-input',
       attr: { placeholder, 'aria-label': placeholder },
     });
     this.searchInputEl.addEventListener('input', () => {
@@ -78,7 +78,7 @@ export class SkillsTabRenderer {
     });
 
     const refreshBtn = inputContainer.createEl('button', {
-      cls: 'claudian-quick-actions-search-refresh',
+      cls: 'specorator-quick-actions-search-refresh',
       attr: {
         type: 'button',
         title: t('quickActions.skills.refreshTooltip'),
@@ -102,7 +102,7 @@ export class SkillsTabRenderer {
       this.renderSkeleton();
       return;
     }
-    this.listEl.removeClass('claudian-quick-actions-skills-empty');
+    this.listEl.removeClass('specorator-quick-actions-skills-empty');
 
     const filtered = this.applyFilter(this.skills);
     filtered.sort((a, b) => {
@@ -114,7 +114,7 @@ export class SkillsTabRenderer {
 
     if (filtered.length === 0) {
       this.listEl.createDiv({
-        cls: 'claudian-quick-actions-empty-results',
+        cls: 'specorator-quick-actions-empty-results',
         text: t('quickActions.skills.noResults'),
       });
       return;
@@ -124,7 +124,7 @@ export class SkillsTabRenderer {
     for (const skill of filtered) {
       if (skill.providerId !== lastProvider) {
         this.listEl.createDiv({
-          cls: 'claudian-quick-actions-provider-header',
+          cls: 'specorator-quick-actions-provider-header',
           text: skill.providerDisplayName,
         });
         lastProvider = skill.providerId;
@@ -135,13 +135,13 @@ export class SkillsTabRenderer {
 
   private renderSkeleton(): void {
     if (!this.listEl) return;
-    this.listEl.addClass('claudian-quick-actions-skills-skeleton');
+    this.listEl.addClass('specorator-quick-actions-skills-skeleton');
     for (let i = 0; i < SKELETON_ROWS; i++) {
       const row = this.listEl.createDiv({
-        cls: 'claudian-quick-action-row claudian-quick-actions-skill-row is-skeleton',
+        cls: 'specorator-quick-action-row specorator-quick-actions-skill-row is-skeleton',
       });
-      row.createDiv({ cls: 'claudian-quick-action-icon is-skeleton-block' });
-      const text = row.createDiv({ cls: 'claudian-quick-action-text' });
+      row.createDiv({ cls: 'specorator-quick-action-icon is-skeleton-block' });
+      const text = row.createDiv({ cls: 'specorator-quick-action-text' });
       text.createDiv({ cls: 'is-skeleton-line is-skeleton-line-title' });
       text.createDiv({ cls: 'is-skeleton-line is-skeleton-line-desc' });
     }
@@ -169,24 +169,24 @@ export class SkillsTabRenderer {
     if (!this.listEl) return;
 
     const row = this.listEl.createDiv({
-      cls: 'claudian-quick-action-row claudian-quick-actions-skill-row',
+      cls: 'specorator-quick-action-row specorator-quick-actions-skill-row',
     });
     if (!skill.providerEnabled) {
       row.addClass('is-provider-disabled');
     }
 
     const main = row.createDiv({
-      cls: 'claudian-quick-action-main claudian-quick-actions-skill-row-main',
+      cls: 'specorator-quick-action-main specorator-quick-actions-skill-row-main',
     });
 
-    const iconEl = main.createSpan({ cls: 'claudian-quick-action-icon' });
+    const iconEl = main.createSpan({ cls: 'specorator-quick-action-icon' });
     setIcon(iconEl, 'book-open');
 
-    const textCol = main.createDiv({ cls: 'claudian-quick-action-text' });
+    const textCol = main.createDiv({ cls: 'specorator-quick-action-text' });
     textCol.createEl('strong', { text: skill.name });
     if (skill.description) {
       textCol.createDiv({
-        cls: 'claudian-quick-action-desc',
+        cls: 'specorator-quick-action-desc',
         text: skill.description,
       });
     }
@@ -194,13 +194,13 @@ export class SkillsTabRenderer {
       const key = `skill:${skill.providerId}:${skill.name}`;
       const record = this.usageTracker.getAll().get(key) ?? null;
       textCol.createSpan({
-        cls: 'claudian-skill-usage-badge',
+        cls: 'specorator-skill-usage-badge',
         text: formatUsageBadge(record, this.now(), loadBadgeI18n()),
       });
     }
     if (!skill.providerEnabled) {
       textCol.createSpan({
-        cls: 'claudian-quick-actions-skill-disabled-badge',
+        cls: 'specorator-quick-actions-skill-disabled-badge',
         text: t('quickActions.skills.disabledBadge'),
       });
     }
@@ -211,9 +211,9 @@ export class SkillsTabRenderer {
     });
 
     if (skill.sourceFilePath) {
-      const actions = row.createDiv({ cls: 'claudian-quick-action-actions' });
+      const actions = row.createDiv({ cls: 'specorator-quick-action-actions' });
       const editBtn = actions.createEl('button', {
-        cls: 'claudian-quick-actions-skill-edit',
+        cls: 'specorator-quick-actions-skill-edit',
         text: t('quickActions.skills.editInSettings', {
           provider: skill.providerDisplayName,
         }),

@@ -35,8 +35,8 @@ function silentLogger(): Logger {
 }
 
 describe('UsageStorage', () => {
-  const PATH = '.claudian/usage.json';
-  const CORRUPT = '.claudian/usage.corrupt.json';
+  const PATH = '.specorator/usage.json';
+  const CORRUPT = '.specorator/usage.corrupt.json';
 
   it('returns empty index when file missing', async () => {
     const adapter = makeAdapter();

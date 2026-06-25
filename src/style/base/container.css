@@ -1,4 +1,4 @@
-.claudian-container {
+.specorator-container {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -7,26 +7,26 @@
   font-family: var(--font-text);
 }
 
-.claudian-hidden {
+.specorator-hidden {
   display: none !important;
 }
 
-.claudian-visible-block {
+.specorator-visible-block {
   display: block !important;
 }
 
-.claudian-visible-flex {
+.specorator-visible-flex {
   display: flex !important;
 }
 
-.claudian-provider-icon-variant--dark {
+.specorator-provider-icon-variant--dark {
   display: none;
 }
 
-body.theme-dark .claudian-provider-icon-variant--light {
+body.theme-dark .specorator-provider-icon-variant--light {
   display: none;
 }
 
-body.theme-dark .claudian-provider-icon-variant--dark {
+body.theme-dark .specorator-provider-icon-variant--dark {
   display: inline;
 }

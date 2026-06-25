@@ -1,6 +1,6 @@
 import { PluginLifecycle } from '@/app/lifecycle/PluginLifecycle';
-import type { ClaudianView } from '@/features/chat/ClaudianView';
-import type ClaudianPlugin from '@/main';
+import type { SpecoratorView } from '@/features/chat/SpecoratorView';
+import type SpecoratorPlugin from '@/main';
 import * as pathUtils from '@/utils/path';
 
 function createTab(opts: { cleanup?: () => Promise<void> | void } = {}) {
@@ -16,15 +16,15 @@ function createView(tabs: ReturnType<typeof createTab>[]) {
   };
   return {
     getTabManager: jest.fn().mockReturnValue(tabManager),
-  } as unknown as ClaudianView;
+  } as unknown as SpecoratorView;
 }
 
-function createPlugin(views: ClaudianView[]): ClaudianPlugin {
+function createPlugin(views: SpecoratorView[]): SpecoratorPlugin {
   return {
     getAllViews: jest.fn().mockReturnValue(views),
     persistTabManagerState: jest.fn().mockResolvedValue(undefined),
     app: { vault: { on: jest.fn() } },
-  } as unknown as ClaudianPlugin;
+  } as unknown as SpecoratorPlugin;
 }
 
 describe('PluginLifecycle.shutdownActiveRuntimes', () => {
@@ -74,7 +74,7 @@ describe('PluginLifecycle.installGitWatcher', () => {
       gitStatusWatcher: null,
       registerEvent: jest.fn(),
       app: { vault: { on: jest.fn() } },
-    } as unknown as ClaudianPlugin;
+    } as unknown as SpecoratorPlugin;
     const lifecycle = new PluginLifecycle(plugin);
 
     lifecycle.installGitWatcher();

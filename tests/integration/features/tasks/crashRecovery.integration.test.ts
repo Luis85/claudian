@@ -16,7 +16,7 @@ const PATH = 'Agent Board/tasks/t1.md';
 
 function makeRunningNote(status = 'running'): string {
   return `---
-type: claudian-work-order
+type: specorator-work-order
 schema_version: 1
 id: t1
 title: Orphaned task
@@ -63,7 +63,7 @@ function makeRunningNoteFor(id: string, opts: { withLedger?: boolean } = {}): st
       ? 'This note predates the generated run-ledger markers.'
       : `${RUN_LEDGER_START}\n- 2026-06-04T08:30:00.000Z [running] Run started (attempt 1)\n${RUN_LEDGER_END}`;
   return `---
-type: claudian-work-order
+type: specorator-work-order
 schema_version: 1
 id: ${id}
 title: Orphaned ${id}

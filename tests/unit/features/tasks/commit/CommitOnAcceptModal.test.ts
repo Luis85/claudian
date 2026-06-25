@@ -132,7 +132,7 @@ describe('CommitOnAcceptModal', () => {
     const modal = mountModal({ taskTitle: 'X', dirtyCount: 2 });
     const promise = modal.result();
     const ctaBtn = modal.contentEl.querySelector(
-      '[data-claudian-commit-on-accept="confirm"]',
+      '[data-specorator-commit-on-accept="confirm"]',
     ) as HTMLButtonElement;
     ctaBtn.click();
     await expect(promise).resolves.toEqual({ confirmed: true, dontAskAgain: false });
@@ -142,12 +142,12 @@ describe('CommitOnAcceptModal', () => {
     const modal = mountModal({ taskTitle: 'X', dirtyCount: 2 });
     const promise = modal.result();
     const cb = modal.contentEl.querySelector(
-      '[data-claudian-commit-on-accept="dont-ask"]',
+      '[data-specorator-commit-on-accept="dont-ask"]',
     ) as HTMLInputElement;
     cb.checked = true;
     cb.dispatchEvent(new Event('change'));
     const skipBtn = modal.contentEl.querySelector(
-      '[data-claudian-commit-on-accept="skip"]',
+      '[data-specorator-commit-on-accept="skip"]',
     ) as HTMLButtonElement;
     skipBtn.click();
     await expect(promise).resolves.toEqual({ confirmed: false, dontAskAgain: true });

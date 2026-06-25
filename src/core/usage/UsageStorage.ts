@@ -2,8 +2,8 @@ import type { Logger } from '../logging/Logger';
 import type { VaultFileAdapter } from '../storage/VaultFileAdapter';
 import { USAGE_INDEX_SCHEMA_VERSION, type UsageIndex, type UsageRecord } from './types';
 
-const DEFAULT_PATH = '.claudian/usage.json';
-const CORRUPT_PATH = '.claudian/usage.corrupt.json';
+const DEFAULT_PATH = '.specorator/usage.json';
+const CORRUPT_PATH = '.specorator/usage.corrupt.json';
 
 export class UsageStorage {
   constructor(

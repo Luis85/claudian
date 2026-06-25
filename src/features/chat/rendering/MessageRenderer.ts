@@ -11,11 +11,11 @@ import {
 } from '../../../core/tools/toolNames';
 import type { ChatMessage, ImageAttachment, ToolCallInfo } from '../../../core/types';
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { processFileLinks, registerFileLinkHandler } from '../../../utils/fileLink';
 import { replaceImageEmbedsWithHtml } from '../../../utils/imageEmbed';
 import { escapeMathDelimitersForStreaming } from '../../../utils/markdownMath';
-import { openClaudianProviderSettings } from '../../../utils/obsidianPrivateApi';
+import { openSpecoratorProviderSettings } from '../../../utils/obsidianPrivateApi';
 import { extractVaultMentions } from '../../../utils/vaultMentions';
 import { findRewindContext } from '../rewind';
 import {
@@ -46,7 +46,7 @@ import { renderStoredWriteEdit } from './WriteEditRenderer';
  * execution prompts. Used to collapse the prompt behind a `<details>` toggle
  * so the chat stays readable.
  */
-const WORK_ORDER_PROMPT_SIGNATURE = 'You are executing a Claudian work order.';
+const WORK_ORDER_PROMPT_SIGNATURE = 'You are executing a Specorator work order.';
 
 function isWorkOrderExecutionPrompt(text: string): boolean {
   return text.includes(WORK_ORDER_PROMPT_SIGNATURE);
@@ -63,7 +63,7 @@ export type RenderContentFn = (
 ) => Promise<void>;
 
 /**
- * Returns the direct `.claudian-response-footer` child of `contentEl`, if any.
+ * Returns the direct `.specorator-response-footer` child of `contentEl`, if any.
  * Direct-child only on purpose: `:scope > .x` is not portable through our
  * tests' minimal DOM mock, so this iterates the live `children` array instead.
  */
@@ -71,7 +71,7 @@ function findResponseFooterChild(contentEl: HTMLElement): HTMLElement | null {
   const children = contentEl.children;
   for (let i = 0; i < children.length; i++) {
     const child = children[i] as HTMLElement;
-    if (child.classList?.contains('claudian-response-footer')) return child;
+    if (child.classList?.contains('specorator-response-footer')) return child;
   }
   return null;
 }
@@ -92,7 +92,7 @@ export interface MessageRendererHooks {
 
 export class MessageRenderer {
   private app: App;
-  private plugin: ClaudianPlugin;
+  private plugin: SpecoratorPlugin;
   private component: Component;
   private messagesEl: HTMLElement;
   private rewindCallback?: (messageId: string, mode?: ChatRewindMode) => Promise<void>;
@@ -116,7 +116,7 @@ export class MessageRenderer {
   private imageRendererInstance: MessageImageRenderer | null = null;
 
   constructor(
-    plugin: ClaudianPlugin,
+    plugin: SpecoratorPlugin,
     component: Component,
     messagesEl: HTMLElement,
     hooks: MessageRendererHooks = {},
@@ -198,16 +198,16 @@ export class MessageRenderer {
    */
   private renderUserTextBlock(contentEl: HTMLElement, text: string): void {
     if (isWorkOrderExecutionPrompt(text)) {
-      const details = contentEl.createEl('details', { cls: 'claudian-work-order-prompt' });
+      const details = contentEl.createEl('details', { cls: 'specorator-work-order-prompt' });
       details.createEl('summary', {
-        cls: 'claudian-work-order-prompt-summary',
+        cls: 'specorator-work-order-prompt-summary',
         text: 'Work order prompt',
       });
-      const textEl = details.createDiv({ cls: 'claudian-text-block' });
+      const textEl = details.createDiv({ cls: 'specorator-text-block' });
       void this.renderContent(textEl, text);
       return;
     }
-    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+    const textEl = contentEl.createDiv({ cls: 'specorator-text-block' });
     void this.renderContent(textEl, text);
   }
 
@@ -287,7 +287,7 @@ export class MessageRenderer {
       return;
     }
 
-    const contentEl = msgEl.querySelector<HTMLElement>('.claudian-message-content');
+    const contentEl = msgEl.querySelector<HTMLElement>('.specorator-message-content');
     if (!contentEl) {
       return;
     }
@@ -300,10 +300,10 @@ export class MessageRenderer {
       this.renderUserTextBlock(contentEl, textToShow);
     }
 
-    const toolbar = msgEl.querySelector<HTMLElement>('.claudian-user-msg-actions');
+    const toolbar = msgEl.querySelector<HTMLElement>('.specorator-user-msg-actions');
     if (toolbar) {
-      toolbar.querySelectorAll('.claudian-user-msg-copy-btn').forEach((el) => el.remove());
-      toolbar.querySelectorAll('.claudian-user-msg-action-btn').forEach((el) => el.remove());
+      toolbar.querySelectorAll('.specorator-user-msg-copy-btn').forEach((el) => el.remove());
+      toolbar.querySelectorAll('.specorator-user-msg-action-btn').forEach((el) => el.remove());
     }
 
     if (textToShow) {
@@ -349,9 +349,9 @@ export class MessageRenderer {
     this.liveMessageEls.clear();
     this.loadEarlierEl = null;
     this.windowedMessages = [];
-    const loader = this.messagesEl.createDiv({ cls: 'claudian-loading' });
-    loader.createDiv({ cls: 'claudian-loading-spinner' });
-    loader.createDiv({ cls: 'claudian-loading-text', text: loadingText });
+    const loader = this.messagesEl.createDiv({ cls: 'specorator-loading' });
+    loader.createDiv({ cls: 'specorator-loading-spinner' });
+    loader.createDiv({ cls: 'specorator-loading-text', text: loadingText });
   }
 
   renderMessages(
@@ -459,21 +459,21 @@ export class MessageRenderer {
    */
   clearHydrationBanner(): void {
     this.hydrationError = null;
-    this.messagesEl.querySelector('.claudian-hydration-error')?.remove();
+    this.messagesEl.querySelector('.specorator-hydration-error')?.remove();
   }
 
   private renderHydrationErrorBanner(): void {
-    this.messagesEl.querySelector('.claudian-hydration-error')?.remove();
+    this.messagesEl.querySelector('.specorator-hydration-error')?.remove();
     if (!this.hydrationError) return;
-    const banner = this.messagesEl.createDiv({ cls: 'claudian-hydration-error' });
+    const banner = this.messagesEl.createDiv({ cls: 'specorator-hydration-error' });
     banner.setText(this.hydrationError.message);
     banner.dataset.errorCode = this.hydrationError.code;
   }
 
   private renderLoadEarlierControl(): void {
-    const el = this.messagesEl.createDiv({ cls: 'claudian-load-earlier' });
+    const el = this.messagesEl.createDiv({ cls: 'specorator-load-earlier' });
     const btn = el.createEl('button', {
-      cls: 'claudian-load-earlier-btn',
+      cls: 'specorator-load-earlier-btn',
       text: t('chat.loadEarlier'),
       attr: { type: 'button' },
     });
@@ -590,13 +590,13 @@ export class MessageRenderer {
 
   private createMessageShell(msg: ChatMessage): { msgEl: HTMLElement; contentEl: HTMLElement } {
     const msgEl = this.messagesEl.createDiv({
-      cls: `claudian-message claudian-message-${msg.role}`,
+      cls: `specorator-message specorator-message-${msg.role}`,
       attr: {
         'data-message-id': msg.id,
         'data-role': msg.role,
       },
     });
-    const contentEl = msgEl.createDiv({ cls: 'claudian-message-content', attr: { dir: 'auto' } });
+    const contentEl = msgEl.createDiv({ cls: 'specorator-message-content', attr: { dir: 'auto' } });
     return { msgEl, contentEl };
   }
 
@@ -617,18 +617,18 @@ export class MessageRenderer {
   }
 
   private renderInterruptMessage(): void {
-    const msgEl = this.messagesEl.createDiv({ cls: 'claudian-message claudian-message-assistant' });
-    const contentEl = msgEl.createDiv({ cls: 'claudian-message-content', attr: { dir: 'auto' } });
+    const msgEl = this.messagesEl.createDiv({ cls: 'specorator-message specorator-message-assistant' });
+    const contentEl = msgEl.createDiv({ cls: 'specorator-message-content', attr: { dir: 'auto' } });
     this.appendInterruptIndicator(contentEl);
   }
 
   private appendInterruptIndicator(contentEl: HTMLElement): void {
-    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
-    textEl.createSpan({ cls: 'claudian-interrupted', text: 'Interrupted' });
+    const textEl = contentEl.createDiv({ cls: 'specorator-text-block' });
+    textEl.createSpan({ cls: 'specorator-interrupted', text: 'Interrupted' });
     textEl.appendText(' ');
     textEl.createSpan({
-      cls: 'claudian-interrupted-hint',
-      text: '\u00B7 What should Claudian do instead?',
+      cls: 'specorator-interrupted-hint',
+      text: '\u00B7 What should Specorator do instead?',
     });
   }
 
@@ -644,7 +644,7 @@ export class MessageRenderer {
   }
 
   private renderPlainAssistantTextBlock(contentEl: HTMLElement, markdown: string): void {
-    const textEl = contentEl.createDiv({ cls: 'claudian-text-block' });
+    const textEl = contentEl.createDiv({ cls: 'specorator-text-block' });
     void this.renderContent(textEl, markdown);
     this.addTextCopyButton(textEl, markdown);
   }
@@ -691,7 +691,7 @@ export class MessageRenderer {
     if (segments.every((s) => s.type === 'markdown')) return false;
 
     // A live run that took long enough to bake a duration footer attaches
-    // `.claudian-response-footer` to `contentEl` BEFORE finalize runs. Since
+    // `.specorator-response-footer` to `contentEl` BEFORE finalize runs. Since
     // `renderAssistantDisplaySegment` appends new children, naïvely removing
     // `textEl` and rendering would leave the card BELOW the footer — while a
     // reload renders the card above. Detach the footer first, render the card,
@@ -718,7 +718,7 @@ export class MessageRenderer {
     return {
       getProviderId: () => this.getCapabilities().providerId,
       openProviderSettings: (providerId) => {
-        openClaudianProviderSettings(this.app, this.plugin.manifest.id, providerId);
+        openSpecoratorProviderSettings(this.app, this.plugin.manifest.id, providerId);
       },
       renderMarkdown: (el, md) => this.renderContent(el, md),
       renderTextBlock: (el, md) => this.renderAssistantTextBlock(el, md),
@@ -815,10 +815,10 @@ export class MessageRenderer {
       // Wrap pre elements and move buttons outside scroll area
       el.querySelectorAll('pre').forEach((pre) => {
         // Skip if already wrapped
-        if (pre.parentElement?.classList.contains('claudian-code-wrapper')) return;
+        if (pre.parentElement?.classList.contains('specorator-code-wrapper')) return;
 
         // Create wrapper
-        const wrapper = createEl('div', { cls: 'claudian-code-wrapper' });
+        const wrapper = createEl('div', { cls: 'specorator-code-wrapper' });
         pre.parentElement?.insertBefore(wrapper, pre);
         wrapper.appendChild(pre);
 
@@ -829,7 +829,7 @@ export class MessageRenderer {
           if (match) {
             wrapper.classList.add('has-language');
             const label = createEl('span', {
-              cls: 'claudian-code-lang-label',
+              cls: 'specorator-code-lang-label',
               text: match[1],
             });
             wrapper.appendChild(label);
@@ -861,7 +861,7 @@ export class MessageRenderer {
       processFileLinks(this.app, el);
     } catch {
       el.createDiv({
-        cls: 'claudian-render-error',
+        cls: 'specorator-render-error',
         text: 'Failed to render message content.',
       });
     }

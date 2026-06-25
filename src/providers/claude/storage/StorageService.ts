@@ -1,9 +1,9 @@
 import type { App } from 'obsidian';
 
-import { ClaudianSettingsStorage, type StoredClaudianSettings } from '../../../app/settings/ClaudianSettingsStorage';
+import { SpecoratorSettingsStorage, type StoredSpecoratorSettings } from '../../../app/settings/SpecoratorSettingsStorage';
 import { persistTabManagerState, readTabManagerState } from '../../../app/storage/SharedStorageService';
 import { SESSIONS_PATH, SessionStorage } from '../../../core/bootstrap/SessionStorage';
-import { CLAUDIAN_STORAGE_PATH } from '../../../core/bootstrap/StoragePaths';
+import { SPECORATOR_STORAGE_PATH } from '../../../core/bootstrap/StoragePaths';
 import type { AppTabManagerState } from '../../../core/providers/types';
 import { VaultFileAdapter } from '../../../core/storage/VaultFileAdapter';
 import type {
@@ -24,7 +24,7 @@ export const CLAUDE_PATH = '.claude';
 
 export interface CombinedSettings {
   cc: CCSettings;
-  claudian: StoredClaudianSettings;
+  specorator: StoredSpecoratorSettings;
 }
 
 /** Minimal plugin surface this storage layer reads: vault access plus raw data persistence. */
@@ -36,7 +36,7 @@ interface StoragePluginHost {
 
 export class StorageService {
   readonly ccSettings: CCSettingsStorage;
-  readonly claudianSettings: ClaudianSettingsStorage;
+  readonly specoratorSettings: SpecoratorSettingsStorage;
   readonly commands: SlashCommandStorage;
   readonly skills: SkillStorage;
   readonly sessions: SessionStorage;
@@ -52,7 +52,7 @@ export class StorageService {
     this.app = plugin.app;
     this.adapter = adapter ?? new VaultFileAdapter(this.app);
     this.ccSettings = new CCSettingsStorage(this.adapter);
-    this.claudianSettings = new ClaudianSettingsStorage(this.adapter);
+    this.specoratorSettings = new SpecoratorSettingsStorage(this.adapter);
     this.commands = new SlashCommandStorage(this.adapter);
     this.skills = new SkillStorage(this.adapter);
     this.sessions = new SessionStorage(this.adapter);
@@ -64,14 +64,14 @@ export class StorageService {
     await this.ensureDirectories();
 
     const cc = await this.ccSettings.load();
-    const claudian = await this.claudianSettings.load();
+    const specorator = await this.specoratorSettings.load();
 
-    return { cc, claudian };
+    return { cc, specorator };
   }
 
   async ensureDirectories(): Promise<void> {
     await this.adapter.ensureFolder(CLAUDE_PATH);
-    await this.adapter.ensureFolder(CLAUDIAN_STORAGE_PATH);
+    await this.adapter.ensureFolder(SPECORATOR_STORAGE_PATH);
     await this.adapter.ensureFolder(COMMANDS_PATH);
     await this.adapter.ensureFolder(SKILLS_PATH);
     await this.adapter.ensureFolder(SESSIONS_PATH);
@@ -108,16 +108,16 @@ export class StorageService {
     return this.ccSettings.removeRule(createPermissionRule(rule));
   }
 
-  async updateClaudianSettings(updates: Partial<StoredClaudianSettings>): Promise<void> {
-    return this.claudianSettings.update(updates);
+  async updateSpecoratorSettings(updates: Partial<StoredSpecoratorSettings>): Promise<void> {
+    return this.specoratorSettings.update(updates);
   }
 
-  async saveClaudianSettings(settings: StoredClaudianSettings): Promise<void> {
-    return this.claudianSettings.save(settings);
+  async saveSpecoratorSettings(settings: StoredSpecoratorSettings): Promise<void> {
+    return this.specoratorSettings.save(settings);
   }
 
-  async loadClaudianSettings(): Promise<StoredClaudianSettings> {
-    return this.claudianSettings.load();
+  async loadSpecoratorSettings(): Promise<StoredSpecoratorSettings> {
+    return this.specoratorSettings.load();
   }
 
   async getTabManagerState(): Promise<TabManagerPersistedState | null> {

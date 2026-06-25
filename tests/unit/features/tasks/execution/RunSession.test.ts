@@ -17,12 +17,12 @@ class ReplayOnSubscribeAdapter implements ProviderStreamAdapter {
   cancel(): void {}
 }
 
-const VALID_HANDOFF = `<claudian_handoff>
+const VALID_HANDOFF = `<specorator_handoff>
 summary: Done.
 verification: Tests pass.
 risks: None.
 next_action: Review.
-</claudian_handoff>`;
+</specorator_handoff>`;
 
 function makeTask(overrides: Partial<TaskSpec['frontmatter']> = {}): TaskSpec {
   return {
@@ -30,7 +30,7 @@ function makeTask(overrides: Partial<TaskSpec['frontmatter']> = {}): TaskSpec {
     raw: '',
     body: '',
     frontmatter: {
-      type: 'claudian-work-order',
+      type: 'specorator-work-order',
       schema_version: 1,
       id: 't1',
       title: 'T1',
@@ -99,13 +99,13 @@ describe('RunSession', () => {
     expect(handoffs.length).toBe(1);
   });
 
-  it('transitions to needs_input on <claudian_needs_input> and resumes via sendFollowUp', async () => {
+  it('transitions to needs_input on <specorator_needs_input> and resumes via sendFollowUp', async () => {
     jest.useFakeTimers();
     const { session, adapter, events, statuses, ledger } = makeSession();
     const seen: TaskEventMap['task:needs-input'][] = [];
     events.on('task:needs-input', (p) => seen.push(p));
     const terminal = session.run();
-    adapter.emitText('<claudian_needs_input>\nquestion: which env?\n</claudian_needs_input>');
+    adapter.emitText('<specorator_needs_input>\nquestion: which env?\n</specorator_needs_input>');
     await Promise.resolve();
     expect(statuses).toEqual(['running', 'needs_input']);
     expect(seen[0].question).toBe('which env?');
@@ -126,7 +126,7 @@ describe('RunSession', () => {
     jest.useFakeTimers();
     const { session, adapter, statuses, handoffs } = makeSession();
     const terminal = session.run();
-    adapter.emitText('<claudian_needs_input>\nquestion: which env?\n</claudian_needs_input>');
+    adapter.emitText('<specorator_needs_input>\nquestion: which env?\n</specorator_needs_input>');
     await Promise.resolve();
     // User resumes BEFORE the pause turn's own `done` arrives.
     await session.resume({ kind: 'reply', content: '.env.local' });
@@ -147,7 +147,7 @@ describe('RunSession', () => {
   it('rejected approval cancels the run with reason', async () => {
     const { session, adapter, statuses, ledger } = makeSession();
     const terminal = session.run();
-    adapter.emitText('<claudian_needs_approval>\naction: drop table\n</claudian_needs_approval>');
+    adapter.emitText('<specorator_needs_approval>\naction: drop table\n</specorator_needs_approval>');
     await Promise.resolve();
     await session.resume({ kind: 'reject', reason: 'too risky' });
     const result = await terminal;
@@ -161,7 +161,7 @@ describe('RunSession', () => {
     const seen: TaskEventMap['task:needs-input'][] = [];
     events.on('task:needs-input', (p) => seen.push(p));
     const terminal = session.run();
-    // Turn 1 ends with a plain-text question — no handoff, no <claudian_*> block.
+    // Turn 1 ends with a plain-text question — no handoff, no <specorator_*> block.
     adapter.emitText('Should I use option A or option B?');
     adapter.emitEnd({ status: 'completed', finalAssistantContent: 'Should I use option A or option B?' });
     // Allow the implicit-pause status write + ledger flush to settle.
@@ -211,7 +211,7 @@ describe('RunSession', () => {
     jest.useFakeTimers();
     const { session, adapter, statuses, handoffs } = makeSession();
     const terminal = session.run();
-    adapter.emitText('<claudian_needs_input>\nquestion: which env?\n</claudian_needs_input>');
+    adapter.emitText('<specorator_needs_input>\nquestion: which env?\n</specorator_needs_input>');
     await Promise.resolve();
     expect(statuses).toEqual(['running', 'needs_input']);
     // The pause turn ends with its own stream-end; this must NOT finalize the run.
@@ -328,7 +328,7 @@ describe('RunSession', () => {
       ledgerMilestone: 999,
     });
     const terminal = session.run();
-    adapter.emitText('<claudian_needs_approval>\naction: drop\n</claudian_needs_approval>');
+    adapter.emitText('<specorator_needs_approval>\naction: drop\n</specorator_needs_approval>');
     await Promise.resolve();
     const rejecting = session.resume({ kind: 'reject', reason: 'no' });
     await Promise.resolve();
@@ -462,7 +462,7 @@ describe('RunSession', () => {
   it('complete() is a no-op once the run has paused, so a stale initial terminal cannot finalize it', async () => {
     const { session, adapter, statuses } = makeSession({ heartbeatIntervalMs: 100000, staleThresholdMs: 100000 });
     const terminal = session.run();
-    adapter.emitText('<claudian_needs_input>\nquestion: which?\n</claudian_needs_input>');
+    adapter.emitText('<specorator_needs_input>\nquestion: which?\n</specorator_needs_input>');
     await Promise.resolve();
     adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked' }); // pause-turn end
     await Promise.resolve();
@@ -527,7 +527,7 @@ describe('RunSession', () => {
   it('finishes a follow-up that settles ok even when it emits no stream done', async () => {
     const { session, adapter, statuses } = makeSession({ heartbeatIntervalMs: 100000, staleThresholdMs: 100000 });
     const terminal = session.run();
-    adapter.emitText('<claudian_needs_input>\nquestion: which?\n</claudian_needs_input>');
+    adapter.emitText('<specorator_needs_input>\nquestion: which?\n</specorator_needs_input>');
     await Promise.resolve();
     adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked' }); // pause-turn end
     await Promise.resolve();
@@ -545,7 +545,7 @@ describe('RunSession', () => {
     const terminal = session.run();
     // A long pause question, so finalContentBuffer exceeds the follow-up handoff.
     const longQuestion = 'which of these environment files should I use for the deployment configuration step here';
-    adapter.emitText(`<claudian_needs_input>\nquestion: ${longQuestion}\n</claudian_needs_input>`);
+    adapter.emitText(`<specorator_needs_input>\nquestion: ${longQuestion}\n</specorator_needs_input>`);
     await Promise.resolve();
     adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked' }); // pause-turn end
     await Promise.resolve();
@@ -561,7 +561,7 @@ describe('RunSession', () => {
   it('finishes a follow-up settling ok even if a late pause-turn done arrives after resume', async () => {
     const { session, adapter } = makeSession({ heartbeatIntervalMs: 100000, staleThresholdMs: 100000 });
     const terminal = session.run();
-    adapter.emitText('<claudian_needs_input>\nquestion: q\n</claudian_needs_input>');
+    adapter.emitText('<specorator_needs_input>\nquestion: q\n</specorator_needs_input>');
     await Promise.resolve();
     // User resumes before the pause-turn done arrives.
     await session.resume({ kind: 'reply', content: 'go' });
@@ -577,14 +577,14 @@ describe('RunSession', () => {
   it('does not finish a follow-up that paused again, even though it settles ok', async () => {
     const { session, adapter, statuses } = makeSession({ heartbeatIntervalMs: 100000, staleThresholdMs: 100000 });
     const terminal = session.run();
-    adapter.emitText('<claudian_needs_input>\nquestion: q1\n</claudian_needs_input>');
+    adapter.emitText('<specorator_needs_input>\nquestion: q1\n</specorator_needs_input>');
     await Promise.resolve();
     adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked' }); // pause 1 turn end
     await Promise.resolve();
     await session.resume({ kind: 'reply', content: 'go' });
 
     // The follow-up re-pauses, emitting its own turn-end done (ignored by the counter).
-    adapter.emitText('<claudian_needs_input>\nquestion: q2\n</claudian_needs_input>');
+    adapter.emitText('<specorator_needs_input>\nquestion: q2\n</specorator_needs_input>');
     await Promise.resolve();
     adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked2' });
     await Promise.resolve();
@@ -622,7 +622,7 @@ describe('RunSession', () => {
       ledgerMilestone: 999,
     });
     const terminal = session.run();
-    adapter.emitText('<claudian_needs_input>\nquestion: which?\n</claudian_needs_input>');
+    adapter.emitText('<specorator_needs_input>\nquestion: which?\n</specorator_needs_input>');
     const result = await terminal;
     expect(result.ok).toBe(false);
     expect(statuses[statuses.length - 1]).toBe('failed');
@@ -631,7 +631,7 @@ describe('RunSession', () => {
   it('fails a follow-up that settles with an error', async () => {
     const { session, adapter, statuses } = makeSession({ heartbeatIntervalMs: 100000, staleThresholdMs: 100000 });
     const terminal = session.run();
-    adapter.emitText('<claudian_needs_input>\nquestion: q\n</claudian_needs_input>');
+    adapter.emitText('<specorator_needs_input>\nquestion: q\n</specorator_needs_input>');
     await Promise.resolve();
     adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked' });
     await Promise.resolve();
@@ -646,7 +646,7 @@ describe('RunSession', () => {
   it('does not fail a queued follow-up (no outcome); the queued turn finishes it later', async () => {
     const { session, adapter, statuses } = makeSession({ heartbeatIntervalMs: 100000, staleThresholdMs: 100000 });
     const terminal = session.run();
-    adapter.emitText('<claudian_needs_input>\nquestion: q\n</claudian_needs_input>');
+    adapter.emitText('<specorator_needs_input>\nquestion: q\n</specorator_needs_input>');
     await Promise.resolve();
     adapter.emitEnd({ status: 'completed', finalAssistantContent: 'asked' }); // pause-turn end
     await Promise.resolve();
@@ -696,7 +696,7 @@ describe('RunSession', () => {
       const appendLedger = jest.fn().mockResolvedValue(undefined);
       const { session, adapter } = makeSession({ appendLedger });
       const terminal = session.run();
-      adapter.emitText('<claudian_progress>\nstep: building\ndone: 1/3\n</claudian_progress>');
+      adapter.emitText('<specorator_progress>\nstep: building\ndone: 1/3\n</specorator_progress>');
       adapter.emitText(VALID_HANDOFF);
       adapter.emitEnd({ status: 'completed', finalAssistantContent: VALID_HANDOFF });
       await terminal;
@@ -788,7 +788,7 @@ describe('RunSession', () => {
       const resumed: TaskEventMap['task:resumed'][] = [];
       events.on('task:resumed', (p) => resumed.push(p));
       const terminal = session.run();
-      adapter.emitText('<claudian_needs_input>\nquestion: which?\n</claudian_needs_input>');
+      adapter.emitText('<specorator_needs_input>\nquestion: which?\n</specorator_needs_input>');
       await Promise.resolve();
       await Promise.resolve();
       // Resume returns normally (the failure is settled internally as a fail);

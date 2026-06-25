@@ -8,15 +8,15 @@ import {
   registerCommandHotkey,
   resetCommandHotkeysForTests,
 } from '@/core/commands/commandHotkeyRegistry';
-import type { ClaudianSettings } from '@/core/types/settings';
+import type { SpecoratorSettings } from '@/core/types/settings';
 import { renderHotkeysSection } from '@/features/settings/hotkeys/HotkeysSection';
 import type { SettingsCtx } from '@/features/settings/registry/SettingsField';
-import type ClaudianPlugin from '@/main';
+import type SpecoratorPlugin from '@/main';
 
 describe('HotkeysSection', () => {
   let host: HTMLElement;
   let ctx: SettingsCtx;
-  let mockPlugin: ClaudianPlugin;
+  let mockPlugin: SpecoratorPlugin;
 
   beforeEach(() => {
     resetCommandHotkeysForTests();
@@ -37,10 +37,10 @@ describe('HotkeysSection', () => {
           return jest.fn();
         }),
       },
-    } as unknown as ClaudianPlugin;
+    } as unknown as SpecoratorPlugin;
 
     ctx = {
-      settings: {} as ClaudianSettings,
+      settings: {} as SpecoratorSettings,
       saveSettings: jest.fn(),
       refresh: jest.fn(),
       plugin: mockPlugin,
@@ -56,40 +56,40 @@ describe('HotkeysSection', () => {
 
   it('renders one row per registered command', () => {
     registerCommandHotkey({
-      commandId: 'claudian:test-cmd1',
+      commandId: 'specorator:test-cmd1',
       label: 'Test Command 1',
     });
     registerCommandHotkey({
-      commandId: 'claudian:test-cmd2',
+      commandId: 'specorator:test-cmd2',
       label: 'Test Command 2',
     });
 
     const dispose = renderHotkeysSection(ctx, host);
 
-    const rows = host.querySelectorAll('.claudian-hotkey-row');
+    const rows = host.querySelectorAll('.specorator-hotkey-row');
     expect(rows).toHaveLength(2);
-    expect(rows[0].querySelector('.claudian-hotkey-command-label')?.textContent).toContain('Test Command 1');
-    expect(rows[1].querySelector('.claudian-hotkey-command-label')?.textContent).toContain('Test Command 2');
+    expect(rows[0].querySelector('.specorator-hotkey-command-label')?.textContent).toContain('Test Command 1');
+    expect(rows[1].querySelector('.specorator-hotkey-command-label')?.textContent).toContain('Test Command 2');
     dispose();
   });
 
   it('shows "Unbound" when no binding exists', () => {
     registerCommandHotkey({
-      commandId: 'claudian:unbound-cmd',
+      commandId: 'specorator:unbound-cmd',
       label: 'Unbound Command',
     });
 
     const dispose = renderHotkeysSection(ctx, host);
 
-    const chip = host.querySelector('.claudian-hotkey-binding-chip');
+    const chip = host.querySelector('.specorator-hotkey-binding-chip');
     expect(chip?.textContent).toContain('Unbound');
-    expect(chip?.classList.contains('claudian-hotkey-binding-chip--unbound')).toBe(true);
+    expect(chip?.classList.contains('specorator-hotkey-binding-chip--unbound')).toBe(true);
     dispose();
   });
 
   it('shows formatted hotkey when bound', () => {
     registerCommandHotkey({
-      commandId: 'claudian:bound-cmd',
+      commandId: 'specorator:bound-cmd',
       label: 'Bound Command',
     });
 
@@ -97,7 +97,7 @@ describe('HotkeysSection', () => {
       ...mockPlugin.app,
       hotkeyManager: {
         customKeys: {
-          'claudian:bound-cmd': [{ modifiers: ['Ctrl'], key: 'K' }],
+          'specorator:bound-cmd': [{ modifiers: ['Ctrl'], key: 'K' }],
         },
         defaultKeys: {},
       },
@@ -106,7 +106,7 @@ describe('HotkeysSection', () => {
 
     const dispose = renderHotkeysSection(ctx, host);
 
-    const chip = host.querySelector('.claudian-hotkey-binding-chip');
+    const chip = host.querySelector('.specorator-hotkey-binding-chip');
     // Accept both Windows (Ctrl+K) and macOS (⌃K) formats depending on platform
     expect(chip?.textContent).toMatch(/Ctrl\+K|⌃K/);
     dispose();
@@ -114,25 +114,25 @@ describe('HotkeysSection', () => {
 
   it('calls openHotkeySettingsFor when edit button clicked', () => {
     registerCommandHotkey({
-      commandId: 'claudian:edit-test',
+      commandId: 'specorator:edit-test',
       label: 'Edit Test Command',
     });
 
     const openHotkeySettingsFor = jest.fn();
     const dispose = renderHotkeysSection(ctx, host, openHotkeySettingsFor);
 
-    const editBtn = host.querySelector('.claudian-hotkey-edit-button') as HTMLButtonElement;
+    const editBtn = host.querySelector('.specorator-hotkey-edit-button') as HTMLButtonElement;
     expect(editBtn).toBeTruthy();
 
     editBtn?.click();
 
-    expect(openHotkeySettingsFor).toHaveBeenCalledWith('claudian:edit-test');
+    expect(openHotkeySettingsFor).toHaveBeenCalledWith('specorator:edit-test');
     dispose();
   });
 
   it('returns a disposer that clears the poll interval', () => {
     registerCommandHotkey({
-      commandId: 'claudian:reactive-cmd',
+      commandId: 'specorator:reactive-cmd',
       label: 'Reactive Command',
     });
 

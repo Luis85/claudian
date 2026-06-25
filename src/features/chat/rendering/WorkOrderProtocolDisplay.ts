@@ -52,18 +52,18 @@ function isInsideAnyRange(pos: number, ranges: Array<[number, number]>): boolean
 }
 
 const BLOCK_PATTERNS: Array<{ kind: 'progress' | 'needs_input' | 'needs_approval' | 'handoff'; regex: RegExp }> = [
-  { kind: 'progress', regex: /<claudian_progress>([\s\S]*?)<\/claudian_progress>/g },
-  { kind: 'needs_input', regex: /<claudian_needs_input>([\s\S]*?)<\/claudian_needs_input>/g },
-  { kind: 'needs_approval', regex: /<claudian_needs_approval>([\s\S]*?)<\/claudian_needs_approval>/g },
-  { kind: 'handoff', regex: /<claudian_handoff>([\s\S]*?)<\/claudian_handoff>/g },
+  { kind: 'progress', regex: /<specorator_progress>([\s\S]*?)<\/specorator_progress>/g },
+  { kind: 'needs_input', regex: /<specorator_needs_input>([\s\S]*?)<\/specorator_needs_input>/g },
+  { kind: 'needs_approval', regex: /<specorator_needs_approval>([\s\S]*?)<\/specorator_needs_approval>/g },
+  { kind: 'handoff', regex: /<specorator_handoff>([\s\S]*?)<\/specorator_handoff>/g },
 ];
 
 export const HANDOFF_PREVIEW_MAX_CHARS = 160;
 
 /**
  * Splits an assistant text block into rendered segments by extracting
- * `<claudian_progress>`, `<claudian_needs_input>`, `<claudian_needs_approval>`,
- * and `<claudian_handoff>` blocks. Blocks inside fenced code (``` or ~~~) are
+ * `<specorator_progress>`, `<specorator_needs_input>`, `<specorator_needs_approval>`,
+ * and `<specorator_handoff>` blocks. Blocks inside fenced code (``` or ~~~) are
  * left untouched so agents can show protocol docs without triggering cards.
  *
  * Semantics (deliberately more permissive than the deleted `splitWorkOrderHandoffForDisplay`):

@@ -20,7 +20,7 @@ interface CachedBucket {
 
 const DEFAULT_TTL_MS = 60_000;
 const PERSIST_DEBOUNCE_MS = 1_000;
-const DEFAULT_CACHE_PATH = '.claudian/cache/skill-index.json';
+const DEFAULT_CACHE_PATH = '.specorator/cache/skill-index.json';
 
 /**
  * Walks every provider record returned by the injected factory, asks each

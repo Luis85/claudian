@@ -1,7 +1,7 @@
 import { normalizePath, Notice } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { PRESET_TEMPLATES } from './presetTemplates';
 import { TemplateNoteStore } from './TemplateNoteStore';
 
@@ -15,7 +15,7 @@ function normalizeFolder(value: string): string {
   return value.replace(/^\/+|\/+$/g, '');
 }
 
-export async function installPresetTemplates(plugin: ClaudianPlugin): Promise<InstallPresetTemplatesResult> {
+export async function installPresetTemplates(plugin: SpecoratorPlugin): Promise<InstallPresetTemplatesResult> {
   // Settings-derived folder feeds vault.createFolder/getAbstractFileByPath below.
   const folder = normalizePath(normalizeFolder(plugin.settings.agentBoardTemplateFolder || 'Agent Board/templates'));
   const store = new TemplateNoteStore();
@@ -40,7 +40,7 @@ export async function installPresetTemplates(plugin: ClaudianPlugin): Promise<In
 }
 
 /** Installs the preset templates and surfaces the installed/skipped summary as a Notice. */
-export async function installPresetTemplatesWithNotice(plugin: ClaudianPlugin): Promise<void> {
+export async function installPresetTemplatesWithNotice(plugin: SpecoratorPlugin): Promise<void> {
   const result = await installPresetTemplates(plugin);
   const parts: string[] = [];
   if (result.installed > 0) parts.push(`installed ${result.installed}`);

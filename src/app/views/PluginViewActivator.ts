@@ -1,23 +1,23 @@
 import type { WorkspaceLeaf } from 'obsidian';
 
-import { VIEW_TYPE_CLAUDIAN, VIEW_TYPE_CLAUDIAN_AGENT_BOARD } from '@/core/types';
+import { VIEW_TYPE_SPECORATOR, VIEW_TYPE_SPECORATOR_AGENT_BOARD } from '@/core/types';
 import type { ChatViewPlacement } from '@/core/types/settings';
-import type { ClaudianView } from '@/features/chat/ClaudianView';
+import type { SpecoratorView } from '@/features/chat/SpecoratorView';
 import { AgentBoardView } from '@/features/tasks/ui/AgentBoardView';
-import type ClaudianPlugin from '@/main';
+import type SpecoratorPlugin from '@/main';
 import { revealWorkspaceLeaf } from '@/utils/obsidianCompat';
 
 export class PluginViewActivator {
-  constructor(private readonly plugin: ClaudianPlugin) {}
+  constructor(private readonly plugin: SpecoratorPlugin) {}
 
   async activateView(): Promise<void> {
     const { workspace } = this.plugin.app;
-    let leaf = workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN)[0];
+    let leaf = workspace.getLeavesOfType(VIEW_TYPE_SPECORATOR)[0];
 
     if (!leaf) {
       const newLeaf = this.getLeafForPlacement(this.plugin.settings.chatViewPlacement);
       if (newLeaf) {
-        await newLeaf.setViewState({ type: VIEW_TYPE_CLAUDIAN, active: true });
+        await newLeaf.setViewState({ type: VIEW_TYPE_SPECORATOR, active: true });
         leaf = newLeaf;
       }
     }
@@ -30,17 +30,17 @@ export class PluginViewActivator {
   async activateAgentBoardView(): Promise<void> {
     const { workspace } = this.plugin.app;
     let leaf: WorkspaceLeaf | null =
-      workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN_AGENT_BOARD)[0] ?? null;
+      workspace.getLeavesOfType(VIEW_TYPE_SPECORATOR_AGENT_BOARD)[0] ?? null;
 
     if (!leaf) {
       leaf = workspace.getLeaf('tab');
-      await leaf.setViewState({ type: VIEW_TYPE_CLAUDIAN_AGENT_BOARD, active: true });
+      await leaf.setViewState({ type: VIEW_TYPE_SPECORATOR_AGENT_BOARD, active: true });
     }
 
     await revealWorkspaceLeaf(workspace, leaf);
   }
 
-  async ensureViewOpen(): Promise<ClaudianView | null> {
+  async ensureViewOpen(): Promise<SpecoratorView | null> {
     const existingView = this.plugin.getView();
     if (existingView) return existingView;
     // Route through plugin.activateView() — tests + external consumers
@@ -65,15 +65,15 @@ export class PluginViewActivator {
   }
 
   canCreateNewTab(): boolean {
-    const hasClaudianLeaf =
-      this.plugin.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN).length > 0;
+    const hasSpecoratorLeaf =
+      this.plugin.app.workspace.getLeavesOfType(VIEW_TYPE_SPECORATOR).length > 0;
     const view = this.plugin.getView();
     const tabManager = view?.getTabManager();
 
     if (tabManager) {
       return tabManager.canCreateTab('chat');
     }
-    if (hasClaudianLeaf) return false;
+    if (hasSpecoratorLeaf) return false;
     return this.getLastKnownOpenTabCount() < this.getMaxTabsLimitFor('chat');
   }
 
@@ -85,7 +85,7 @@ export class PluginViewActivator {
    * reservations are added on top so a second Agent Board pane sees the
    * committed-but-uncreated tab and can't over-launch into the cap.
    *
-   * When a Claudian leaf exists but its tab manager isn't ready yet — not
+   * When a Specorator leaf exists but its tab manager isn't ready yet — not
    * created, or created but still restoring its persisted tabs — report no
    * free capacity so the queue waits instead of racing the restore.
    *
@@ -101,7 +101,7 @@ export class PluginViewActivator {
       const wo = tabManager.countTabsByKind('work-order');
       return { used: wo + this.plugin.chatTabReservations.pending, max };
     }
-    const leaves = this.plugin.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN);
+    const leaves = this.plugin.app.workspace.getLeavesOfType(VIEW_TYPE_SPECORATOR);
     if (leaves.length > 0) {
       if (leaves.every((leaf) => leaf.isDeferred)) {
         const persistedWorkOrderTabs = this.getLastKnownOpenTabCountFor('work-order');
@@ -117,7 +117,7 @@ export class PluginViewActivator {
 
   async runNextReadyWorkOrder(): Promise<void> {
     await this.activateAgentBoardView();
-    const leaf = this.plugin.app.workspace.getLeavesOfType(VIEW_TYPE_CLAUDIAN_AGENT_BOARD)[0];
+    const leaf = this.plugin.app.workspace.getLeavesOfType(VIEW_TYPE_SPECORATOR_AGENT_BOARD)[0];
     const view = leaf?.view;
     if (view instanceof AgentBoardView) {
       await view.runNextReady();

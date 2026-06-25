@@ -5,7 +5,7 @@
  * Parity test for the General tab registry port (settings-registry port
  * completion, Task 1). Renders the tab through the registry walker directly —
  * NOT through the `REGISTRY_TABS` flag — and asserts every Setting the legacy
- * `ClaudianSettings.renderGeneralTab` creates is present, custom widgets
+ * `SpecoratorSettings.renderGeneralTab` creates is present, custom widgets
  * actually mount (no `render: () => undefined` stubs), and a representative
  * simple field round-trips through SettingsCtx onto the real persisted path.
  */
@@ -26,7 +26,7 @@ jest.mock('../../../src/core/providers/ProviderRegistry');
 const PROVIDER_IDS = ['claude', 'codex', 'opencode', 'cursor'];
 
 // Inventory of the legacy General tab, derived from
-// `ClaudianSettings.renderGeneralTab` (the source of truth, per plan Task 1
+// `SpecoratorSettings.renderGeneralTab` (the source of truth, per plan Task 1
 // Step 1). Ids are the REAL persisted settings paths for value-backed fields.
 const LEGACY_FIELD_IDS = [
   ...PROVIDER_IDS.map((id) => `providerConfigs.${id}.enabled`),
@@ -149,8 +149,8 @@ describe('general tab registry port', () => {
     // Shared environment section: snippet manager + keychain-backed secret
     // editor mount inside the field host (same code path as the legacy tab).
     const envRow = fieldRow(host, 'sharedEnvironmentVariables');
-    expect(envRow?.querySelector('.claudian-env-snippets-container')).not.toBeNull();
-    expect(envRow?.querySelector('.claudian-secret-env-vars')).not.toBeNull();
+    expect(envRow?.querySelector('.specorator-env-snippets-container')).not.toBeNull();
+    expect(envRow?.querySelector('.specorator-secret-env-vars')).not.toBeNull();
 
     // Quick actions folder: same renderQuickActionsSettingsTab the legacy
     // path uses, seeded with the persisted value.

@@ -6,7 +6,7 @@ import type { HydrationContext, ProviderId } from '../../core/providers/types';
 import { DEFAULT_CHAT_PROVIDER_ID } from '../../core/providers/types';
 import type { Conversation, ConversationMeta } from '../../core/types';
 import { assertNever } from '../../utils/assertNever';
-import type { ClaudianEventMap } from '../events/claudianEvents';
+import type { SpecoratorEventMap } from '../events/specoratorEvents';
 
 /**
  * Collaborators the store needs from the Obsidian-lifecycle plugin shell.
@@ -32,7 +32,7 @@ export interface ConversationStoreDeps {
    * dependency boundary so future store-owned events (delete notifications,
    * provider switches) don't need a constructor change.
    */
-  events: EventBus<ClaudianEventMap>;
+  events: EventBus<SpecoratorEventMap>;
 }
 
 /**

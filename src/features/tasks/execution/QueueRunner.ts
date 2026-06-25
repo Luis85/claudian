@@ -8,7 +8,7 @@ import { selectNextEligibleTask, taskIneligibilityReason } from './selectNextEli
 import type { TaskRunResult } from './TaskRunCoordinator';
 
 // Variadic to mirror the shared EventBus exactly so a plain
-// `EventBus<ClaudianEventMap>` satisfies this without an adapter: void events
+// `EventBus<SpecoratorEventMap>` satisfies this without an adapter: void events
 // take no payload arg, the rest take one.
 export interface QueueRunnerEvents {
   emit<K extends keyof TaskEventMap>(

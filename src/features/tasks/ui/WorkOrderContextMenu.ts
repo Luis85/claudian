@@ -1,7 +1,7 @@
 import { Menu, TFile } from 'obsidian';
 
 import { t } from '../../../i18n/i18n';
-import type ClaudianPlugin from '../../../main';
+import type SpecoratorPlugin from '../../../main';
 import { launchQuickAction } from '../../quickActions/launchQuickAction';
 import { openContextMenuQuickAction } from '../../quickActions/openContextMenuQuickAction';
 import type { TaskSpec } from '../model/taskTypes';
@@ -17,7 +17,7 @@ const ARCHIVABLE_STATUSES: ReadonlySet<TaskSpec['frontmatter']['status']> = new 
 ]);
 
 export interface WorkOrderContextMenuDeps {
-  plugin: ClaudianPlugin;
+  plugin: SpecoratorPlugin;
   onOpenNote: (task: TaskSpec) => void;
   onOpenConversation: (task: TaskSpec) => void;
   /**

@@ -5,7 +5,7 @@ import { tryParseClipboardConfig } from '../../core/mcp/McpConfigParser';
 import { collectMissingMcpSecrets, extractMcpServerSecrets, type MissingMcpSecret } from '../../core/mcp/mcpSecrets';
 import { testMcpServer } from '../../core/mcp/McpTester';
 import type { AppMcpStorage } from '../../core/providers/types';
-import { isClaudianGeneratedSecretId } from '../../core/security/secretIds';
+import { isSpecoratorGeneratedSecretId } from '../../core/security/secretIds';
 import type { SecretStore } from '../../core/security/secretStore';
 import type { ManagedMcpServer, McpServerConfig, McpServerType } from '../../core/types';
 import { DEFAULT_MCP_SERVER, getMcpServerType } from '../../core/types';
@@ -77,8 +77,8 @@ export class McpSettingsManager {
     for (const id of removedIds) {
       // SecretStorage ids are global across plugins. The metadata may point at an
       // external/user-selected id (e.g. a hand-edited mcp.json), so only auto-clear
-      // Claudian-owned ids — never a secret another plugin or workflow owns.
-      if (!isClaudianGeneratedSecretId(id)) continue;
+      // Specorator-owned ids — never a secret another plugin or workflow owns.
+      if (!isSpecoratorGeneratedSecretId(id)) continue;
       if (!stillReferenced.has(id)) this.secretStore.clear(id);
     }
   }
@@ -91,36 +91,36 @@ export class McpSettingsManager {
   private render() {
     this.containerEl.empty();
 
-    const headerEl = this.containerEl.createDiv({ cls: 'claudian-mcp-header' });
-    headerEl.createSpan({ text: 'MCP Servers', cls: 'claudian-mcp-label' });
+    const headerEl = this.containerEl.createDiv({ cls: 'specorator-mcp-header' });
+    headerEl.createSpan({ text: 'MCP Servers', cls: 'specorator-mcp-label' });
 
-    const addContainer = headerEl.createDiv({ cls: 'claudian-mcp-add-container' });
+    const addContainer = headerEl.createDiv({ cls: 'specorator-mcp-add-container' });
     const addBtn = addContainer.createEl('button', {
-      cls: 'claudian-settings-action-btn',
+      cls: 'specorator-settings-action-btn',
       attr: { 'aria-label': 'Add' },
     });
     setIcon(addBtn, 'plus');
 
-    const dropdown = addContainer.createDiv({ cls: 'claudian-mcp-add-dropdown' });
+    const dropdown = addContainer.createDiv({ cls: 'specorator-mcp-add-dropdown' });
 
-    const stdioOption = dropdown.createDiv({ cls: 'claudian-mcp-add-option' });
-    setIcon(stdioOption.createSpan({ cls: 'claudian-mcp-add-option-icon' }), 'terminal');
+    const stdioOption = dropdown.createDiv({ cls: 'specorator-mcp-add-option' });
+    setIcon(stdioOption.createSpan({ cls: 'specorator-mcp-add-option-icon' }), 'terminal');
     stdioOption.createSpan({ text: 'stdio (local command)' });
     stdioOption.addEventListener('click', () => {
       dropdown.removeClass('is-visible');
       this.openModal(null, 'stdio');
     });
 
-    const httpOption = dropdown.createDiv({ cls: 'claudian-mcp-add-option' });
-    setIcon(httpOption.createSpan({ cls: 'claudian-mcp-add-option-icon' }), 'globe');
+    const httpOption = dropdown.createDiv({ cls: 'specorator-mcp-add-option' });
+    setIcon(httpOption.createSpan({ cls: 'specorator-mcp-add-option-icon' }), 'globe');
     httpOption.createSpan({ text: 'http / sse (remote)' });
     httpOption.addEventListener('click', () => {
       dropdown.removeClass('is-visible');
       this.openModal(null, 'http');
     });
 
-    const importOption = dropdown.createDiv({ cls: 'claudian-mcp-add-option' });
-    setIcon(importOption.createSpan({ cls: 'claudian-mcp-add-option-icon' }), 'clipboard-paste');
+    const importOption = dropdown.createDiv({ cls: 'specorator-mcp-add-option' });
+    setIcon(importOption.createSpan({ cls: 'specorator-mcp-add-option-icon' }), 'clipboard-paste');
     importOption.createSpan({ text: 'Import from clipboard' });
     importOption.addEventListener('click', () => {
       dropdown.removeClass('is-visible');
@@ -137,56 +137,56 @@ export class McpSettingsManager {
     });
 
     if (this.servers.length === 0) {
-      const emptyEl = this.containerEl.createDiv({ cls: 'claudian-mcp-empty' });
+      const emptyEl = this.containerEl.createDiv({ cls: 'specorator-mcp-empty' });
       emptyEl.setText('No mcp servers configured. Click "add" to add one.');
       return;
     }
 
-    const listEl = this.containerEl.createDiv({ cls: 'claudian-mcp-list' });
+    const listEl = this.containerEl.createDiv({ cls: 'specorator-mcp-list' });
     for (const server of this.servers) {
       this.renderServerItem(listEl, server);
     }
   }
 
   private renderServerItem(listEl: HTMLElement, server: ManagedMcpServer) {
-    const itemEl = listEl.createDiv({ cls: 'claudian-mcp-item' });
+    const itemEl = listEl.createDiv({ cls: 'specorator-mcp-item' });
     if (!server.enabled) {
-      itemEl.addClass('claudian-mcp-item-disabled');
+      itemEl.addClass('specorator-mcp-item-disabled');
     }
 
-    const statusEl = itemEl.createDiv({ cls: 'claudian-mcp-status' });
+    const statusEl = itemEl.createDiv({ cls: 'specorator-mcp-status' });
     statusEl.addClass(
-      server.enabled ? 'claudian-mcp-status-enabled' : 'claudian-mcp-status-disabled'
+      server.enabled ? 'specorator-mcp-status-enabled' : 'specorator-mcp-status-disabled'
     );
 
-    const infoEl = itemEl.createDiv({ cls: 'claudian-mcp-info' });
+    const infoEl = itemEl.createDiv({ cls: 'specorator-mcp-info' });
 
-    const nameRow = infoEl.createDiv({ cls: 'claudian-mcp-name-row' });
+    const nameRow = infoEl.createDiv({ cls: 'specorator-mcp-name-row' });
 
-    const nameEl = nameRow.createSpan({ cls: 'claudian-mcp-name' });
+    const nameEl = nameRow.createSpan({ cls: 'specorator-mcp-name' });
     nameEl.setText(server.name);
 
     const serverType = getMcpServerType(server.config);
-    const typeEl = nameRow.createSpan({ cls: 'claudian-mcp-type-badge' });
+    const typeEl = nameRow.createSpan({ cls: 'specorator-mcp-type-badge' });
     typeEl.setText(serverType);
 
     if (server.contextSaving) {
-      const csEl = nameRow.createSpan({ cls: 'claudian-mcp-context-saving-badge' });
+      const csEl = nameRow.createSpan({ cls: 'specorator-mcp-context-saving-badge' });
       csEl.setText('@');
       csEl.setAttribute('title', 'Context-saving: mention with @' + server.name + ' to enable');
     }
 
-    const previewEl = infoEl.createDiv({ cls: 'claudian-mcp-preview' });
+    const previewEl = infoEl.createDiv({ cls: 'specorator-mcp-preview' });
     if (server.description) {
       previewEl.setText(server.description);
     } else {
       previewEl.setText(this.getServerPreview(server, serverType));
     }
 
-    const actionsEl = itemEl.createDiv({ cls: 'claudian-mcp-actions' });
+    const actionsEl = itemEl.createDiv({ cls: 'specorator-mcp-actions' });
 
     const testBtn = actionsEl.createEl('button', {
-      cls: 'claudian-mcp-action-btn',
+      cls: 'specorator-mcp-action-btn',
       attr: { 'aria-label': 'Verify (show tools)' },
     });
     setIcon(testBtn, 'zap');
@@ -195,7 +195,7 @@ export class McpSettingsManager {
     });
 
     const toggleBtn = actionsEl.createEl('button', {
-      cls: 'claudian-mcp-action-btn',
+      cls: 'specorator-mcp-action-btn',
       attr: { 'aria-label': server.enabled ? 'Disable' : 'Enable' },
     });
     setIcon(toggleBtn, server.enabled ? 'toggle-right' : 'toggle-left');
@@ -204,14 +204,14 @@ export class McpSettingsManager {
     });
 
     const editBtn = actionsEl.createEl('button', {
-      cls: 'claudian-mcp-action-btn',
+      cls: 'specorator-mcp-action-btn',
       attr: { 'aria-label': 'Edit' },
     });
     setIcon(editBtn, 'pencil');
     editBtn.addEventListener('click', () => this.openModal(server));
 
     const deleteBtn = actionsEl.createEl('button', {
-      cls: 'claudian-mcp-action-btn claudian-mcp-delete-btn',
+      cls: 'specorator-mcp-action-btn specorator-mcp-delete-btn',
       attr: { 'aria-label': 'Delete' },
     });
     setIcon(deleteBtn, 'trash-2');

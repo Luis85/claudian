@@ -5,7 +5,7 @@ import type { TaskPriority, TaskSpec, TaskStatus } from '@/features/tasks/model/
 const task = (id: string, status: TaskStatus, priority: TaskPriority, created: string): TaskSpec =>
   ({
     path: `${id}.md`,
-    frontmatter: { type: 'claudian-work-order', schema_version: 1, id, title: id, status, priority, created, updated: created, attempts: 0 },
+    frontmatter: { type: 'specorator-work-order', schema_version: 1, id, title: id, status, priority, created, updated: created, attempts: 0 },
     sections: { objective: '', acceptanceCriteria: '', context: '', constraints: '', ledger: '', handoff: '' },
     body: '',
     raw: '',

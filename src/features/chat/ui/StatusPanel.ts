@@ -99,14 +99,14 @@ export class StatusPanel {
 
     // Create panel element (no border/background - seamless)
     this.panelEl = ownerDocument.createElement('div');
-    this.panelEl.className = 'claudian-status-panel';
+    this.panelEl.className = 'specorator-status-panel';
 
     // Bash output container - hidden by default
     this.bashOutputContainerEl = ownerDocument.createElement('div');
-    this.bashOutputContainerEl.className = 'claudian-status-panel-bash claudian-hidden';
+    this.bashOutputContainerEl.className = 'specorator-status-panel-bash specorator-hidden';
 
     this.bashHeaderEl = ownerDocument.createElement('div');
-    this.bashHeaderEl.className = 'claudian-tool-header claudian-status-panel-bash-header';
+    this.bashHeaderEl.className = 'specorator-tool-header specorator-status-panel-bash-header';
     this.bashHeaderEl.setAttribute('tabindex', '0');
     this.bashHeaderEl.setAttribute('role', 'button');
 
@@ -121,7 +121,7 @@ export class StatusPanel {
     this.bashHeaderEl.addEventListener('keydown', this.bashKeydownHandler);
 
     this.bashContentEl = ownerDocument.createElement('div');
-    this.bashContentEl.className = 'claudian-status-panel-bash-content';
+    this.bashContentEl.className = 'specorator-status-panel-bash-content';
 
     this.bashOutputContainerEl.appendChild(this.bashHeaderEl);
     this.bashOutputContainerEl.appendChild(this.bashContentEl);
@@ -129,12 +129,12 @@ export class StatusPanel {
 
     // Todo container
     this.todoContainerEl = ownerDocument.createElement('div');
-    this.todoContainerEl.className = 'claudian-status-panel-todos claudian-hidden';
+    this.todoContainerEl.className = 'specorator-status-panel-todos specorator-hidden';
     this.panelEl.appendChild(this.todoContainerEl);
 
     // Todo header (collapsed view)
     this.todoHeaderEl = ownerDocument.createElement('div');
-    this.todoHeaderEl.className = 'claudian-status-panel-header';
+    this.todoHeaderEl.className = 'specorator-status-panel-header';
     this.todoHeaderEl.setAttribute('tabindex', '0');
     this.todoHeaderEl.setAttribute('role', 'button');
 
@@ -152,7 +152,7 @@ export class StatusPanel {
 
     // Todo content (expanded list)
     this.todoContentEl = ownerDocument.createElement('div');
-    this.todoContentEl.className = 'claudian-status-panel-content claudian-todo-list-container claudian-hidden';
+    this.todoContentEl.className = 'specorator-status-panel-content specorator-todo-list-container specorator-hidden';
     this.todoContainerEl.appendChild(this.todoContentEl);
 
     this.containerEl.appendChild(this.panelEl);
@@ -173,13 +173,13 @@ export class StatusPanel {
     this.currentTodos = todos;
 
     if (!todos || todos.length === 0) {
-      this.todoContainerEl.addClass('claudian-hidden');
+      this.todoContainerEl.addClass('specorator-hidden');
       this.todoHeaderEl.empty();
       this.todoContentEl.empty();
       return;
     }
 
-    this.todoContainerEl.removeClass('claudian-hidden');
+    this.todoContainerEl.removeClass('specorator-hidden');
 
     // Count completed and find current task
     const completedCount = todos.filter(t => t.status === 'completed').length;
@@ -209,13 +209,13 @@ export class StatusPanel {
 
     // List icon
     const icon = ownerDocument.createElement('span');
-    icon.className = 'claudian-status-panel-icon';
+    icon.className = 'specorator-status-panel-icon';
     setIcon(icon, getToolIcon(TOOL_TODO_WRITE));
     this.todoHeaderEl.appendChild(icon);
 
     // Label
     const label = ownerDocument.createElement('span');
-    label.className = 'claudian-status-panel-label';
+    label.className = 'specorator-status-panel-label';
     label.textContent = `Tasks (${completedCount}/${totalCount})`;
     this.todoHeaderEl.appendChild(label);
 
@@ -224,7 +224,7 @@ export class StatusPanel {
       // Status indicator (tick only when all todos complete)
       if (completedCount === totalCount && totalCount > 0) {
         const status = ownerDocument.createElement('span');
-        status.className = 'claudian-status-panel-status status-completed';
+        status.className = 'specorator-status-panel-status status-completed';
         setIcon(status, 'check');
         this.todoHeaderEl.appendChild(status);
       }
@@ -232,7 +232,7 @@ export class StatusPanel {
       // Current task preview
       if (currentTask) {
         const current = ownerDocument.createElement('span');
-        current.className = 'claudian-status-panel-current';
+        current.className = 'specorator-status-panel-current';
         current.textContent = currentTask.activeForm;
         this.todoHeaderEl.appendChild(current);
       }
@@ -262,7 +262,7 @@ export class StatusPanel {
     if (!this.todoContentEl || !this.todoHeaderEl) return;
 
     // Show/hide content
-    this.todoContentEl.toggleClass('claudian-hidden', !this.isTodoExpanded);
+    this.todoContentEl.toggleClass('specorator-hidden', !this.isTodoExpanded);
 
     // Re-render header to update current task visibility
     if (this.currentTodos && this.currentTodos.length > 0) {
@@ -337,17 +337,17 @@ export class StatusPanel {
     const scroll = options.scroll ?? true;
 
     if (this.currentBashOutputs.size === 0) {
-      this.bashOutputContainerEl.addClass('claudian-hidden');
+      this.bashOutputContainerEl.addClass('specorator-hidden');
       return;
     }
 
-    this.bashOutputContainerEl.removeClass('claudian-hidden');
+    this.bashOutputContainerEl.removeClass('specorator-hidden');
     this.bashHeaderEl.empty();
     this.bashContentEl.empty();
     const ownerDocument = this.bashHeaderEl.ownerDocument ?? window.document;
 
     const headerIconEl = ownerDocument.createElement('span');
-    headerIconEl.className = 'claudian-tool-icon';
+    headerIconEl.className = 'specorator-tool-icon';
     headerIconEl.setAttribute('aria-hidden', 'true');
     setIcon(headerIconEl, 'terminal');
     this.bashHeaderEl.appendChild(headerIconEl);
@@ -355,7 +355,7 @@ export class StatusPanel {
     const latest = Array.from(this.currentBashOutputs.values()).at(-1);
 
     const headerLabelEl = ownerDocument.createElement('span');
-    headerLabelEl.className = 'claudian-tool-label';
+    headerLabelEl.className = 'specorator-tool-label';
     if (this.isBashExpanded) {
       headerLabelEl.textContent = t('chat.bangBash.commandPanel');
     } else {
@@ -364,26 +364,26 @@ export class StatusPanel {
     this.bashHeaderEl.appendChild(headerLabelEl);
 
     const previewEl = ownerDocument.createElement('span');
-    previewEl.className = 'claudian-tool-current';
-    previewEl.classList.toggle('claudian-hidden', !this.isBashExpanded);
+    previewEl.className = 'specorator-tool-current';
+    previewEl.classList.toggle('specorator-hidden', !this.isBashExpanded);
     this.bashHeaderEl.appendChild(previewEl);
 
     const summaryStatusEl = ownerDocument.createElement('span');
-    summaryStatusEl.className = 'claudian-tool-status';
+    summaryStatusEl.className = 'specorator-tool-status';
     if (!this.isBashExpanded && latest) {
       summaryStatusEl.classList.add(`status-${latest.status}`);
       summaryStatusEl.setAttribute('aria-label', t('chat.bangBash.statusLabel', { status: latest.status }));
       if (latest.status === 'completed') setIcon(summaryStatusEl, 'check');
       if (latest.status === 'error') setIcon(summaryStatusEl, 'x');
     } else {
-      summaryStatusEl.classList.add('claudian-hidden');
+      summaryStatusEl.classList.add('specorator-hidden');
     }
     this.bashHeaderEl.appendChild(summaryStatusEl);
 
     this.bashHeaderEl.setAttribute('aria-expanded', String(this.isBashExpanded));
 
     const actionsEl = ownerDocument.createElement('span');
-    actionsEl.className = 'claudian-status-panel-bash-actions';
+    actionsEl.className = 'specorator-status-panel-bash-actions';
     this.appendActionButton(actionsEl, 'copy', t('chat.bangBash.copyAriaLabel'), 'copy', () => {
       void this.copyLatestBashOutput();
     });
@@ -392,7 +392,7 @@ export class StatusPanel {
     });
     this.bashHeaderEl.appendChild(actionsEl);
 
-    this.bashContentEl.toggleClass('claudian-hidden', !this.isBashExpanded);
+    this.bashContentEl.toggleClass('specorator-hidden', !this.isBashExpanded);
 
     if (!this.isBashExpanded) {
       return;
@@ -410,26 +410,26 @@ export class StatusPanel {
 
   private renderBashEntry(info: PanelBashOutput, ownerDocument: Document): HTMLElement {
     const entryEl = ownerDocument.createElement('div');
-    entryEl.className = 'claudian-tool-call claudian-status-panel-bash-entry';
+    entryEl.className = 'specorator-tool-call specorator-status-panel-bash-entry';
 
     const entryHeaderEl = ownerDocument.createElement('div');
-    entryHeaderEl.className = 'claudian-tool-header';
+    entryHeaderEl.className = 'specorator-tool-header';
     entryHeaderEl.setAttribute('tabindex', '0');
     entryHeaderEl.setAttribute('role', 'button');
 
     const entryIconEl = ownerDocument.createElement('span');
-    entryIconEl.className = 'claudian-tool-icon';
+    entryIconEl.className = 'specorator-tool-icon';
     entryIconEl.setAttribute('aria-hidden', 'true');
     setIcon(entryIconEl, 'dollar-sign');
     entryHeaderEl.appendChild(entryIconEl);
 
     const entryLabelEl = ownerDocument.createElement('span');
-    entryLabelEl.className = 'claudian-tool-label';
+    entryLabelEl.className = 'specorator-tool-label';
     entryLabelEl.textContent = t('chat.bangBash.commandLabel', { command: this.truncateDescription(info.command, 60) });
     entryHeaderEl.appendChild(entryLabelEl);
 
     const entryStatusEl = ownerDocument.createElement('span');
-    entryStatusEl.className = 'claudian-tool-status';
+    entryStatusEl.className = 'specorator-tool-status';
     entryStatusEl.classList.add(`status-${info.status}`);
     entryStatusEl.setAttribute('aria-label', t('chat.bangBash.statusLabel', { status: info.status }));
     if (info.status === 'completed') setIcon(entryStatusEl, 'check');
@@ -439,9 +439,9 @@ export class StatusPanel {
     entryEl.appendChild(entryHeaderEl);
 
     const contentEl = ownerDocument.createElement('div');
-    contentEl.className = 'claudian-tool-content';
+    contentEl.className = 'specorator-tool-content';
     const isEntryExpanded = this.bashEntryExpanded.get(info.id) ?? true;
-    contentEl.classList.toggle('claudian-hidden', !isEntryExpanded);
+    contentEl.classList.toggle('specorator-hidden', !isEntryExpanded);
     entryHeaderEl.setAttribute('aria-expanded', String(isEntryExpanded));
     entryHeaderEl.setAttribute('aria-label', isEntryExpanded ? t('chat.bangBash.collapseOutput') : t('chat.bangBash.expandOutput'));
     entryHeaderEl.addEventListener('click', () => {
@@ -457,10 +457,10 @@ export class StatusPanel {
     });
 
     const rowEl = ownerDocument.createElement('div');
-    rowEl.className = 'claudian-tool-result-row';
+    rowEl.className = 'specorator-tool-result-row';
 
     const textEl = ownerDocument.createElement('span');
-    textEl.className = 'claudian-tool-result-text';
+    textEl.className = 'specorator-tool-result-text';
     if (info.status === 'running' && !info.output) {
       textEl.textContent = t('chat.bangBash.running');
     } else if (info.output) {
@@ -495,7 +495,7 @@ export class StatusPanel {
     action: () => void
   ): void {
     const el = (parent.ownerDocument ?? window.document).createElement('span');
-    el.className = `claudian-status-panel-bash-action claudian-status-panel-bash-action-${name}`;
+    el.className = `specorator-status-panel-bash-action specorator-status-panel-bash-action-${name}`;
     el.setAttribute('role', 'button');
     el.setAttribute('tabindex', '0');
     el.setAttribute('aria-label', ariaLabel);

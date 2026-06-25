@@ -84,7 +84,7 @@ function renderCount(view: CursorPickerView): void {
 }
 
 function renderFamilyRow(view: CursorPickerView, family: CursorModelFamily): void {
-  const rowEl = view.listEl.createEl('label', { cls: 'claudian-cursor-model-picker-row' });
+  const rowEl = view.listEl.createEl('label', { cls: 'specorator-cursor-model-picker-row' });
   rowEl.title = family.familyId;
 
   const checkboxEl = rowEl.createEl('input', { type: 'checkbox' });
@@ -101,16 +101,16 @@ function renderFamilyRow(view: CursorPickerView, family: CursorModelFamily): voi
     })();
   });
 
-  const textEl = rowEl.createDiv({ cls: 'claudian-cursor-model-picker-row-text' });
+  const textEl = rowEl.createDiv({ cls: 'specorator-cursor-model-picker-row-text' });
   textEl.createDiv({
-    cls: 'claudian-cursor-model-picker-row-name',
+    cls: 'specorator-cursor-model-picker-row-name',
     text: family.label,
   });
   const modeHint = family.variants.length > 1
     ? `${family.vendor} · ${family.variants.length} modes`
     : family.vendor;
   textEl.createDiv({
-    cls: 'claudian-cursor-model-picker-row-id',
+    cls: 'specorator-cursor-model-picker-row-id',
     text: modeHint,
   });
 }
@@ -120,7 +120,7 @@ function renderFamilyList(view: CursorPickerView): void {
   const families = visibleFamilies(view);
 
   if (families.length === 0) {
-    const emptyEl = view.listEl.createDiv({ cls: 'claudian-cursor-model-picker-empty' });
+    const emptyEl = view.listEl.createDiv({ cls: 'specorator-cursor-model-picker-empty' });
     if (buildCursorFamilies(getAllCursorRawIds(view.settingsBag)).length === 0) {
       emptyEl.setText('No models discovered yet. Set the Cursor CLI path below, then refresh the model list.');
     } else {
@@ -218,25 +218,25 @@ export const mountCursorVisibleModelsPicker: ProviderSettingsWidgetMount = (host
     .setName('Visible models')
     .setDesc('Choose which Cursor models appear in the picker. `auto` is always available.');
 
-  const pickerEl = host.createDiv({ cls: 'claudian-cursor-model-picker' });
-  const controlsEl = pickerEl.createDiv({ cls: 'claudian-cursor-model-picker-controls' });
+  const pickerEl = host.createDiv({ cls: 'specorator-cursor-model-picker' });
+  const controlsEl = pickerEl.createDiv({ cls: 'specorator-cursor-model-picker-controls' });
 
   const searchInput = controlsEl.createEl('input', {
-    cls: 'claudian-cursor-model-picker-search',
+    cls: 'specorator-cursor-model-picker-search',
     type: 'search',
   });
   searchInput.placeholder = 'Filter models…';
 
   const selectAllBtn = controlsEl.createEl('button', {
-    cls: 'claudian-cursor-model-picker-action',
+    cls: 'specorator-cursor-model-picker-action',
     text: 'Select all',
   });
   const selectNoneBtn = controlsEl.createEl('button', {
-    cls: 'claudian-cursor-model-picker-action',
+    cls: 'specorator-cursor-model-picker-action',
     text: 'Select none',
   });
-  const countEl = controlsEl.createSpan({ cls: 'claudian-cursor-model-picker-count' });
-  const listEl = pickerEl.createDiv({ cls: 'claudian-cursor-model-picker-list' });
+  const countEl = controlsEl.createSpan({ cls: 'specorator-cursor-model-picker-count' });
+  const listEl = pickerEl.createDiv({ cls: 'specorator-cursor-model-picker-list' });
 
   const view: CursorPickerView = {
     context,

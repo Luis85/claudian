@@ -17,18 +17,18 @@ export function renderPlanContentPreview(params: {
   const { rootEl, content, errorMessage, renderContent } = params;
 
   if (content) {
-    const previewEl = rootEl.createDiv({ cls: 'claudian-plan-content-preview' });
+    const previewEl = rootEl.createDiv({ cls: 'specorator-plan-content-preview' });
     if (renderContent) {
       void renderContent(previewEl, content);
     } else {
-      previewEl.createDiv({ cls: 'claudian-plan-content-text', text: content });
+      previewEl.createDiv({ cls: 'specorator-plan-content-text', text: content });
     }
     return;
   }
 
   if (errorMessage) {
     rootEl.createDiv({
-      cls: 'claudian-plan-content-preview claudian-plan-read-error',
+      cls: 'specorator-plan-content-preview specorator-plan-read-error',
       text: errorMessage,
     });
   }

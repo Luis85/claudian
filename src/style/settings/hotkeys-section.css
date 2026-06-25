@@ -1,13 +1,13 @@
 /* Hotkeys section in General tab — registry-rendered */
 
-.claudian-hotkeys-section {
+.specorator-hotkeys-section {
   display: flex;
   flex-direction: column;
   gap: 4px;
   padding: 4px 0;
 }
 
-.claudian-hotkey-row {
+.specorator-hotkey-row {
   display: grid;
   grid-template-columns: 1fr auto auto;
   align-items: center;
@@ -18,11 +18,11 @@
   transition: background 0.15s ease;
 }
 
-.claudian-hotkey-row:hover {
+.specorator-hotkey-row:hover {
   background: var(--background-modifier-hover);
 }
 
-.claudian-hotkey-command-label {
+.specorator-hotkey-command-label {
   font-size: var(--font-ui-small);
   color: var(--text-normal);
   overflow: hidden;
@@ -30,7 +30,7 @@
   white-space: nowrap;
 }
 
-.claudian-hotkey-binding-chip {
+.specorator-hotkey-binding-chip {
   display: inline-block;
   padding: 3px 8px;
   border-radius: 4px;
@@ -41,7 +41,7 @@
   color: var(--text-normal);
 }
 
-.claudian-hotkey-binding-chip--unbound {
+.specorator-hotkey-binding-chip--unbound {
   background: transparent;
   border-style: dashed;
   color: var(--text-faint);
@@ -49,7 +49,7 @@
   font-style: italic;
 }
 
-.claudian-hotkey-edit-button {
+.specorator-hotkey-edit-button {
   padding: 4px 12px;
   font-size: var(--font-ui-smaller);
   border: 1px solid var(--background-modifier-border);
@@ -60,7 +60,7 @@
   transition: all 0.15s ease;
 }
 
-.claudian-hotkey-edit-button:hover {
+.specorator-hotkey-edit-button:hover {
   background: var(--interactive-accent);
   color: var(--text-on-accent);
   border-color: var(--interactive-accent);
